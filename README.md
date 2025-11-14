@@ -94,37 +94,37 @@ graph TD
 - ✅ **Pattern B (API Gateway)**: Security, simplicity, centralized logging
 - ✅ **Hybrid Database**: PostgreSQL (ACID) + VectorDB (semantic search 10x faster)
 - ✅ **SSE Streaming**: Real-time AI responses, 93% fewer network requests
-- ✅ **Nx Monorepo**: Shared types via OpenAPI, 75% faster builds
+- ✅ **Multirepo Structure**: Independent repositories for each service
 
-**Detailed Docs**:
-- [Architecture Details](./architecture.md)
-- [Pattern B Migration Guide](./docs/PATTERN_B_MIGRATION_GUIDE.md)
-- [Architecture Decision Records](./docs/ARCHITECTURE_DECISIONS.md)
-- [MSA Optimization](./docs/MSA_BACKEND_OPTIMIZATION.md)
-| **Database**     | PostgreSQL 15.x                      | Fully normalized relational schema (32 tables) |
-| **AI Service**   | Local LLM                            | Character conversations in alternate timelines |
+**📚 Documentation**:
+- [**ARCHITECTURE.md**](./docs/ARCHITECTURE.md) - Complete architecture guide (6 ADRs)
+- [**IMPLEMENTATION_ROADMAP.md**](./docs/IMPLEMENTATION_ROADMAP.md) - Next steps & timeline
+- [**BACKEND_OPTIMIZATION.md**](./docs/BACKEND_OPTIMIZATION.md) - 7 performance strategies
+- [**DATABASE_STRATEGY.md**](./docs/DATABASE_STRATEGY.md) - Hybrid database design
+| **AI/ML**        | Gemini 2.5 Flash, Gemini Embedding   | Text generation (768-dim embeddings)           |
 | **Deployment**   | Railway (backend), Vercel (frontend) | Cloud infrastructure                           |
 
 ## 📊 Database Schema
 
-Gaji uses a **fully normalized relational design** with 32 tables (21 core + 11 relationship tables). Key highlights:
+Gaji uses a **Hybrid Database Architecture** (PostgreSQL + VectorDB):
 
-### Core Tables
+### PostgreSQL (13 tables)
+- **Metadata**: Users, novels, scenarios, conversations, messages
+- **Social**: Follows, likes, memos, forks
+- **Features**: ACID transactions, complex JOINs, B-Tree indexing
 
-- **`scenarios`**: What If scenario definitions (root scenarios)
-- **`conversations`**: User conversations within scenarios
-- **`messages`**: Individual chat messages (normalized via join table)
-- **`users`**: User accounts and profiles
-- **`characters`**: Story characters with AI-extracted metadata
+### VectorDB (5 collections)
+- **Content**: Novel passages (chunked 200-500 words)
+- **AI Analysis**: Characters, locations, events, themes
+- **Search**: Semantic search via 768-dim embeddings (Gemini)
+- **Performance**: 10x faster than pgvector on semantic queries
 
-### Advanced Features
+**Why Hybrid?**
+- PostgreSQL: Best for relational metadata queries
+- VectorDB: Best for semantic "find brave scenes" searches
+- **Combined**: Best of both worlds
 
-- **Scenario Forking**: Unlimited depth for creative meta-scenarios
-- **Conversation Forking**: Root-only (max depth = 1) with automatic 6-message copy
-- **Normalized Character Data**: Separate tables for aliases, personality traits, relationships
-- **Social Features**: Follows, likes, memos with efficient indexing
-
-See [ERD.md](docs/ERD.md) for complete schema diagram.
+See [DATABASE_STRATEGY.md](docs/DATABASE_STRATEGY.md) for detailed comparison.
 
 ---
 
@@ -219,12 +219,37 @@ We're a passionate team of developers building the future of interactive storyte
 
 ---
 
+## 📞 Documentation & Resources
+
+### 📂 Core Documentation
+- [**ARCHITECTURE.md**](./docs/ARCHITECTURE.md) - System architecture & ADRs
+- [**IMPLEMENTATION_ROADMAP.md**](./docs/IMPLEMENTATION_ROADMAP.md) - Next steps & timeline
+- [**CLAUDE.md**](./CLAUDE.md) - AI development guide
+
+### 🛠️ Implementation Guides
+- [**DEVELOPMENT_SETUP.md**](./docs/DEVELOPMENT_SETUP.md) - Local environment setup
+- [**BACKEND_OPTIMIZATION.md**](./docs/BACKEND_OPTIMIZATION.md) - Performance strategies
+- [**DATABASE_STRATEGY.md**](./docs/DATABASE_STRATEGY.md) - Hybrid DB design
+
+### 📋 Specifications
+- [**PRD.md**](./docs/PRD.md) - Product requirements
+- [**ERD.md**](./docs/ERD.md) - Database schema
+- [**API_DOCUMENTATION.md**](./docs/API_DOCUMENTATION.md) - API reference
+- [**TESTING_STRATEGY.md**](./docs/TESTING_STRATEGY.md) - Testing guidelines
+- [**UI_UX_SPECIFICATIONS.md**](./docs/UI_UX_SPECIFICATIONS.md) - Design specs
+- [**SECURITY.md**](./docs/SECURITY.md) - Security best practices
+
+### 📖 Epic & Story Details
+- [**Epics**](./docs/epics/) - 7 epic specifications
+- [**Stories**](./docs/stories/) - 37 user story implementations
+
+---
+
 ## Contact & Support
 
 - **Documentation**: [/docs](/docs)
-- **Issues**: [GitHub Issues](https://github.com/your-org/gaji/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/your-org/gaji/discussions)
-- **Email**: support@gaji.app
+- **Issues**: [GitHub Issues](https://github.com/SideProjectSFY/gajiFE/issues)
+- **Email**: Contact via GitHub
 
 ---
 

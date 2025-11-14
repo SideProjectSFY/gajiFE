@@ -111,27 +111,61 @@ docker --version     # Should show 24.x
 
 ## Repository Setup
 
-```bash
-# Clone repository
-git clone https://github.com/your-org/gaji.git
-cd gaji
+### Multirepo Structure
 
-# Repository structure (Hybrid DB Architecture)
-gaji/
-├── core-backend/      # Spring Boot (CRUD Service, Port 8080)
-├── ai-backend/        # FastAPI (AI/RAG Service, Port 8000)
-│   ├── chroma_data/   # ChromaDB persistent storage
-│   └── app/
-│       └── services/
-│           ├── novel_ingestion.py
-│           ├── rag_service.py
-│           └── vectordb_client.py
-├── frontend/          # Vue 3 (Frontend)
-├── docker-compose.yml # PostgreSQL + ChromaDB + Redis
-└── docs/
-    ├── architecture.md  # Hybrid DB architecture doc
-    └── ERD.md           # PostgreSQL + VectorDB schema
+Gaji uses **separate repositories** for each service:
+
+```bash
+# Clone all repositories
+git clone https://github.com/your-org/gaji-core-backend.git
+git clone https://github.com/your-org/gaji-ai-backend.git
+git clone https://github.com/your-org/gaji-frontend.git
+git clone https://github.com/your-org/gaji-api-contracts.git
+
+# Organize workspace
+mkdir gaji-workspace
+cd gaji-workspace
+mv ../gaji-core-backend ./core-backend
+mv ../gaji-ai-backend ./ai-backend
+mv ../gaji-frontend ./frontend
+mv ../gaji-api-contracts ./api-contracts
 ```
+
+### Repository Structure
+
+```
+gaji-workspace/
+├── core-backend/          # Repository 1: Spring Boot
+│   ├── src/main/java/
+│   ├── src/main/resources/
+│   ├── build.gradle
+│   └── Dockerfile
+│
+├── ai-backend/            # Repository 2: FastAPI
+│   ├── app/
+│   │   ├── api/
+│   │   └── services/
+│   ├── chroma_data/       # ChromaDB persistent storage
+│   ├── requirements.txt
+│   └── Dockerfile
+│
+├── frontend/              # Repository 3: Vue.js
+│   ├── src/
+│   ├── package.json
+│   └── Dockerfile
+│
+├── api-contracts/         # Repository 4: Shared OpenAPI specs
+│   ├── openapi.yaml
+│   └── README.md
+│
+└── docker-compose.yml     # Optional: Shared docker-compose for local dev
+```
+
+**Benefits**:
+- Independent deployment cycles per service
+- Clear ownership boundaries
+- Easier CI/CD configuration
+- Better suited for team growth
 
 ---
 
@@ -142,12 +176,12 @@ gaji/
 ### 1. Navigate to Backend Directory
 
 ```bash
-cd backend
+cd gaji-workspace/core-backend
 ```
 
 ### 2. Configure Environment
 
-Create `backend/.env`:
+Create `core-backend/.env`:
 
 ```properties
 # Server Configuration
@@ -205,7 +239,7 @@ curl http://localhost:8080/actuator/health
 ### 1. Navigate to AI Backend Directory
 
 ```bash
-cd ai-backend
+cd gaji-workspace/ai-backend
 ```
 
 ### 2. Create Virtual Environment
@@ -690,7 +724,7 @@ psql -U gaji_user -d gaji -f backend/src/main/resources/db/seed/test_data.sql
 ### 1. Navigate to Frontend Directory
 
 ```bash
-cd frontend
+cd gaji-workspace/frontend
 ```
 
 ### 2. Install Dependencies
@@ -1161,12 +1195,15 @@ JWT_ACCESS_TOKEN_EXPIRATION=3600000  # 1 hour
 ### Recommended Workflow
 
 1. **Start Database**: `docker-compose up postgres -d`
-2. **Start Core Backend**: `cd backend && ./gradlew bootRun`
-3. **Start AI Backend**: `cd ai-backend && uvicorn main:app --reload`
-4. **Start Frontend**: `cd frontend && pnpm dev`
+2. **Start Core Backend**: `cd gaji-workspace/core-backend && ./gradlew bootRun`
+3. **Start AI Backend**: `cd gaji-workspace/ai-backend && uvicorn main:app --reload`
+4. **Start Frontend**: `cd gaji-workspace/frontend && pnpm dev`
 5. **Open Browser**: http://localhost:5173
 6. **Check Health**: Visit health endpoints
-7. **Run Tests**: `./gradlew test` (backend), `pnpm test` (frontend)
+7. **Run Tests**: 
+   - Backend: `cd core-backend && ./gradlew test`
+   - AI Backend: `cd ai-backend && pytest`
+   - Frontend: `cd frontend && pnpm test`
 
 ### Hot Reload
 

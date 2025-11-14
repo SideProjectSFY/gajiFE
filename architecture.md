@@ -1,6 +1,6 @@
 # Gaji: System Architecture Document
 
-**Version:** 2.0
+**Version:** 1.0
 **Date:** 2025-01-14
 **Author:** GitHub Copilot (Architect)
 
@@ -1473,7 +1473,7 @@ async def create_scenario_with_passages(scenario_data: dict):
 
 ## Changelog
 
-**2025-01-14** (Version 2.0): Hybrid Database Architecture
+**2025-01-14** (Version 1.0): Hybrid Database Architecture
 
 - **Database Split**: Separated PostgreSQL (metadata) and VectorDB (content/embeddings)
 - **Table Count**: Reduced from 32 to 13 PostgreSQL tables
@@ -1800,7 +1800,7 @@ All epics from 0-6 have been fully documented with detailed user stories includi
 
 | Story | Title                                | Effort | Key Deliverables                          |
 | ----- | ------------------------------------ | ------ | ----------------------------------------- |
-| 0.1   | Repository Setup & Structure         | 6h     | Monorepo structure, Git workflows         |
+| 0.1   | Repository Setup & Structure         | 6h     | Multirepo structure, Git workflows        |
 | 0.2   | Docker Development Environment       | 8h     | docker-compose.yml, multi-container setup |
 | 0.3   | Database Setup (PostgreSQL + Flyway) | 6h     | PostgreSQL 15.x, Flyway migrations        |
 | 0.4   | Backend API Foundation (Spring Boot) | 8h     | Spring Boot 3.x skeleton, health checks   |
