@@ -6,14 +6,17 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **Gaji** (가지, Korean for "branch") is a novel platform that applies Git-style forking to AI-mediated book discussions with the tagline **"Branch all of story"**. Users can fork conversations at specific moments to explore different discussion paths, creating a tree of diverse interpretations and collaborative exploration.
 
-**Current Status**: MVP planning phase complete with comprehensive documentation. All 35 user stories across 7 epics (Epic 0-6) are fully documented with production-ready specifications. The platform uses a dual-backend microservices approach with Spring Boot (Java) for core business logic and FastAPI (Python) for RAG features.
+**Current Status**: MVP planning phase complete with comprehensive documentation. All 37 user stories across 7 epics (Epic 0-6) are fully documented with production-ready specifications. The platform uses a **hybrid database architecture** with **PostgreSQL for metadata** (13 tables) and **VectorDB for content/embeddings** (5 collections).
 
-**Key Fork Business Rules**:
+**Key Architectural Decisions**:
 
-1. **Scenario Fork**: Unlimited depth - users can create meta-scenarios by forking existing scenarios (e.g., "Hermione in Slytherin" → "Hermione in Slytherin AND Head Girl")
-2. **Conversation Fork**: ROOT-only (parent_conversation_id IS NULL) - maximum depth of 1 level (parent → child, no grandchildren)
-3. **Message Copy Logic**: When forking conversations, automatically copy min(6, total_message_count) most recent messages
-4. **Conversation Start Rule**: Users always initiate conversations (no AI-first messages)
+1. **Hybrid Database**: PostgreSQL (metadata) + VectorDB (ChromaDB/Pinecone for content)
+2. **MSA Backend**: Spring Boot (CRUD, port 8080) + FastAPI (AI/RAG, port 8000)
+3. **Novel Source**: Project Gutenberg Dataset (batch import, not real-time API)
+4. **Scenario Fork**: Unlimited depth - users can create meta-scenarios by forking existing scenarios
+5. **Conversation Fork**: ROOT-only (parent_conversation_id IS NULL) - maximum depth of 1 level
+6. **Message Copy Logic**: When forking conversations, automatically copy **min(6, total_message_count)** most recent messages
+7. **Conversation Start Rule**: Users always initiate conversations (no AI-first messages)
 
 ## Essential Development Commands
 
@@ -56,6 +59,13 @@ pnpm prepare                    # Prepare Panda CSS (codegen)
 docker-compose up -d postgres   # Start PostgreSQL
 docker-compose down             # Stop all services
 
+# ChromaDB (via Docker - Development)
+docker-compose up -d chromadb   # Start ChromaDB
+# Access: http://localhost:8001
+
+# Redis (for Celery)
+docker-compose up -d redis      # Start Redis
+
 # Run migrations (from core-backend)
 ./gradlew flywayMigrate         # Apply database migrations
 ./gradlew flywayInfo            # Check migration status
@@ -73,16 +83,21 @@ docker-compose down             # Stop all services
 │   │   ├── service/     # Business logic layer
 │   │   ├── repository/  # Database access (JPA)
 │   │   ├── model/       # Domain models & entities
-│   │   └── config/      # Spring configuration
+│   │   ├── config/      # Spring configuration
+│   │   └── client/      # FastAPI service client (WebClient)
 │   └── src/main/resources/
 │       └── db/migration/ # Flyway migrations
 │
-├── ai-backend/          # FastAPI (Python) - RAG & AI features
+├── ai-backend/          # FastAPI (Python) - AI/RAG service
 │   ├── app/
-│   │   ├── api/         # API endpoints
-│   │   ├── services/    # RAG services
-│   │   ├── models/      # Data models (Pydantic)
-│   │   └── utils/       # Helper functions
+│   │   ├── api/         # AI endpoints
+│   │   ├── services/    # RAG, LLM integration
+│   │   │   ├── novel_ingestion.py
+│   │   │   ├── rag_service.py
+│   │   │   └── vectordb_client.py
+│   │   ├── models/      # Pydantic models
+│   │   ├── celery_app.py
+│   │   └── utils/
 │   └── requirements.txt
 │
 ├── frontend/            # Vue 3 + TypeScript
@@ -92,100 +107,316 @@ docker-compose down             # Stop all services
 │   │   ├── stores/      # Pinia stores (state management)
 │   │   ├── router/      # Vue Router
 │   │   └── services/    # API client services
+│   │       ├── coreApi.ts    # Spring Boot API
+│   │       └── aiApi.ts      # FastAPI API (if needed)
 │   ├── styled-system/   # Panda CSS generated files
 │   ├── panda.config.ts  # Panda CSS configuration
 │   └── package.json
 │
 └── docs/                # Product documentation
-    ├── PRD.md          # Product requirements
-    ├── architecture.md # Technical architecture
-    ├── epics/          # Epic specifications
-    └── stories/        # User stories
+    ├── PRD.md
+    ├── architecture.md  # THIS DOCUMENT - Updated for VectorDB
+    ├── ERD.md           # Hybrid DB schema (PostgreSQL + VectorDB)
+    ├── epics/
+    └── stories/
+```
+
+### Hybrid Database Architecture
+
+> **CRITICAL**: Spring Boot uses ONLY PostgreSQL, FastAPI uses ONLY VectorDB. Cross-database access must go through REST API.
+
+**PostgreSQL (Metadata Only - 13 Tables)** ← Spring Boot ONLY:
+- `users` - User accounts
+- `novels` - Novel metadata (NO full_text, stores vectordb_collection_id)
+- `base_scenarios` - Scenario metadata with VectorDB references
+- `root_user_scenarios` - User-created "What If" scenarios
+- `leaf_user_scenarios` - Forked scenarios (depth 1)
+- `scenario_character_changes` - References VectorDB character IDs
+- `scenario_event_alterations` - References VectorDB event IDs
+- `scenario_setting_modifications` - References VectorDB location IDs
+- `conversations` - Conversation instances with character_vectordb_id
+- `conversation_message_links` - Join table for message reuse
+- `messages` - Individual messages
+- `user_follows`, `conversation_likes`, `conversation_memos` - Social features
+
+**VectorDB (Content + Embeddings - 5 Collections)** ← FastAPI ONLY:
+- `novel_passages` - Novel text chunks with 768-dim Gemini embeddings
+- `characters` - Character descriptions and personality traits (extracted via Gemini)
+- `locations` - Setting descriptions
+- `events` - Plot events
+- `themes` - Thematic analysis
+
+**Architecture Rules**:
+
+| Component     | Allowed DB Access        | Cross-DB Pattern                                |
+|---------------|--------------------------|------------------------------------------------|
+| Spring Boot   | ✅ PostgreSQL (JPA)      | Call FastAPI `/api/ai/*` for VectorDB          |
+| FastAPI       | ✅ VectorDB (ChromaDB)   | Call Spring Boot `/api/internal/*` for PostgreSQL |
+| Frontend      | ❌ No direct DB          | Call Spring Boot (metadata) + FastAPI (AI)     |
+
+**Why Hybrid?**:
+- **PostgreSQL**: ACID transactions, relational joins, user data integrity
+- **VectorDB**: Semantic search (cosine similarity), high-dimensional embeddings, horizontal scaling
+- **Cost**: VectorDB scales better for large novel collections (~100GB vs PostgreSQL storage costs)
+- **Performance**: Semantic search in VectorDB is 10x faster than pgvector for high-dimensional vectors (768 dims)
+- **Separation of Concerns**: Metadata (Spring Boot) vs Content+AI (FastAPI)
+
+**Data Flow Example** (Novel Ingestion):
+```
+1. FastAPI parses Gutenberg file
+2. FastAPI → Spring Boot: POST /api/internal/novels (metadata only)
+3. Spring Boot saves to PostgreSQL, returns novel_id
+4. FastAPI chunks text, generates embeddings via Gemini Embedding API
+5. FastAPI stores passages in VectorDB novel_passages collection with novel_id
+6. FastAPI extracts characters via Gemini 2.5 Flash
+7. FastAPI stores characters in VectorDB characters collection with novel_id
+8. FastAPI → Spring Boot: PATCH /api/internal/novels/{id} (update ingestion_status)
 ```
 
 ### Core Features Architecture
 
+**MSA Communication**:
+1. **Frontend → Spring Boot**: All requests (single entry point, Pattern B)
+2. **Spring Boot → FastAPI**: AI operations (internal proxy, WebClient)
+3. **FastAPI → VectorDB**: Semantic search, embedding storage
+4. **FastAPI → Gemini API**: Text generation, embedding generation (not externally exposed)
+
 **Conversation System**:
 
-- **Forking Model**: Limited mid-conversation forking (up to 6 turns) for MVP
+- **Forking Model**: ROOT-only conversation forking (max depth 1)
+- **Message Copy Rule**: Copy **min(6, total_message_count)** from parent
 - **Tree Structure**: PostgreSQL with adjacency list + recursive CTEs
-- **Context Management**: ~500 tokens for character, 2000 for conversation history
+- **Context Management**: ~500 tokens for character, 2000 for conversation history (Gemini 2.5 Flash)
 - **Streaming**: Server-Sent Events (SSE) for real-time AI responses
 
-**RAG Pipeline** (AI Backend):
-
-- Book content parsing and chunking
-- Vector embedding generation and storage
-- Character/relationship extraction
-- Semantic search for context retrieval
+**Novel Ingestion Pipeline** (FastAPI):
+- Source: Project Gutenberg Dataset (batch import, not real-time API)
+- Book content parsing and chunking (200-500 words per passage)
+- Vector embedding generation (Gemini Embedding API: 768 dimensions)
+- Character/location/event/theme extraction via Gemini 2.5 Flash
+- Storage: VectorDB (ChromaDB dev / Pinecone prod)
 
 **Character System**:
 
 - Complete story knowledge approach (simplified vs. temporal consistency)
 - System prompts: ~500 tokens defining character context
 - Temperature: 0.7-0.8 for creativity + consistency balance
+- Prompt re-injection every 10 turns prevents character drift
 
 ### Technology Stack
 
-| Layer                | Technology                                                      |
-| -------------------- | --------------------------------------------------------------- |
-| **Core Backend**     | Spring Boot 3.x (Java 17+)                                      |
-| **AI Backend**       | FastAPI (Python 3.10+)                                          |
-| **Frontend**         | Vue 3 + TypeScript + Vite                                       |
-| **Package Manager**  | pnpm                                                            |
-| **Styling**          | Panda CSS (CSS-in-JS with static extraction)                    |
-| **UI Components**    | PrimeVue                                                        |
-| **State Management** | Pinia                                                           |
-| **Database**         | PostgreSQL 15+                                                  |
-| **ORM**              | Spring Data JPA (core-backend)                                  |
-| **Migrations**       | Flyway                                                          |
-| **AI/ML**            | OpenAI API (GPT-3.5-turbo/GPT-4o)                               |
-| **Vector DB**        | (To be determined - Pinecone/Chroma/pgvector)                   |
-| **Testing**          | JUnit 5 + Mockito (Java), pytest (Python), Vitest (Frontend)    |
-| **Code Quality**     | ESLint + Prettier (Frontend), Checkstyle (Java), Black (Python) |
+| Layer                  | Technology                                        |
+| ---------------------- | ------------------------------------------------- |
+| **Core Backend**       | Spring Boot 3.x (Java 17+), Port 8080            |
+| **AI Backend**         | FastAPI (Python 3.11+), Port 8000                |
+| **Frontend**           | Vue 3 + TypeScript + Vite                        |
+| **Package Managers**   | pnpm (Frontend), uv (Python)                     |
+| **Styling**            | Panda CSS (CSS-in-JS with static extraction)     |
+| **UI Components**      | PrimeVue                                         |
+| **State Management**   | Pinia                                            |
+| **Database**           | PostgreSQL 15+ (metadata only, 13 core tables)   |
+| **VectorDB**           | ChromaDB (dev) / Pinecone (prod)                 |
+| **ORM**                | Spring Data JPA (Spring Boot)                    |
+| **Migrations**         | Flyway                                           |
+| **AI/ML**              | Gemini 2.5 Flash (text gen), Gemini Embedding API (768 dims) |
+| **Task Queue**         | Celery + Redis (async AI operations)            |
+| **Testing**            | JUnit 5 + Mockito (Java), pytest (Python), Vitest (Frontend) |
+| **Code Quality**       | ESLint + Prettier (Frontend), Checkstyle (Java), Black (Python) |
+
+**Database Access Enforcement**:
+- Spring Boot: `spring-boot-starter-data-jpa` (PostgreSQL), NO VectorDB libraries
+- FastAPI: `chromadb` (dev) / `pinecone-client` (prod), NO PostgreSQL drivers
+- Inter-service: `spring-webflux.WebClient` (Java), `httpx` (Python)
 
 ## Working with the Multi-Service Architecture
 
-### Inter-Service Communication
+### 🚨 Database Access Rules (CRITICAL)
 
-**Core Backend → AI Backend**:
+**Rule #1: Spring Boot → PostgreSQL ONLY**
 
 ```java
-// In core-backend: Call AI service via RestTemplate or WebClient
+// ✅ CORRECT: Spring Boot uses JPA for PostgreSQL
 @Service
-public class AiServiceClient {
-    private final WebClient webClient;
-
-    public AiServiceClient(@Value("${ai.backend.url}") String aiBackendUrl) {
-        this.webClient = WebClient.create(aiBackendUrl);
-    }
-
-    public CharacterData extractCharacters(String bookContent) {
-        return webClient.post()
-            .uri("/api/characters/extract")
-            .bodyValue(Map.of("content", bookContent))
+public class ScenarioService {
+    @Autowired
+    private ScenarioRepository scenarioRepository;  // PostgreSQL via JPA
+    
+    @Autowired
+    private WebClient aiServiceClient;  // Call FastAPI for VectorDB
+    
+    public Scenario createScenario(CreateScenarioRequest request) {
+        // 1. Call FastAPI for VectorDB query
+        PassageSearchResponse passages = aiServiceClient.post()
+            .uri("/api/ai/search/passages")
+            .bodyValue(request)
             .retrieve()
-            .bodyToMono(CharacterData.class)
+            .bodyToMono(PassageSearchResponse.class)
             .block();
+        
+        // 2. Save to PostgreSQL with VectorDB IDs
+        Scenario scenario = new Scenario();
+        scenario.setVectordbPassageIds(passages.getPassageIds());
+        return scenarioRepository.save(scenario);  // PostgreSQL
+    }
+}
+
+// ❌ WRONG: Spring Boot trying to access VectorDB
+ChromaClient chroma = new ChromaClient();  // NEVER DO THIS!
+VectorDBClient vectordb = new VectorDBClient();  // FORBIDDEN!
+```
+
+**Rule #2: FastAPI → VectorDB ONLY**
+
+```python
+# ✅ CORRECT: FastAPI uses ChromaDB client
+from chromadb import PersistentClient
+import httpx
+
+class RAGService:
+    def __init__(self):
+        # Only FastAPI has VectorDB client
+        self.chroma = PersistentClient(path="./chroma_data")
+        self.passages = self.chroma.get_collection("novel_passages")
+    
+    async def search_passages(self, query: str, novel_id: UUID):
+        # VectorDB query ONLY in FastAPI
+        results = self.passages.query(
+            query_texts=[query],
+            where={"novel_id": str(novel_id)},
+            n_results=10
+        )
+        
+        # Call Spring Boot for PostgreSQL metadata
+        async with httpx.AsyncClient() as client:
+            novel_metadata = await client.get(
+                f"http://spring-boot:8080/api/internal/novels/{novel_id}"
+            )
+        
+        return {"passages": results, "metadata": novel_metadata.json()}
+
+# ❌ WRONG: FastAPI trying to access PostgreSQL
+import psycopg2
+conn = psycopg2.connect("postgresql://...")  # NEVER DO THIS!
+from sqlalchemy import create_engine
+engine = create_engine("postgresql://...")  # FORBIDDEN!
+```
+
+### Inter-Service Communication Patterns (Pattern B: API Gateway)
+
+**Architecture Decision**: Frontend → Spring Boot (API Gateway) → FastAPI (Internal)
+
+**Pattern 1: Frontend → Spring Boot Proxy → FastAPI**
+
+```typescript
+// Frontend: 단일 API 클라이언트 (Spring Boot만 호출)
+import api from '@/services/api';
+
+// AI 검색 요청 (Spring Boot Proxy를 통해 FastAPI 호출)
+export const searchPassages = async (query: string, novelId: string) => {
+  return api.post('/ai/search/passages', {
+    query,
+    novel_id: novelId,
+    top_k: 10
+  });
+};
+
+// 대화 생성 요청
+export const generateConversation = async (scenarioId: string) => {
+  return api.post('/ai/generate', {
+    scenario_id: scenarioId
+  });
+};
+```
+
+```java
+// Spring Boot: AIProxyController - FastAPI 프록시
+@RestController
+@RequestMapping("/api/ai")
+public class AIProxyController {
+    
+    @Autowired
+    private WebClient fastApiClient;
+    
+    @PostMapping("/search/passages")
+    @PreAuthorize("isAuthenticated()")
+    public Mono<ResponseEntity<PassageSearchResponse>> searchPassages(
+        @RequestBody PassageSearchRequest request,
+        @CurrentUser User user
+    ) {
+        log.info("[Proxy] Passage search from user={}", user.getId());
+        
+        // FastAPI 내부 호출 (외부 노출 안 됨)
+        return fastApiClient.post()
+            .uri("/api/ai/search/passages")
+            .bodyValue(request)
+            .retrieve()
+            .toEntity(PassageSearchResponse.class)
+            .doOnSuccess(response -> 
+                log.info("[Proxy] Search completed: {} results", 
+                         response.getBody().getPassageIds().size())
+            );
+    }
+    
+    // SSE 스트리밍 프록시
+    @GetMapping(value = "/stream/{conversationId}", 
+                produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    @PreAuthorize("isAuthenticated()")
+    public Flux<ServerSentEvent<String>> streamMessage(
+        @PathVariable UUID conversationId,
+        @RequestParam String userMessage
+    ) {
+        return fastApiClient.get()
+            .uri(uriBuilder -> uriBuilder
+                .path("/api/ai/stream/" + conversationId)
+                .queryParam("user_message", userMessage)
+                .build())
+            .retrieve()
+            .bodyToFlux(String.class)
+            .map(token -> ServerSentEvent.<String>builder().data(token).build());
     }
 }
 ```
 
-**Frontend → Backends**:
+**Pattern 2: FastAPI → Spring Boot (PostgreSQL Metadata)**
 
-```typescript
-// In frontend: Separate API clients for each backend
-// services/coreApi.ts - Spring Boot endpoints
-export const coreApi = {
-  baseURL: "http://localhost:8080/api",
-  // Conversation CRUD, user management, etc.
-};
+```python
+# ai-backend: Call Spring Boot for PostgreSQL data
+class NovelIngestionService:
+    async def save_novel_metadata(self, metadata: dict) -> UUID:
+        """FastAPI NEVER touches PostgreSQL directly"""
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                "http://spring-boot:8080/api/internal/novels",
+                json=metadata,
+                headers={"X-Internal-Service": "fastapi"},
+                timeout=30.0
+            )
+            response.raise_for_status()
+            return UUID(response.json()["id"])
+    
+    async def ingest_novel(self, file_path: str):
+        # 1. Parse Gutenberg file
+        text = self.parse_gutenberg_file(file_path)
+        metadata = self.extract_metadata(text)
+        
+        # 2. Save metadata to PostgreSQL via Spring Boot
+        novel_id = await self.save_novel_metadata(metadata)
+        
+        # 3. Process content and save to VectorDB (FastAPI only)
+        passages = self.chunk_text(text)
+        embeddings = await self.generate_embeddings(passages)
+        await self.store_in_vectordb(novel_id, passages, embeddings)
+```
 
-// services/aiApi.ts - FastAPI endpoints
-export const aiApi = {
-  baseURL: "http://localhost:8000/api",
-  // RAG operations, character extraction, etc.
-};
+**Architecture Benefits (Pattern B)**:
+- ✅ **Security**: Prevents external FastAPI exposure, protects Gemini API keys
+- ✅ **Simplicity**: Frontend manages only 1 API client
+- ✅ **Centralized Logging**: All requests go through Spring Boot for unified tracking
+- ✅ **Cost**: Saves $700/year on SSL/domain costs (2 → 1)
+- ⚠️ **Latency**: +50ms proxy overhead (negligible 1% on 5000ms AI tasks)
+
+**Migration Guide**: [docs/PATTERN_B_MIGRATION_GUIDE.md](./docs/PATTERN_B_MIGRATION_GUIDE.md)  
+**Pattern Comparison**: [docs/FRONTEND_BACKEND_ACCESS_PATTERN_COMPARISON.md](./docs/FRONTEND_BACKEND_ACCESS_PATTERN_COMPARISON.md)
 ```
 
 ### Database Schema Patterns

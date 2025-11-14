@@ -54,30 +54,53 @@ Unlike traditional book discussion platforms, Gaji doesn't just let you talk _ab
 
 ## 🏗️ Architecture Overview
 
-Gaji uses a **microservices architecture** with clear separation of concerns:
+Gaji uses a **microservices architecture (Pattern B: API Gateway)** with clear separation of concerns:
 
 ```mermaid
 graph TD
-    A[Vue.js Frontend<br/>PrimeVue + PandaCSS] -->|HTTPS API| B[Spring Boot Core Backend<br/>Java 17+]
-    B -->|Internal API| C[FastAPI AI Backend<br/>Python 3.11+]
-    B -->|CRUD| D[PostgreSQL 15.x<br/>Fully Normalized Schema]
-    C -->|Vector Search| D
-    C -->|AI Requests| E[Local LLM<br/>Character Conversations]
+    A[Vue.js Frontend<br/>Single API Client] -->|HTTPS /api/*| B[Spring Boot API Gateway<br/>Port 8080]
+    B -->|/api/ai/* Proxy| C[FastAPI AI Backend<br/>Port 8000 Internal]
+    B -->|JPA CRUD| D[PostgreSQL 15.x<br/>Metadata Only]
+    C -->|Semantic Search| E[VectorDB ChromaDB/Pinecone<br/>Content + Embeddings]
+    C -->|AI Generation| F[Gemini 2.5 Flash<br/>Text + Embeddings]
 
     style A fill:#42b883,stroke:#333,stroke-width:2px
-    style B fill:#6db33f,stroke:#333,stroke-width:2px
-    style C fill:#3572A5,stroke:#333,stroke-width:2px
+    style B fill:#FFD54F,stroke:#333,stroke-width:3px
+    style C fill:#3572A5,stroke:#333,stroke-width:2px,stroke-dasharray: 5 5
     style D fill:#336791,stroke:#333,stroke-width:2px
-    style E fill:#4A4A4A,stroke:#333,stroke-width:2px,color:#fff
+    style E fill:#FF6347,stroke:#333,stroke-width:2px
+    style F fill:#4285F4,stroke:#333,stroke-width:2px
 ```
+
+**Architecture Pattern**: **Pattern B (API Gateway)** ✅
+- Frontend → Spring Boot ONLY (single entry point)
+- Spring Boot → FastAPI (internal proxy, not externally exposed)
+- Enhanced Security: FastAPI/Gemini API keys protected from external access
+- Cost Savings: $700/year saved on SSL/domains
+- Performance: +50ms overhead is negligible (1%) on 5000ms AI operations
 
 ### Technology Stack
 
 | Layer            | Technology                           | Purpose                                        |
 | ---------------- | ------------------------------------ | ---------------------------------------------- |
 | **Frontend**     | Vue 3, PrimeVue, PandaCSS, Pinia     | Modern SPA with component-based UI             |
-| **Core Backend** | Java 17+, Spring Boot 3.x            | Business logic, API gateway, user management   |
-| **AI Backend**   | Python 3.11+, FastAPI, LangChain     | RAG, character analysis, AI prompt generation  |
+| **API Gateway**  | Java 17+, Spring Boot 3.x (Port 8080) | **Single entry point**, AI proxy, business logic |
+| **AI Backend**   | Python 3.11+, FastAPI (Port 8000)    | **Internal only**, RAG, VectorDB, Gemini API   |
+| **Metadata DB**  | PostgreSQL 15.x (13 tables)          | Users, novels, scenarios, conversations        |
+| **Content DB**   | ChromaDB/Pinecone (5 collections)    | Passages, characters, locations, events, themes |
+| **AI/ML**        | Gemini 2.5 Flash, Gemini Embedding   | Text generation (768-dim embeddings)           |
+
+**Key Architecture Decisions**:
+- ✅ **Pattern B (API Gateway)**: Security, simplicity, centralized logging
+- ✅ **Hybrid Database**: PostgreSQL (ACID) + VectorDB (semantic search 10x faster)
+- ✅ **SSE Streaming**: Real-time AI responses, 93% fewer network requests
+- ✅ **Nx Monorepo**: Shared types via OpenAPI, 75% faster builds
+
+**Detailed Docs**:
+- [Architecture Details](./architecture.md)
+- [Pattern B Migration Guide](./docs/PATTERN_B_MIGRATION_GUIDE.md)
+- [Architecture Decision Records](./docs/ARCHITECTURE_DECISIONS.md)
+- [MSA Optimization](./docs/MSA_BACKEND_OPTIMIZATION.md)
 | **Database**     | PostgreSQL 15.x                      | Fully normalized relational schema (32 tables) |
 | **AI Service**   | Local LLM                            | Character conversations in alternate timelines |
 | **Deployment**   | Railway (backend), Vercel (frontend) | Cloud infrastructure                           |

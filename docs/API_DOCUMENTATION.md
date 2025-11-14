@@ -1,26 +1,65 @@
 # API Documentation
 
 **Project**: Gaji - Interactive Fiction Platform  
-**Last Updated**: 2025-11-13  
+**Last Updated**: 2025-01-13  
 **API Version**: v1  
-**Base URL**: `http://localhost:8080/api`
+
+---
+
+## Service Architecture
+
+This project uses a **Microservice Architecture (MSA)** with strict database access separation:
+
+- **Spring Boot (Port 8080)**: PostgreSQL ONLY (metadata, user data, social features)
+- **FastAPI (Port 8000)**: VectorDB ONLY (novel content, embeddings, semantic search)
+
+### Base URLs
+
+| Service       | Base URL                      | Database Access          |
+|---------------|-------------------------------|--------------------------|
+| Spring Boot   | `http://localhost:8080/api`   | PostgreSQL (JPA)         |
+| FastAPI       | `http://localhost:8000/api`   | VectorDB (ChromaDB)      |
+
+### Internal APIs
+
+Both services expose **internal endpoints** for cross-service communication:
+
+- **Spring Boot Internal API**: `/api/internal/*` (called by FastAPI for PostgreSQL data)
+- **FastAPI Internal API**: `/api/ai/*` (called by Spring Boot for VectorDB queries)
+
+**Frontend** calls both services directly:
+- Spring Boot: User management, scenario CRUD, social features
+- FastAPI: AI conversation, novel ingestion, semantic search
 
 ---
 
 ## Table of Contents
 
+### Spring Boot APIs (PostgreSQL)
 1. [Authentication](#authentication)
 2. [Scenarios](#scenarios)
-3. [Conversations](#conversations)
+3. [Conversations - Metadata](#conversations-metadata)
 4. [Users](#users)
 5. [Social Features](#social-features)
-6. [Search & Discovery](#search--discovery)
-7. [Tree Visualization](#tree-visualization)
-8. [Error Handling](#error-handling)
-9. [Performance Targets](#performance-targets)
-10. [Code Examples](#code-examples)
+6. [Internal API - Spring Boot](#internal-api-spring-boot)
+
+### FastAPI APIs (VectorDB)
+7. [Novel Ingestion](#novel-ingestion-fastapi)
+8. [AI Conversation](#ai-conversation-fastapi)
+9. [Semantic Search](#semantic-search-fastapi)
+10. [Character Extraction](#character-extraction-fastapi)
+11. [Internal API - FastAPI](#internal-api-fastapi)
+
+### Cross-Cutting Concerns
+12. [Error Handling](#error-handling)
+13. [Performance Targets](#performance-targets)
+14. [Code Examples](#code-examples)
 
 ---
+
+## Spring Boot APIs (PostgreSQL)
+
+> **Database Access**: PostgreSQL ONLY via JPA. For VectorDB queries, Spring Boot calls FastAPI `/api/ai/*`.
 
 ## Authentication
 
@@ -1294,6 +1333,450 @@ No body returned.
 
 - `401 Unauthorized`: Not authenticated
 - `404 Not Found`: Conversation or memo not found
+
+---
+
+## FastAPI APIs (VectorDB)
+
+> **Database Access**: VectorDB (ChromaDB) ONLY. For PostgreSQL queries, FastAPI calls Spring Boot `/api/internal/*`.
+
+### Novel Ingestion (FastAPI)
+
+#### Ingest Novel from Gutenberg Dataset
+
+Batch import novel from Project Gutenberg dataset (not real-time API).
+
+**Endpoint**: `POST /api/ai/novels/ingest`  
+**Service**: FastAPI (Port 8000)  
+**Authentication**: Admin only  
+**Performance**: Async (returns job ID immediately)
+
+**Request**:
+
+```json
+{
+  "novel_file_path": "/data/gutenberg/pg1234.txt",
+  "metadata": {
+    "title": "Pride and Prejudice",
+    "author": "Jane Austen",
+    "publication_year": 1813,
+    "genre": "Romance"
+  }
+}
+```
+
+**Response (202 Accepted)**:
+
+```json
+{
+  "job_id": "ingest-550e8400-e29b-41d4-a716-446655440000",
+  "status": "processing",
+  "estimated_duration_minutes": 15,
+  "message": "Novel ingestion started. Check status at /api/ai/novels/status/{job_id}"
+}
+```
+
+**What Happens Internally**:
+
+```python
+# FastAPI ai-backend/app/services/novel_ingestion.py
+async def ingest_novel(file_path: str, metadata: dict):
+    # 1. Parse Gutenberg file
+    text = parse_gutenberg_file(file_path)
+    
+    # 2. Save metadata to PostgreSQL via Spring Boot
+    async with httpx.AsyncClient() as client:
+        response = await client.post(
+            "http://spring-boot:8080/api/internal/novels",
+            json=metadata
+        )
+        novel_id = UUID(response.json()["id"])
+    
+    # 3. Chunk text (200-500 words per passage)
+    passages = chunk_text(text, chunk_size=300)
+    
+    # 4. Generate embeddings via Gemini Embedding API
+    embeddings = await generate_embeddings(passages)  # 768 dims
+    
+    # 5. Store in VectorDB (FastAPI only)
+    chroma = chromadb.PersistentClient(path="./chroma_data")
+    passages_collection = chroma.get_collection("novel_passages")
+    passages_collection.add(
+        ids=[f"{novel_id}-{i}" for i in range(len(passages))],
+        embeddings=embeddings,
+        documents=passages,
+        metadatas=[{"novel_id": str(novel_id), "chunk_index": i} for i in range(len(passages))]
+    )
+    
+    # 6. Extract characters via Gemini 2.5 Flash
+    characters = await extract_characters_with_llm(text)
+    characters_collection = chroma.get_collection("characters")
+    # ... store in VectorDB
+    
+    # 7. Update PostgreSQL status via Spring Boot
+    await client.patch(
+        f"http://spring-boot:8080/api/internal/novels/{novel_id}",
+        json={"ingestion_status": "completed"}
+    )
+```
+
+---
+
+#### Check Ingestion Status
+
+**Endpoint**: `GET /api/ai/novels/status/{job_id}`  
+**Service**: FastAPI  
+**Authentication**: Required  
+**Performance**: < 50ms
+
+**Response (200 OK)**:
+
+```json
+{
+  "job_id": "ingest-550e8400-e29b-41d4-a716-446655440000",
+  "status": "completed",
+  "novel_id": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+  "progress": {
+    "passages_processed": 1200,
+    "characters_extracted": 45,
+    "locations_extracted": 12,
+    "events_extracted": 67
+  },
+  "completed_at": "2025-01-13T11:00:00Z"
+}
+```
+
+**Status Values**: `pending`, `processing`, `completed`, `failed`
+
+---
+
+### Semantic Search (FastAPI)
+
+#### Search Similar Passages
+
+Semantic search for novel passages using VectorDB cosine similarity.
+
+**Endpoint**: `POST /api/ai/search/passages`  
+**Service**: FastAPI (Port 8000)  
+**Authentication**: Required  
+**Performance**: < 300ms
+
+**Request**:
+
+```json
+{
+  "query": "Hermione's bravery and intelligence",
+  "novel_id": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+  "top_k": 10,
+  "filters": {
+    "min_similarity": 0.7
+  }
+}
+```
+
+**Response (200 OK)**:
+
+```json
+{
+  "passages": [
+    {
+      "id": "7c9e6679-0-145",
+      "text": "Hermione raised her hand before Harry could finish...",
+      "similarity_score": 0.89,
+      "chunk_index": 145,
+      "metadata": {
+        "novel_id": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+        "novel_title": "Harry Potter and the Philosopher's Stone"
+      }
+    }
+  ],
+  "total_results": 10,
+  "query_embedding_time_ms": 45,
+  "search_time_ms": 102
+}
+```
+
+**How Spring Boot Uses This**:
+
+```java
+// Spring Boot core-backend/src/main/java/service/ScenarioService.java
+@Service
+public class ScenarioService {
+    @Autowired
+    private WebClient aiServiceClient;
+    
+    public Scenario createScenario(CreateScenarioRequest request) {
+        // Spring Boot calls FastAPI for VectorDB query
+        PassageSearchResponse passages = aiServiceClient.post()
+            .uri("/api/ai/search/passages")
+            .bodyValue(Map.of(
+                "query", request.getScenarioDescription(),
+                "novel_id", request.getNovelId(),
+                "top_k", 10
+            ))
+            .retrieve()
+            .bodyToMono(PassageSearchResponse.class)
+            .block();
+        
+        // Save to PostgreSQL with VectorDB passage IDs
+        Scenario scenario = new Scenario();
+        scenario.setVectordbPassageIds(passages.getPassageIds());
+        return scenarioRepository.save(scenario);  // PostgreSQL
+    }
+}
+```
+
+---
+
+### AI Conversation (FastAPI)
+
+#### Send Message to AI Character
+
+Generate AI response using RAG + Gemini 2.5 Flash.
+
+**Endpoint**: `POST /api/ai/conversations/{conversation_id}/messages`  
+**Service**: FastAPI (Port 8000)  
+**Authentication**: Required  
+**Performance**: < 3s (SSE streaming)
+
+**Request**:
+
+```json
+{
+  "content": "Hermione, what house would you truly choose?",
+  "scenario_id": "7c9e6679-7425-40de-944b-e07fc1f90ae7"
+}
+```
+
+**Response (Server-Sent Events)**:
+
+```
+event: message
+data: {"type": "start", "message_id": "msg-123"}
+
+event: message
+data: {"type": "token", "content": "You know"}
+
+event: message
+data: {"type": "token", "content": ", Harry"}
+
+event: message  
+data: {"type": "token", "content": ", I've always"}
+
+event: message
+data: {"type": "complete", "message_id": "msg-123", "total_tokens": 245}
+```
+
+**RAG Pipeline (FastAPI Only)**:
+
+```python
+# FastAPI ai-backend/app/services/rag_service.py
+class RAGService:
+    async def generate_response(self, conversation_id: UUID, user_message: str):
+        # 1. Get scenario from Spring Boot (PostgreSQL)
+        async with httpx.AsyncClient() as client:
+            scenario = await client.get(
+                f"http://spring-boot:8080/api/internal/scenarios/{scenario_id}"
+            )
+        
+        # 2. Search VectorDB for relevant passages (FastAPI only)
+        chroma = chromadb.PersistentClient(path="./chroma_data")
+        passages = chroma.get_collection("novel_passages")
+        results = passages.query(
+            query_texts=[user_message],
+            where={"novel_id": scenario["novel_id"]},
+            n_results=20
+        )
+        
+        # 3. Get character from VectorDB (FastAPI only)
+        characters = chroma.get_collection("characters")
+        character = characters.get(ids=[scenario["character_vectordb_id"]])
+        
+        # 4. Build prompt with RAG context
+        prompt = f"""
+        Character: {character["name"]}
+        Personality: {character["personality"]}
+        Scenario: {scenario["description"]}
+        
+        Relevant passages:
+        {results["documents"]}
+        
+        User: {user_message}
+        Assistant:
+        """
+        
+        # 5. Call Gemini 2.5 Flash
+        async for token in gemini_client.generate_stream(prompt):
+            yield token
+        
+        # 6. Save message to PostgreSQL via Spring Boot
+        await client.post(
+            f"http://spring-boot:8080/api/internal/conversations/{conversation_id}/messages",
+            json={"role": "assistant", "content": full_response}
+        )
+```
+
+---
+
+### Character Extraction (FastAPI)
+
+#### Extract Characters from Novel
+
+Use Gemini 2.5 Flash to extract character entities and traits.
+
+**Endpoint**: `POST /api/ai/characters/extract`  
+**Service**: FastAPI  
+**Authentication**: Admin only  
+**Performance**: Async (10-30 minutes for full novel)
+
+**Request**:
+
+```json
+{
+  "novel_id": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+  "extraction_mode": "full"
+}
+```
+
+**Response (202 Accepted)**:
+
+```json
+{
+  "job_id": "extract-chars-550e8400",
+  "status": "processing",
+  "estimated_duration_minutes": 20
+}
+```
+
+**Extracted Data Stored in VectorDB**:
+
+```python
+# FastAPI stores in VectorDB characters collection
+characters_collection.add(
+    ids=["char-hermione-granger"],
+    metadatas=[{
+        "name": "Hermione Granger",
+        "novel_id": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+        "role": "main",
+        "personality_traits": ["intelligent", "brave", "perfectionist"],
+        "first_appearance_chapter": 6
+    }],
+    documents=["Hermione Granger is a muggle-born witch..."]
+)
+```
+
+---
+
+## Internal APIs
+
+### Internal API - Spring Boot
+
+> **Purpose**: Allow FastAPI to query PostgreSQL metadata without direct DB access.  
+> **Base URL**: `http://spring-boot:8080/api/internal/*`  
+> **Authentication**: Internal service token (not exposed to frontend)
+
+#### Get Novel Metadata
+
+**Endpoint**: `GET /api/internal/novels/{novel_id}`  
+**Caller**: FastAPI  
+**Performance**: < 50ms
+
+**Response (200 OK)**:
+
+```json
+{
+  "id": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+  "title": "Harry Potter and the Philosopher's Stone",
+  "author": "J.K. Rowling",
+  "publication_year": 1997,
+  "ingestion_status": "completed",
+  "vectordb_collection_id": "novel_passages"
+}
+```
+
+---
+
+#### Create Novel Metadata
+
+**Endpoint**: `POST /api/internal/novels`  
+**Caller**: FastAPI (during ingestion)  
+**Performance**: < 100ms
+
+**Request**:
+
+```json
+{
+  "title": "Pride and Prejudice",
+  "author": "Jane Austen",
+  "publication_year": 1813,
+  "genre": "Romance",
+  "ingestion_status": "processing"
+}
+```
+
+**Response (201 Created)**:
+
+```json
+{
+  "id": "550e8400-e29b-41d4-a716-446655440000",
+  "title": "Pride and Prejudice",
+  "created_at": "2025-01-13T10:00:00Z"
+}
+```
+
+---
+
+#### Update Novel Status
+
+**Endpoint**: `PATCH /api/internal/novels/{novel_id}`  
+**Caller**: FastAPI (after ingestion complete)  
+**Performance**: < 50ms
+
+**Request**:
+
+```json
+{
+  "ingestion_status": "completed",
+  "total_passages": 1200,
+  "total_characters": 45
+}
+```
+
+---
+
+### Internal API - FastAPI
+
+> **Purpose**: Allow Spring Boot to query VectorDB without direct DB access.  
+> **Base URL**: `http://fastapi:8000/api/ai/*`  
+> **Authentication**: Internal service token (not exposed to frontend)
+
+#### Search Passages (Internal)
+
+**Endpoint**: `POST /api/ai/search/passages`  
+**Caller**: Spring Boot (for scenario creation, conversation context)  
+**Performance**: < 300ms
+
+(Same as public `/api/ai/search/passages` but with internal auth token)
+
+---
+
+#### Get Character by VectorDB ID
+
+**Endpoint**: `GET /api/ai/characters/{vectordb_id}`  
+**Caller**: Spring Boot (for conversation setup)  
+**Performance**: < 100ms
+
+**Response (200 OK)**:
+
+```json
+{
+  "id": "char-hermione-granger",
+  "name": "Hermione Granger",
+  "description": "Muggle-born witch, Gryffindor student...",
+  "personality_traits": ["intelligent", "brave", "perfectionist"],
+  "novel_id": "7c9e6679-7425-40de-944b-e07fc1f90ae7"
+}
+```
 
 ---
 
