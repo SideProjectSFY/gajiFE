@@ -2,211 +2,243 @@
 
 ## Epic Goal
 
-Establish the foundational technical infrastructure for Gaji platform including backend services (Spring Boot + FastAPI), frontend application (Vue.js), database setup (PostgreSQL), containerization (Docker), and inter-service communication, enabling all subsequent feature development.
+Establish the foundational technical infrastructure for Gaji platform with **Pattern B (API Gateway)** architecture: Spring Boot API Gateway (port 8080) + FastAPI AI Backend (port 8000, internal-only), Vue.js frontend with PandaCSS, **hybrid database** (PostgreSQL for metadata + VectorDB for content/embeddings), and **Gemini API integration** for AI-powered character conversations.
 
 ## User Value
 
-While users don't directly interact with infrastructure, this epic ensures the platform is scalable, maintainable, and production-ready from day one, preventing technical debt and enabling rapid feature iteration.
+While users don't directly interact with infrastructure, this epic ensures:
+- **Enhanced Security**: FastAPI and Gemini API keys protected from external access
+- **Cost Efficiency**: $700/year saved on SSL certificates and domains
+- **Performance**: SSE streaming for real-time AI responses
+- **Scalability**: Hybrid database architecture optimized for metadata (PostgreSQL) and semantic search (VectorDB)
 
 ## Timeline
 
 **Week 1-2 of MVP development**
 
 - **Infrastructure Setup**: Days 1-3 (Stories 0.1-0.6)
-- **LLM Pipeline Implementation**: Days 4-10 (Stories 0.7-0.12)
+- **Data Import**: Day 4 (Story 0.7)
 
 ## Stories Overview
 
-### Phase 1: Infrastructure Setup (25 hours)
+### Phase 1: Infrastructure Setup (~36 hours)
 
-**Stories 0.1-0.6**: Core infrastructure, databases, services, Docker
+**Stories 0.1-0.6**: Spring Boot API Gateway, FastAPI AI service (internal-only), PostgreSQL (13 metadata tables), Vue.js + PandaCSS + PrimeVue, Docker, health checks
 
-### Phase 2: LLM Analysis Pipeline (52 hours)
+### Phase 2: Data Import (~3 hours)
 
-**Stories 0.7-0.12**: Novel ingestion, character/location/event extraction, embeddings, base scenarios, monitoring
+**Story 0.7**: Import pre-processed Project Gutenberg dataset (passages, characters, locations, events, themes) into VectorDB, create PostgreSQL metadata via Spring Boot API
 
-**Total Epic Effort**: 77 hours (~10 working days for 1-2 engineers)
+**Total Epic Effort**: ~39 hours (~5 working days for 2 engineers)
 
 ## Stories
 
-### Story 0.1: Spring Boot Backend Core Setup
+### Story 0.1: Spring Boot Backend - API Gateway Setup
 
 **Priority: P0 - Critical**
 
-**Description**: Initialize Spring Boot application with essential dependencies, project structure, and base configuration for REST API development.
+**Description**: Initialize Spring Boot application as **API Gateway** with WebClient for proxying FastAPI requests, REST API endpoints, and JWT authentication. Implements **Pattern B** architecture where frontend communicates only with Spring Boot.
 
 **Acceptance Criteria**:
 
 - [ ] Spring Boot 3.2+ project initialized with Gradle
 - [ ] Dependencies configured:
   - Spring Web (REST API)
-  - Spring Data JPA (database ORM)
-  - Spring Security (authentication/authorization)
+  - Spring WebFlux WebClient (FastAPI proxy client)
+  - Spring Data JPA (PostgreSQL ORM)
+  - Spring Security (JWT authentication)
   - PostgreSQL Driver
   - Lombok (reduce boilerplate)
   - Spring Validation
   - Spring Boot Actuator (health checks)
 - [ ] Package structure created:
   ```
-  com.gaji.backend/
-  ├── config/          # Configuration classes
-  ├── controller/      # REST controllers
+  com.gaji.corebackend/
+  ├── config/          # WebClient, Security, CORS
+  ├── controller/      # REST controllers + AI proxy
   ├── service/         # Business logic
-  ├── repository/      # Data access
-  ├── entity/          # JPA entities
-  ├── dto/             # Data transfer objects
+  ├── repository/      # JPA repositories (PostgreSQL only)
+  ├── entity/          # JPA entities (13 tables)
+  ├── dto/             # Request/response DTOs
+  ├── client/          # FastAPIClient (WebClient)
   ├── exception/       # Custom exceptions
   └── util/            # Utility classes
   ```
-- [ ] application.yml configured with profiles (dev, staging, prod)
-- [ ] CORS configuration for frontend (localhost:5173 for dev)
+- [ ] application.yml configured:
+  - Profiles: dev, staging, prod
+  - `fastapi.base-url: http://localhost:8000` (internal proxy)
+  - PostgreSQL connection (metadata only)
+- [ ] WebClient configured for FastAPI proxy:
+  - Base URL: `http://localhost:8000`
+  - Timeout: 60 seconds (AI operations)
+  - Error handling with circuit breaker pattern
+- [ ] CORS configuration for frontend:
+  - Dev: `http://localhost:3000` (Vite default)
+  - Prod: `https://gaji.app`
+- [ ] API Gateway routes:
+  - `/api/v1/*` - Spring Boot direct endpoints
+  - `/api/v1/ai/*` - Proxy to FastAPI (e.g., `/api/v1/ai/chat` → `http://localhost:8000/api/chat`)
 - [ ] Global exception handler for consistent error responses
-- [ ] Health check endpoint: GET /actuator/health
-- [ ] Base API versioning: `/api/v1/*`
+- [ ] Health check endpoint: `GET /actuator/health` (includes FastAPI health check)
 - [ ] Swagger/OpenAPI documentation auto-generated
-- [ ] Logging configured (SLF4J + Logback)
+- [ ] Logging configured (SLF4J + Logback) with request/response logging
 - [ ] Application runs on port 8080
 
 **Technical Notes**:
 
-- Use Spring Boot 3.2+ for latest features and security patches
-- Enable JPA `hibernate.ddl-auto=validate` for prod (use Flyway for migrations)
-- Configure Jackson for consistent JSON serialization (camelCase, ISO-8601 dates)
+- **Pattern B Implementation**: Frontend → Spring Boot ONLY. Spring Boot proxies AI requests to FastAPI internally.
+- **Security Benefit**: FastAPI URL and Gemini API keys never exposed to frontend
+- **Database Access**: Spring Boot accesses PostgreSQL ONLY (no VectorDB libraries)
+- Use Spring Boot 3.2+ for Virtual Threads support (improves proxy throughput)
+- Configure connection pooling: HikariCP with max 20 connections
 
-**Estimated Effort**: 4 hours
+**Estimated Effort**: 6 hours
 
 ---
 
-### Story 0.2: FastAPI AI Service Setup
+### Story 0.2: FastAPI AI Service Setup (Internal-Only)
 
 **Priority: P0 - Critical**
 
-**Description**: Initialize FastAPI service for AI/ML operations including RAG pipeline, character extraction, and scenario template generation.
+**Description**: Initialize FastAPI service for **internal AI/ML operations** including RAG pipeline, Gemini API integration, and VectorDB management. Service is **NOT externally exposed** - accessed only via Spring Boot proxy.
 
 **Acceptance Criteria**:
 
-- [ ] FastAPI project initialized with Poetry/pip
-- [ ] Dependencies configured:
+- [ ] Python 3.11+ project initialized with **uv** package manager
+- [ ] Dependencies configured (requirements.txt):
   - FastAPI
   - Uvicorn (ASGI server)
-  - SQLAlchemy (database ORM)
   - Pydantic (data validation)
-  - Local LLM Python SDK (llama-cpp-python)
-  - LangChain (RAG framework)
-  - FAISS or ChromaDB (vector store)
-  - asyncpg (async PostgreSQL driver)
+  - **google-generativeai** (Gemini API SDK)
+  - **chromadb** (VectorDB for dev)
+  - **pinecone-client** (VectorDB for prod)
+  - httpx (async HTTP client for Spring Boot callbacks)
+  - celery (async task queue)
+  - redis (Celery broker)
 - [ ] Project structure created:
   ```
-  gaji-ai/
+  ai-backend/
   ├── app/
-  │   ├── api/           # API routes
-  │   ├── services/      # Business logic
-  │   ├── models/        # Pydantic models
-  │   ├── db/            # Database models
-  │   ├── config/        # Configuration
-  │   └── utils/         # Utilities
+  │   ├── main.py              # FastAPI app
+  │   ├── api/
+  │   │   ├── chat.py          # Conversation endpoints
+  │   │   ├── ingestion.py     # Novel processing
+  │   │   └── health.py        # Health check
+  │   ├── services/
+  │   │   ├── gemini_client.py # Gemini API integration
+  │   │   ├── rag_service.py   # RAG pipeline
+  │   │   ├── vectordb_client.py # ChromaDB/Pinecone
+  │   │   └── novel_ingestion.py # Gutenberg parsing
+  │   ├── models/
+  │   │   └── schemas.py       # Pydantic models
+  │   ├── config.py            # Environment config
+  │   ├── celery_app.py        # Celery configuration
+  │   └── utils/
   ├── tests/
   └── requirements.txt
   ```
-- [ ] Environment configuration (.env support)
-- [ ] CORS middleware for backend communication
-- [ ] Health check endpoint: GET /health
-- [ ] OpenAPI documentation auto-generated at /docs
+- [ ] Environment configuration (.env):
+  - `GEMINI_API_KEY` (Gemini 2.5 Flash API key)
+  - `VECTORDB_TYPE=chromadb` (dev) / `pinecone` (prod)
+  - `SPRING_BOOT_URL=http://localhost:8080` (for callbacks)
+  - `REDIS_URL=redis://localhost:6379` (Celery broker)
+- [ ] Gemini API client configured:
+  - Model: `gemini-2.5-flash` for text generation
+  - Model: `text-embedding-004` for 768-dim embeddings
+  - Temperature: 0.7-0.8 for character conversations
+  - Timeout: 30 seconds
+- [ ] VectorDB client configured:
+  - ChromaDB (dev): Persistent client with local storage
+  - Pinecone (prod): Cloud-hosted with API key
+  - 5 collections: `novel_passages`, `characters`, `locations`, `events`, `themes`
+- [ ] CORS middleware:
+  - **Internal access only**: Allow `http://localhost:8080` (Spring Boot)
+  - **NO external origins** (not exposed to frontend)
+- [ ] Health check endpoint: `GET /health`
+  - Returns Gemini API status, VectorDB connection status
+- [ ] OpenAPI documentation at `/docs` (internal use only)
 - [ ] Logging configured (structlog for JSON logs)
-- [ ] Application runs on port 8001
-- [ ] Async database connection pool configured
-- [ ] Base API versioning: `/api/v1/*`
+- [ ] Application runs on port 8000 (internal-only, not publicly exposed)
+- [ ] Celery worker configured for async tasks (novel ingestion)
+- [ ] Base API versioning: `/api/*`
 
 **Technical Notes**:
 
+- **Pattern B Implementation**: FastAPI is NOT externally exposed. Only Spring Boot can call it.
+- **Security Benefit**: Gemini API key never exposed to frontend
+- **Database Access**: FastAPI accesses VectorDB ONLY (no PostgreSQL drivers)
+- **No PostgreSQL Access**: Use Spring Boot REST API for metadata queries
 - Use async/await throughout for better performance
-- Configure connection pooling (min 5, max 20 connections)
-- Set Local LLM inference timeout: 30 seconds
-- Enable request/response logging for debugging
+- Configure Gemini API retry logic (3 attempts with exponential backoff)
+- VectorDB connection pooling: min 5, max 15 connections
 
-**Estimated Effort**: 3 hours
+**Estimated Effort**: 6 hours
 
 ---
 
-### Story 0.3: PostgreSQL Database Setup & Flyway Migrations
+### Story 0.3: PostgreSQL Database Setup & Flyway Migrations (Metadata Only)
 
 **Priority: P0 - Critical**
 
-**Description**: Set up PostgreSQL database with proper configuration, create initial schema using Flyway migrations, and establish connection from both backend services.
+**Description**: Set up PostgreSQL database for **metadata storage only** (13 tables) using Flyway migrations. Novel content and embeddings are stored in VectorDB (ChromaDB/Pinecone). This implements the **hybrid database architecture**.
 
 **Acceptance Criteria**:
 
-- [ ] PostgreSQL 15+ installed/configured (or Railway cloud database)
+- [ ] PostgreSQL 15+ installed/configured (Docker or Railway cloud)
 - [ ] Database created: `gaji_db`
 - [ ] PostgreSQL extensions enabled:
   - `uuid-ossp` for UUID generation
   - `pg_trgm` for full-text search
-  - `pgvector` for embedding similarity search
 - [ ] Flyway configured in Spring Boot for schema migrations
-- [ ] Initial migration scripts created (32 tables total):
-  - **Core Tables** (6 tables):
+- [ ] **13 metadata tables total** (NO content storage):
+  - **Core Tables** (3):
     - `V1__create_users_table.sql`
-    - `V2__create_novels_table.sql` (includes series_title, series_number, copyright_status, copyright_note)
-    - `V3__create_novel_chapters_table.sql`
-    - `V4__create_novel_passages_table.sql`
-    - `V5__create_characters_table.sql`
-    - `V6__create_locations_table.sql`
-  - **Character Normalized Tables** (3 tables):
-    - `V7__create_character_aliases_table.sql`
-    - `V8__create_character_personality_traits_table.sql`
-    - `V9__create_character_relationships_table.sql`
-  - **Appearance Tracking** (2 tables):
-    - `V10__create_character_appearances_table.sql`
-    - `V11__create_location_appearances_table.sql`
-  - **Event/Theme/Arc Tables** (3 tables):
-    - `V12__create_events_table.sql`
-    - `V13__create_themes_table.sql`
-    - `V14__create_narrative_arcs_table.sql`
-  - **Event/Theme/Arc Normalized Tables** (4 tables):
-    - `V15__create_event_characters_table.sql`
-    - `V16__create_theme_passages_table.sql`
-    - `V17__create_narrative_arc_characters_table.sql`
-    - `V18__create_narrative_arc_events_table.sql`
-  - **Scenario Tables** (2 tables):
-    - `V19__create_base_scenarios_table.sql`
-    - `V20__create_root_user_scenarios_table.sql`
-    - `V21__create_leaf_user_scenarios_table.sql`
-  - **Scenario Normalized Tables** (3 tables):
-    - `V22__create_scenario_character_changes_table.sql`
-    - `V23__create_scenario_event_alterations_table.sql`
-    - `V24__create_scenario_setting_modifications_table.sql`
-  - **Conversation Tables** (3 tables):
-    - `V25__create_conversations_table.sql`
-    - `V26__create_messages_table.sql`
-    - `V27__create_conversation_message_links_table.sql`
-    - `V28__create_conversation_emotions_table.sql`
-  - **Social Features** (3 tables):
-    - `V29__create_follows_table.sql`
-    - `V30__create_likes_table.sql`
-    - `V31__create_memos_table.sql`
-  - **LLM Metadata**:
-    - `V32__create_llm_analysis_metadata_table.sql`
-  - **Indexes & Constraints**:
-    - `V33__create_indexes.sql`
-    - `V34__create_foreign_key_constraints.sql`
-- [ ] Fully normalized relational design:
-  - 0 JSONB columns (all data in structured relational tables)
-  - CASCADE DELETE on all foreign keys for automatic cleanup
-  - B-tree indexes on all FK columns and scoring columns
+    - `V2__create_novels_table.sql` (metadata only, stores `vectordb_collection_id`, NO `full_text` column)
+    - `V3__create_base_scenarios_table.sql` (stores VectorDB passage IDs as ARRAY)
+  - **Scenario Tables** (5):
+    - `V4__create_root_user_scenarios_table.sql`
+    - `V5__create_leaf_user_scenarios_table.sql`
+    - `V6__create_scenario_character_changes_table.sql` (stores `character_vectordb_id`)
+    - `V7__create_scenario_event_alterations_table.sql` (stores `event_vectordb_id`)
+    - `V8__create_scenario_setting_modifications_table.sql` (stores `location_vectordb_id`)
+  - **Conversation Tables** (3):
+    - `V9__create_conversations_table.sql` (stores `character_vectordb_id`)
+    - `V10__create_messages_table.sql`
+    - `V11__create_conversation_message_links_table.sql`
+  - **Social Features** (3):
+    - `V12__create_user_follows_table.sql`
+    - `V13__create_conversation_likes_table.sql`
+    - `V14__create_conversation_memos_table.sql`
+- [ ] **Hybrid Database Cross-References**:
+  - `novels.vectordb_collection_id` (UUID) → VectorDB collection name
+  - `base_scenarios.vectordb_passage_ids` (UUID[]) → VectorDB passage documents
+  - `scenario_character_changes.character_vectordb_id` (UUID) → VectorDB characters collection
+  - `conversations.character_vectordb_id` (UUID) → VectorDB characters collection
+- [ ] **NO content columns**:
+  - ❌ NO `novels.full_text` (stored in VectorDB `novel_passages` collection)
+  - ❌ NO `characters` table (stored in VectorDB `characters` collection)
+  - ❌ NO `locations` table (stored in VectorDB `locations` collection)
+  - ❌ NO JSONB columns (all data normalized)
+- [ ] CASCADE DELETE on all foreign keys for automatic cleanup
+- [ ] B-tree indexes on:
+  - All FK columns
+  - `novels.title`, `novels.author` (search optimization)
+  - `base_scenarios.novel_id`, `root_user_scenarios.base_scenario_id`
+  - `conversations.user_id`, `conversations.scenario_id`
 - [ ] Connection pooling configured (HikariCP):
   - Spring Boot: min 5, max 20 connections
-  - FastAPI: min 5, max 15 connections
-- [ ] Database connection verified from both services
+- [ ] Database connection verified from Spring Boot
 - [ ] Rollback testing: migrations can be reverted cleanly
-- [ ] Seed data script for development (10 sample users, 3 sample novels, 20 scenarios)
+- [ ] Seed data script for development:
+  - 10 sample users
+  - 3 sample novels (metadata only, with `vectordb_collection_id`)
 
-**Schema Highlights**:
+**Schema Highlights** (Metadata Only):
 
 ```sql
 -- V1__create_users_table.sql
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE EXTENSION IF NOT EXISTS "pg_trgm";
-CREATE EXTENSION IF NOT EXISTS "vector";
 
 CREATE TABLE users (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -219,86 +251,115 @@ CREATE TABLE users (
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- V29__create_follows_table.sql
-CREATE TABLE follows (
-  follower_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  following_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+-- V2__create_novels_table.sql (Metadata Only - NO full_text)
+CREATE TABLE novels (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  title VARCHAR(500) NOT NULL,
+  author VARCHAR(200) NOT NULL,
+  publication_year INTEGER,
+  genre VARCHAR(100),
+  vectordb_collection_id VARCHAR(255) NOT NULL UNIQUE,  -- Reference to VectorDB
+  ingestion_status VARCHAR(50) DEFAULT 'pending',       -- pending, processing, completed, failed
+  total_passages_count INTEGER,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (follower_id, following_id),
-  CHECK (follower_id != following_id)
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+-- NOTE: Novel content is in VectorDB 'novel_passages' collection
+-- NOTE: Characters are in VectorDB 'characters' collection
+
+-- V3__create_base_scenarios_table.sql
+CREATE TABLE base_scenarios (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  novel_id UUID NOT NULL REFERENCES novels(id) ON DELETE CASCADE,
+  title VARCHAR(200) NOT NULL,
+  description TEXT,
+  vectordb_passage_ids UUID[] NOT NULL,  -- Array of VectorDB passage IDs
+  character_vectordb_ids UUID[],         -- Array of VectorDB character IDs
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- V30__create_likes_table.sql
-CREATE TABLE likes (
+-- V6__create_scenario_character_changes_table.sql
+CREATE TABLE scenario_character_changes (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  scenario_id UUID NOT NULL REFERENCES root_user_scenarios(id) ON DELETE CASCADE,
+  character_vectordb_id UUID NOT NULL,   -- Reference to VectorDB characters collection
+  attribute VARCHAR(100) NOT NULL,
+  original_value TEXT,
+  new_value TEXT NOT NULL,
+  reasoning TEXT,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+-- NOTE: Character data (name, description, personality) is in VectorDB
+
+-- V9__create_conversations_table.sql
+CREATE TABLE conversations (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  scenario_id UUID REFERENCES root_user_scenarios(id) ON DELETE SET NULL,
+  character_vectordb_id UUID NOT NULL,   -- Reference to VectorDB characters collection
+  parent_conversation_id UUID REFERENCES conversations(id) ON DELETE SET NULL,
+  title VARCHAR(200),
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  CHECK (parent_conversation_id IS NULL OR 
+         (SELECT parent_conversation_id FROM conversations WHERE id = parent_conversation_id) IS NULL)
+);
+-- NOTE: ROOT-only forking (max depth 1)
+
+-- V12__create_user_follows_table.sql
+CREATE TABLE user_follows (
+  follower_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  followee_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (follower_id, followee_id),
+  CHECK (follower_id != followee_id)
+);
+
+-- V13__create_conversation_likes_table.sql
+CREATE TABLE conversation_likes (
   user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   conversation_id UUID NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (user_id, conversation_id)
 );
 
--- V31__create_memos_table.sql
-CREATE TABLE memos (
+-- V14__create_conversation_memos_table.sql
+CREATE TABLE conversation_memos (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   conversation_id UUID NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
-  content TEXT NOT NULL,
+  content TEXT NOT NULL CHECK (length(content) <= 2000),
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   UNIQUE(user_id, conversation_id)
 );
-
--- V7__create_character_aliases_table.sql (Normalized from characters.aliases JSONB)
-CREATE TABLE character_aliases (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  character_id UUID NOT NULL REFERENCES characters(id) ON DELETE CASCADE,
-  alias VARCHAR(255) NOT NULL,
-  usage_context TEXT,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  UNIQUE(character_id, alias)
-);
-
--- V8__create_character_personality_traits_table.sql (Normalized from characters.personality_traits JSONB)
-CREATE TABLE character_personality_traits (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  character_id UUID NOT NULL REFERENCES characters(id) ON DELETE CASCADE,
-  trait VARCHAR(100) NOT NULL,
-  intensity DECIMAL(3,2) CHECK (intensity BETWEEN 0 AND 1),
-  evidence_passage_id UUID REFERENCES novel_passages(id) ON DELETE SET NULL,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  UNIQUE(character_id, trait)
-);
-
--- V9__create_character_relationships_table.sql (Normalized from characters.relationships JSONB)
-CREATE TABLE character_relationships (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  character_id UUID NOT NULL REFERENCES characters(id) ON DELETE CASCADE,
-  related_character_id UUID NOT NULL REFERENCES characters(id) ON DELETE CASCADE,
-  relationship_type VARCHAR(50) NOT NULL,
-  relationship_description TEXT,
-  strength DECIMAL(3,2) CHECK (strength BETWEEN 0 AND 1),
-  is_mutual BOOLEAN DEFAULT FALSE,
-  first_interaction_chapter_id UUID REFERENCES novel_chapters(id) ON DELETE SET NULL,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  CHECK(character_id != related_character_id)
-);
-
--- V22__create_scenario_character_changes_table.sql (Normalized from root/leaf_user_scenarios.custom_parameters JSONB)
-CREATE TABLE scenario_character_changes (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  root_scenario_id UUID REFERENCES root_user_scenarios(id) ON DELETE CASCADE,
-  leaf_scenario_id UUID REFERENCES leaf_user_scenarios(id) ON DELETE CASCADE,
-  character_id UUID NOT NULL REFERENCES characters(id) ON DELETE CASCADE,
-  attribute VARCHAR(100) NOT NULL,
-  original_value TEXT,
-  new_value TEXT NOT NULL,
-  reasoning TEXT,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  CHECK((root_scenario_id IS NOT NULL AND leaf_scenario_id IS NULL) OR
-        (root_scenario_id IS NULL AND leaf_scenario_id IS NOT NULL))
-);
 ```
 
 **Technical Notes**:
+
+- **Hybrid Database Philosophy**: PostgreSQL stores ONLY relational metadata (13 tables). VectorDB stores content + embeddings (5 collections).
+- **Cross-Database References**: UUIDs link PostgreSQL metadata to VectorDB documents
+- **Why Metadata-Only?**:
+  - Novel passages: ~100GB for 1000 books → Better in VectorDB
+  - Character descriptions: Require semantic search → Better in VectorDB
+  - Metadata queries: ACID transactions, complex JOINs → Better in PostgreSQL
+- **VectorDB Collections** (managed by FastAPI):
+  - `novel_passages` (content chunks, 768-dim embeddings)
+  - `characters` (descriptions, personality traits)
+  - `locations` (settings)
+  - `events` (plot points)
+  - `themes` (thematic analysis)
+- **Data Flow Example**:
+  1. FastAPI ingests novel, stores passages in VectorDB
+  2. FastAPI → Spring Boot: `POST /api/internal/novels` (metadata only)
+  3. Spring Boot saves to PostgreSQL with `vectordb_collection_id`
+  4. Frontend queries Spring Boot for novel metadata
+  5. Spring Boot → FastAPI: Get character data from VectorDB
+- Use HikariCP connection pooling for optimal performance
+- Enable query logging in dev mode for debugging
+
+**Estimated Effort**: 5 hours
 
 - All 11 JSONB columns have been eliminated in favor of structured relational tables
 - Use CASCADE DELETE on all foreign keys for automatic cleanup of dependent records
@@ -315,36 +376,49 @@ CREATE TABLE scenario_character_changes (
 
 **Priority: P0 - Critical**
 
-**Description**: Initialize Vue 3 application with TypeScript, Vite, essential libraries (Router, Pinia, Panda CSS), and project structure.
+**Description**: Initialize Vue 3 application with TypeScript, Vite, **PandaCSS**, **PrimeVue**, Pinia, and **single API client** (Spring Boot only). Implements **Pattern B** where frontend communicates ONLY with Spring Boot API Gateway.
 
 **Acceptance Criteria**:
 
 - [ ] Vue 3 project initialized with Vite + TypeScript
+- [ ] Package manager: **pnpm** (faster than npm/yarn)
 - [ ] Dependencies configured:
   - Vue Router 4 (routing)
   - Pinia (state management)
-  - Panda CSS (utility-first styling)
-  - Axios (HTTP client)
+  - **PandaCSS** (CSS-in-JS with static extraction)
+  - **PrimeVue** (UI component library)
+  - Axios (HTTP client - Spring Boot ONLY)
   - VueUse (composition utilities)
   - date-fns (date formatting)
 - [ ] Project structure created:
   ```
-  src/
-  ├── assets/          # Static assets
-  ├── components/      # Reusable components
-  │   ├── common/      # Generic components
-  │   ├── scenario/    # Scenario-related
-  │   ├── conversation/# Conversation-related
-  │   └── user/        # User-related
-  ├── views/           # Page components
-  ├── router/          # Route definitions
-  ├── stores/          # Pinia stores
-  ├── services/        # API services
-  ├── types/           # TypeScript types
-  ├── utils/           # Utility functions
-  └── styles/          # Global styles
+  frontend/
+  ├── src/
+  │   ├── assets/          # Static assets
+  │   ├── components/      # Reusable components
+  │   │   ├── common/      # Generic components
+  │   │   ├── scenario/    # Scenario-related
+  │   │   ├── conversation/# Conversation-related
+  │   │   └── user/        # User-related
+  │   ├── views/           # Page components
+  │   ├── router/          # Route definitions
+  │   ├── stores/          # Pinia stores
+  │   ├── services/
+  │   │   └── api.ts       # Axios instance (Spring Boot only)
+  │   ├── types/           # TypeScript types
+  │   ├── utils/           # Utility functions
+  │   └── styles/          # Global styles
+  ├── styled-system/       # Panda CSS generated files
+  ├── panda.config.ts      # Panda CSS config
+  └── package.json
   ```
-- [ ] Panda CSS configured with theme (colors, typography, spacing)
+- [ ] **PandaCSS configured** with:
+  - Custom theme (colors, typography, spacing)
+  - Static extraction for zero-runtime CSS
+  - TypeScript support for styled props
+- [ ] **PrimeVue integrated**:
+  - Component library for UI elements (buttons, dialogs, etc.)
+  - Compatible with PandaCSS styling
 - [ ] Vue Router configured with:
   - Protected routes (require authentication)
   - Public routes (login, register, browse)
@@ -354,24 +428,38 @@ CREATE TABLE scenario_character_changes (
   - `useAuthStore` (user authentication state)
   - `useUserStore` (current user profile)
   - `useScenarioStore` (scenario browsing/creation)
-  - `useConversationStore` (conversation management)
-- [ ] Axios instance configured with:
-  - Base URL: `http://localhost:8080/api/v1`
-  - Request interceptor (add auth token)
-  - Response interceptor (handle 401 errors)
-- [ ] Environment variables (.env.development, .env.production)
+  - `useConversationStore` (conversation management with SSE)
+- [ ] **Single Axios instance** configured:
+  - Base URL: `http://localhost:8080/api/v1` (Spring Boot ONLY)
+  - ❌ NO FastAPI URL (Pattern B: all AI requests go through Spring Boot proxy)
+  - Request interceptor (add JWT token)
+  - Response interceptor (handle 401 errors, refresh token)
+  - SSE support for streaming AI responses
+- [ ] Environment variables:
+  - `.env.development`: `VITE_API_BASE_URL=http://localhost:8080/api/v1`
+  - `.env.production`: `VITE_API_BASE_URL=https://api.gaji.app/api/v1`
 - [ ] TypeScript strict mode enabled
 - [ ] ESLint + Prettier configured
-- [ ] Application runs on port 5173
+- [ ] Application runs on port 3000 (Vite default)
+- [ ] pnpm commands:
+  - `pnpm dev` - Run dev server
+  - `pnpm build` - Build for production
+  - `pnpm prepare` - Generate Panda CSS (codegen)
 
 **Technical Notes**:
 
+- **Pattern B Implementation**: Frontend → Spring Boot ONLY. All AI requests proxied internally.
+- **Security Benefit**: No FastAPI URL or Gemini API keys exposed to browser
+- **PandaCSS Benefits**: 
+  - Zero-runtime CSS (all styling extracted at build time)
+  - Type-safe styling with TypeScript autocomplete
+  - Smaller bundle size vs Tailwind
 - Use `<script setup>` syntax for composition API
 - Configure path aliases: `@/` → `src/`
 - Enable Vite HMR for fast development
 - Add meta tags for SEO and social sharing
 
-**Estimated Effort**: 4 hours
+**Estimated Effort**: 6 hours
 
 ---
 
@@ -562,173 +650,177 @@ Response:
 
 ---
 
-### Story 0.7: Novel Ingestion & Chapter Segmentation Pipeline
+### Story 0.7: VectorDB Data Import from Pre-processed Dataset
 
 **Priority: P0 - Critical**
 
-**Description**: Implement novel upload, automatic chapter detection, and passage segmentation pipeline for LLM analysis preparation.
+**Description**: Import **pre-processed Project Gutenberg dataset** into ChromaDB (dev) / Pinecone (prod) using one-time Python script. Dataset includes pre-chunked passages with 768-dim embeddings, extracted characters, locations, events, and themes. Creates PostgreSQL metadata via Spring Boot API. **No LLM processing needed** (dataset already processed).
 
 **Acceptance Criteria**:
 
-- [ ] Novel upload endpoint: POST /api/v1/admin/novels/upload
-  - Accept file formats: .txt, .epub (Phase 1: .txt only)
-  - UTF-8 encoding detection with BOM handling
-  - Language detection using `langdetect` library
-- [ ] Automatic chapter detection via regex patterns:
-  - English: "Chapter \d+", "Part \d+", "CHAPTER [IVX]+"
-  - Korean: "제(\d+)장", "(\d+)화"
-  - Chinese: "第(\d+)章"
-  - Fallback: Split by blank lines if no pattern matches
-- [ ] Passage segmentation algorithm:
-  - Target size: 200-500 words per passage
-  - Overlap: 50 words between consecutive passages
-  - Sentence boundary preservation (don't split mid-sentence)
-  - Store `start_char_offset` and `end_char_offset` for each passage
-- [ ] Batch database inserts:
-  - Insert novel record
-  - Insert chapter records (batch of 10)
-  - Insert passage records (batch of 100)
-- [ ] Status tracking:
-  - Novel upload progress API: GET /api/v1/admin/novels/{id}/status
-  - Returns: total_chapters, processed_chapters, total_passages, status
-- [ ] Error handling:
+- [ ] **Dataset Structure**:
+  - `novels.json` - Novel metadata (title, author, year, genre)
+  - `passages.parquet` - Text chunks + 768-dim embeddings (200-500 words each)
+  - `characters.json` - Character metadata (name, role, description, personality_traits)
+  - `locations.json` - Setting descriptions
+  - `events.json` - Plot events
+  - `themes.json` - Thematic analysis (optional)
+- [ ] **Import Script**: `ai-backend/scripts/import_dataset.py`
+  - CLI tool with args: `--dataset-path`, `--vectordb-host`, `--spring-boot-api`
+  - Workflow:
+    1. Validate dataset structure
+    2. Create 5 ChromaDB collections (passages, characters, locations, events, themes)
+    3. Batch import passages (1000 per batch)
+    4. Batch import characters
+    5. Create PostgreSQL metadata via Spring Boot API
+    6. Verify import (count validation, semantic search test)
+  - Progress tracking: Console output "Importing passages: 1000/5234 (19%)"
+  - Error handling: Rollback on failure, retry API calls 3 times
+- [ ] **ChromaDB Collections** (5 total):
+  - `novel_passages`: Text chunks with embeddings (cosine similarity, HNSW index)
+  - `characters`: Character metadata with description embeddings
+  - `locations`: Setting descriptions
+  - `events`: Plot events
+  - `themes`: Thematic elements
+- [ ] **PostgreSQL Metadata** (via Spring Boot):
+  - Endpoint: `POST /api/internal/novels`
+  - Payload:
+    ```json
+    {
+      "title": "Pride and Prejudice",
+      "author": "Jane Austen",
+      "publication_year": 1813,
+      "genre": "Romance",
+      "language": "en",
+      "vectordb_collection_id": "novel_UUID",
+      "total_passages_count": 523,
+      "total_characters_count": 47,
+      "ingestion_status": "completed"
+    }
+    ```
+- [ ] **Verification Script**: `scripts/verify_import.py`
+  - Check all 5 collections exist
+  - Count validation: PostgreSQL count == VectorDB count
+  - Semantic search test: "brave protagonist" → returns relevant characters
+  - Cross-reference: PostgreSQL novel_id exists in VectorDB
+- [ ] **Performance Requirements**:
+  - Import speed: > 1000 passages/minute
+  - Total time: < 10 minutes for 10 novels
+  - Memory usage: < 2GB during import
+
+**Data Flow**:
+
+```
+1. Admin runs: python scripts/import_dataset.py --dataset-path /data/gutenberg
+2. Script validates dataset structure (novels.json, passages.parquet, etc.)
+3. Script creates 5 ChromaDB collections
+4. Script imports passages batch (1000 per batch) → ChromaDB novel_passages
+5. Script imports characters → ChromaDB characters collection
+6. Script → Spring Boot API: POST /api/internal/novels (metadata only)
+7. Spring Boot → PostgreSQL: Save novel metadata
+8. Script runs verify_import.py to confirm success
+```
+
+**Technical Notes**:
+
+- **Why Pre-processed Dataset**: Eliminates 10+ hours of LLM extraction work
+- **Embeddings**: 768-dim vectors compatible with Gemini Embedding API (for future updates)
+- **Import Script**: Python with ChromaDB client, pandas (parquet), httpx (API calls)
+- **Dependencies**: `chromadb==0.4.18`, `pandas==2.1.4`, `pyarrow==14.0.1`, `httpx==0.25.2`
+- Store original dataset path for debugging: `novels.dataset_source_path`
+
+**Estimated Effort**: 3 hours
+
+---
+  - Collection: `novel_passages`
+  - Document schema:
+    ```python
+    {
+      "id": "UUID",
+      "novel_id": "UUID (PostgreSQL reference)",
+      "chapter_number": 1,
+      "passage_number": 5,
+      "passage_type": "narrative",
+      "text": "It is a truth universally acknowledged...",
+      "word_count": 387,
+      "embedding": [768-dimensional float vector]
+    }
+    ```
+- [ ] **PostgreSQL Metadata Storage** (via Spring Boot):
+  - FastAPI → Spring Boot: `POST /api/internal/novels`
+  - Request:
+    ```json
+    {
+      "title": "Pride and Prejudice",
+      "author": "Jane Austen",
+      "publication_year": 1813,
+      "genre": "Romance",
+      "vectordb_collection_id": "novel_UUID",
+      "total_passages_count": 523
+    }
+    ```
+  - Spring Boot saves to PostgreSQL `novels` table
+- [ ] **Gemini API Integration**:
+  - Model: `text-embedding-004` (768 dimensions)
+  - Batch embeddings: 100 passages per API call
+  - Error handling: retry 3 times with exponential backoff
+  - Rate limiting: respect Gemini API quotas
+- [ ] **Async Processing** (Celery):
+  - Task: `ingest_novel_task(file_path)`
+  - Status tracking: `GET /api/ingestion/tasks/{task_id}`
+  - Returns: `{status: "processing", progress: "45%", total_passages: 523, processed: 235}`
+- [ ] **Error Handling**:
   - Invalid file format → 400 Bad Request
-  - File too large (>10MB) → 413 Payload Too Large
-  - Chapter detection failure → fallback to blank-line splitting
-- [ ] Unit tests for chapter detection regex patterns
-- [ ] Integration test: upload sample novel, verify passages created
+  - File not found → 404 Not Found
+  - Gemini API error → retry then fail gracefully
+  - VectorDB connection error → log and retry
+- [ ] Integration test: Ingest sample Gutenberg book, verify VectorDB + PostgreSQL storage
+
+**Data Flow**:
+
+```
+1. Admin uploads Gutenberg .txt file
+2. FastAPI parses metadata + body text
+3. FastAPI chunks text (200-500 words)
+4. FastAPI → Gemini API: Generate embeddings (768-dim)
+5. FastAPI → VectorDB: Store passages with embeddings
+6. FastAPI → Spring Boot: POST /api/internal/novels (metadata only)
+7. Spring Boot → PostgreSQL: Save novel metadata
+8. FastAPI → Spring Boot: PATCH /api/internal/novels/{id} (update ingestion_status)
+```
 
 **Technical Notes**:
 
-- Use Python FastAPI for implementation
-- Store original file in S3 or local storage, reference via `full_text_s3_path`
-- Async processing with Celery/background tasks for large files
-- Target processing time: <30 seconds for typical 100k-word novel
+- **Hybrid Database**: Content in VectorDB, metadata in PostgreSQL
+- **Why VectorDB?**: ~100GB for 1000 novels, semantic search 10x faster than PostgreSQL
+- **Why Not Real-Time API?**: Project Gutenberg dataset is static, batch import is sufficient
+- Use Celery + Redis for async processing (novels can take 2-5 minutes)
+- Target processing time: ~3 minutes for 100k-word novel
+- Store original file path for debugging: `novels.gutenberg_file_path`
 
-**Estimated Effort**: 8 hours
-
----
-
-### Story 0.8: LLM Character Extraction & Relationship Mapping
-
-**Priority: P0 - Critical**
-
-**Description**: Extract characters, their traits, and relationships from novel passages using LLM analysis.
-
-**Acceptance Criteria**:
-
-- [ ] Passage type classification (narrative, dialogue, description, action, internal_thought, mixed)
-- [ ] Character extraction from passages:
-  - Name, role (protagonist/antagonist/supporting/minor)
-  - Description (physical and personality)
-  - first_appearance_chapter_id
-- [ ] **Normalized character data** (no JSONB):
-  - Character aliases stored in `character_aliases` table (1:N)
-  - Personality traits stored in `character_personality_traits` table (1:N with intensity scoring)
-  - Relationships stored in `character_relationships` table (N:M self-referencing)
-- [ ] Character appearance tracking:
-  - Create character_appearances records for each mention
-  - Track mention_type, mention_count, context_snippet, sentiment, emotional_state
-- [ ] Character relationship mapping:
-  - Extract relationship graph from context
-  - Store in `character_relationships` table with structured columns:
-    - relationship_type (friend/enemy/family/romantic/mentor/rival)
-    - strength (0.0-1.0), is_mutual, first_interaction_chapter_id
-  - Enable social network analysis and relationship graphs
-- [ ] LLM analysis metadata tracking:
-  - Create llm_analysis_metadata record for 'character_extraction'
-  - Track tokens_used, cost_usd, status, started_at, completed_at
-  - Progress tracking with processed_passages count
-- [ ] Batch processing (50 passages per LLM request)
-- [ ] Character deduplication logic (merge "Harry" and "Harry Potter" in aliases table)
-- [ ] Cost optimization: Use Local LLM (Llama-2-7B, temperature 0.2)
-- [ ] Target cost: <$0.50 per 100k-word novel (local compute)
-
-**Technical Notes**:
-
-- Two-pass approach: character extraction → relationship mapping
-- Async job with progress API endpoint
-- Retry logic with exponential backoff (3 attempts)
-- Integration test with sample novel (verify accuracy >85%)
-
-**Estimated Effort**: 10 hours
+**Estimated Effort**: 3 hours
 
 ---
 
-### Story 0.9: LLM Location, Event, and Theme Extraction
+## Epic Summary
 
-**Priority: P1 - High**
+**Total Stories**: 7 (Stories 0.1-0.7)
 
-**Description**: Extract locations, major events, and themes from novel passages to complete metadata enrichment.
+**Total Effort**: ~39 hours (~5 working days for 2 engineers)
 
-**Acceptance Criteria**:
+**Success Criteria**:
+- ✅ All 6 services running via Docker Compose
+- ✅ Pattern B architecture validated (FastAPI not externally accessible)
+- ✅ PostgreSQL 13 metadata tables migrated
+- ✅ 5 ChromaDB collections created and populated
+- ✅ Health checks passing for all services
+- ✅ Sample dataset imported (10+ novels, 5000+ passages, 100+ characters)
 
-- [ ] Location extraction:
-  - Name, type (city/building/room/landmark/region), description
-  - Hierarchical parent_location_id (room → building → city)
-  - first_appearance_chapter_id, significance
-  - Create location_appearances records linking to passages
-- [ ] Event detection:
-  - event_type (action/dialogue/revelation/conflict/resolution)
-  - Title, description, location_id, significance_score (0.0-1.0)
-  - chronological_order tracking
-  - **Normalized event-character links**: Store character involvement in `event_characters` table (not JSONB)
-    - event_id, character_id, role_in_event (protagonist/witness/victim)
-- [ ] Theme analysis:
-  - Theme name (e.g., "love vs duty", "coming of age")
-  - Description, prominence_score (0.0-1.0)
-  - **Normalized theme-passage links**: Store theme occurrences in `theme_passages` table (not JSONB)
-    - theme_id, passage_id, relevance_score (0.0-1.0)
-- [ ] Narrative arc detection:
-  - Arc name, description, arc_type
-  - **Normalized arc-character links**: Store character roles in `narrative_arc_characters` table
-    - narrative_arc_id, character_id, role (hero/antagonist/mentor)
-  - **Normalized arc-event links**: Store key events in `narrative_arc_events` table
-    - narrative_arc_id, event_id, sequence_order, importance_to_arc (0.0-1.0)
-- [ ] LLM analysis metadata for each type:
-  - 'location_extraction', 'event_detection', 'theme_analysis', 'narrative_arc_detection'
-  - Separate jobs with individual cost tracking
-- [ ] Batch processing optimization (combine related analyses)
-- [ ] API endpoints:
-  - GET /api/v1/admin/novels/{id}/locations
-  - GET /api/v1/admin/novels/{id}/events
-  - GET /api/v1/admin/novels/{id}/themes
-  - GET /api/v1/admin/novels/{id}/narrative-arcs
-- [ ] Admin verification workflow for extracted data
-- [ ] Quality metrics: extraction completeness report
-
-**Technical Notes**:
-
-- Run after character extraction (Story 0.8) completes
-- Can run location/event/theme extractions in parallel
-- Use same prompt template versioning system
-- Target cost: <$3.00 per novel for all three analyses combined
-
-**Estimated Effort**: 12 hours
+**Epic Dependencies**:
+- Epic 0 → Epic 1 (Scenario system requires novel data)
+- Epic 0 → Epic 2 (AI conversations require character data)
 
 ---
-
-### Story 0.10: Passage Embedding Generation for RAG
-
-**Priority: P0 - Critical**
-
-**Description**: Generate vector embeddings for all novel passages to enable semantic search and RAG retrieval.
-
-**Acceptance Criteria**:
-
-- [ ] Local LLM embedding generation:
-  - Model: sentence-transformers/all-MiniLM-L6-v2 (384 dimensions)
-  - Batch processing: 100 passages per request
-  - Store in novel_passages.embedding_vector (pgvector type)
-  - Store embedding_model name for versioning
-- [ ] ivfflat index creation:
-  - Create index on novel_passages.embedding_vector
-  - Configure lists parameter (100 for passages table)
-  - Vector similarity operator: <=> (cosine distance)
-- [ ] Character embedding generation:
-  - Generate embeddings for character descriptions
-  - Store in characters.embedding_vector
-  - Enable character similarity search
 - [ ] Semantic search API:
   - POST /api/v1/novels/{id}/passages/search
   - Input: query text, top_k (default 10)

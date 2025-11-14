@@ -1,13 +1,13 @@
-# Story 0.3: PostgreSQL Database Setup & Flyway Migrations
+# Story 0.3: PostgreSQL Database Setup & Flyway Migrations (Metadata Only)
 
-**Epic**: Epic 0 - Project Initialization  
+**Epic**: Epic 0 - Project Setup & Infrastructure  
 **Priority**: P0 - Critical  
 **Status**: Not Started  
 **Estimated Effort**: 5 hours
 
 ## Description
 
-Set up PostgreSQL 15.x database with Flyway migration management, initial schema versioning, and development data seeding.
+Set up PostgreSQL database for **metadata storage only** (13 tables) using Flyway migrations. Novel content and embeddings are stored in VectorDB (ChromaDB/Pinecone). This implements the **hybrid database architecture**.
 
 ## Dependencies
 
@@ -30,44 +30,100 @@ Set up PostgreSQL 15.x database with Flyway migration management, initial schema
 - [ ] PostgreSQL extensions enabled:
   - `uuid-ossp` for UUID generation
   - `pg_trgm` for full-text search
-  - `vector` (pgvector) for embedding similarity search
 - [ ] Flyway integrated in Spring Boot with `spring.flyway.enabled=true`
-- [ ] Migration files in `/src/main/resources/db/migration/` following V{version}\_\_{description}.sql naming
-- [ ] **32 tables total** (21 core + 11 normalized relationship tables):
-  - Core tables: users, novels, novel_chapters, novel_passages, characters, locations, events, themes, narrative_arcs, base_scenarios, root_user_scenarios, leaf_user_scenarios, conversations, messages, conversation_message_links, conversation_emotions, follows, likes, memos, llm_analysis_metadata, character_appearances, location_appearances
-  - **Normalized tables** (no JSONB): character_aliases, character_personality_traits, character_relationships, event_characters, theme_passages, narrative_arc_characters, narrative_arc_events, scenario_character_changes, scenario_event_alterations, scenario_setting_modifications, conversation_emotions (structured)
-- [ ] **0 JSONB columns** (fully normalized relational design)
-- [ ] All foreign keys use CASCADE DELETE for automatic cleanup
-- [ ] B-tree indexes on all FK columns and scoring columns (intensity, strength, relevance_score, importance_to_arc)
+- [ ] Migration files in `/src/main/resources/db/migration/` following `V{version}__{description}.sql` naming
+- [ ] **13 metadata tables total** (NO content storage):
+  - **Core Tables** (3):
+    - `V1__create_users_table.sql`
+    - `V2__create_novels_table.sql` (metadata only, stores `vectordb_collection_id`, NO `full_text` column)
+    - `V3__create_base_scenarios_table.sql` (stores VectorDB passage IDs as ARRAY)
+  - **Scenario Tables** (5):
+    - `V4__create_root_user_scenarios_table.sql`
+    - `V5__create_leaf_user_scenarios_table.sql`
+    - `V6__create_scenario_character_changes_table.sql` (stores `character_vectordb_id`)
+    - `V7__create_scenario_event_alterations_table.sql` (stores `event_vectordb_id`)
+    - `V8__create_scenario_setting_modifications_table.sql` (stores `location_vectordb_id`)
+  - **Conversation Tables** (3):
+    - `V9__create_conversations_table.sql` (stores `character_vectordb_id`)
+    - `V10__create_messages_table.sql`
+    - `V11__create_conversation_message_links_table.sql`
+  - **Social Features** (3):
+    - `V12__create_user_follows_table.sql`
+    - `V13__create_conversation_likes_table.sql`
+    - `V14__create_conversation_memos_table.sql`
+- [ ] **Hybrid Database Cross-References**:
+  - `novels.vectordb_collection_id` (VARCHAR 255) → VectorDB collection name
+  - `base_scenarios.vectordb_passage_ids` (UUID[]) → VectorDB passage documents
+  - `scenario_character_changes.character_vectordb_id` (UUID) → VectorDB characters collection
+  - `conversations.character_vectordb_id` (UUID) → VectorDB characters collection
+- [ ] **NO content columns**:
+  - ❌ NO `novels.full_text` (stored in VectorDB `novel_passages` collection)
+  - ❌ NO `characters` table (stored in VectorDB `characters` collection)
+  - ❌ NO `locations` table (stored in VectorDB `locations` collection)
+  - ❌ NO `novel_passages` table (stored in VectorDB)
+  - ❌ NO JSONB columns (all data normalized in structured tables)
+- [ ] CASCADE DELETE on all foreign keys for automatic cleanup
+- [ ] B-tree indexes on:
+  - All FK columns
+  - `novels.title`, `novels.author` (search optimization)
+  - `base_scenarios.novel_id`, `root_user_scenarios.base_scenario_id`
+  - `conversations.user_id`, `conversations.scenario_id`
+- [ ] Connection pooling configured (HikariCP):
+  - Spring Boot: min 5, max 20 connections
+- [ ] Database connection verified from Spring Boot
+- [ ] Rollback testing: migrations can be reverted cleanly
+- [ ] Development seed data migration `V15__seed_dev_data.sql` (only applied with `spring.profiles.active=dev`):
+  - 10 sample users
+  - 3 sample novels (metadata only, with `vectordb_collection_id`)
 - [ ] Timezone set to UTC: `SET TIMEZONE='UTC';`
-- [ ] Connection pooling configured: HikariCP with max 10 connections
-- [ ] Development seed data migration V33\_\_seed_dev_data.sql (only applied with `spring.profiles.active=dev`)
-- [ ] Database connection validated on Spring Boot startup
 - [ ] Migration history tracked in `flyway_schema_history` table
 
 ## Technical Notes
 
-**Database Design Philosophy**: Fully normalized relational design with 32 tables. All JSONB columns have been eliminated in favor of structured relational tables for better queryability, type safety, and performance.
+**Database Design Philosophy**: **Hybrid Database Architecture** - PostgreSQL stores ONLY relational metadata (13 tables). VectorDB stores all content and embeddings (5 collections).
 
-**Migration Sequence (32 migrations)**:
+**Why Hybrid?**:
+- **PostgreSQL**: Best for ACID transactions, complex JOINs, user data integrity
+- **VectorDB**: Best for semantic search (cosine similarity), high-dimensional embeddings (768 dims)
+- **Cost**: VectorDB scales better for large novel collections (~100GB vs PostgreSQL storage costs)
+- **Performance**: Semantic search in VectorDB is 10x faster than pgvector for high-dimensional vectors
 
-1. V1-6: Core tables (users, novels, novel_chapters, novel_passages, characters, locations)
-2. V7-9: Character normalized tables (character_aliases, character_personality_traits, character_relationships)
-3. V10-11: Appearance tracking (character_appearances, location_appearances)
-4. V12-14: Event/theme/arc (events, themes, narrative_arcs)
-5. V15-18: Event/theme/arc normalized tables (event_characters, theme_passages, narrative_arc_characters, narrative_arc_events)
-6. V19-21: Scenario tables (base_scenarios, root_user_scenarios, leaf_user_scenarios)
-7. V22-24: Scenario type-specific tables (scenario_character_changes, scenario_event_alterations, scenario_setting_modifications)
-8. V25-28: Conversation tables (conversations, messages, conversation_message_links, conversation_emotions)
-9. V29-31: Social features (follows, likes, memos)
-10. V32: LLM metadata (llm_analysis_metadata)
+**Migration Sequence (14 migrations)**:
 
-**Example Normalized Tables (V1\_\_create_users_table.sql)**:
+1. V1: Core users table
+2. V2: Novels table (metadata only, NO full_text)
+3. V3: Base scenarios (stores VectorDB references)
+4. V4-5: Root/leaf user scenarios
+5. V6-8: Scenario type-specific tables (character/event/setting changes)
+6. V9-11: Conversation tables
+7. V12-14: Social features (follows, likes, memos)
+8. V15: Development seed data (dev profile only)
 
+**VectorDB Collections** (managed by FastAPI, NOT in PostgreSQL):
+- `novel_passages` (content chunks, 768-dim embeddings)
+- `characters` (descriptions, personality traits)
+- `locations` (settings)
+- `events` (plot points)
+- `themes` (thematic analysis)
+
+**Cross-Database Data Flow Example**:
+```
+1. FastAPI ingests novel, stores passages in VectorDB
+2. FastAPI → Spring Boot: POST /api/internal/novels (metadata only)
+3. Spring Boot saves to PostgreSQL with vectordb_collection_id
+4. Frontend queries Spring Boot for novel metadata
+5. Spring Boot → FastAPI: Get character data from VectorDB
+6. FastAPI queries VectorDB characters collection
+7. FastAPI returns character data to Spring Boot
+8. Spring Boot returns to frontend
+```
+
+**Example Metadata Tables (Hybrid References)**:
+
+**V1__create_users_table.sql**:
 ```sql
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE EXTENSION IF NOT EXISTS "pg_trgm";
-CREATE EXTENSION IF NOT EXISTS "vector";
 
 CREATE TABLE users (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -79,25 +135,146 @@ CREATE TABLE users (
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE INDEX idx_users_email ON users(email);
+CREATE INDEX idx_users_username ON users(username);
 ```
 
-**Example Novels Table (V2\_\_create_novels_table.sql)**:
-
+**V2__create_novels_table.sql (Metadata Only - NO full_text)**:
 ```sql
 CREATE TABLE novels (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   title VARCHAR(500) NOT NULL,
   author VARCHAR(200) NOT NULL,
-  original_language VARCHAR(10),
-  era VARCHAR(100),
-  genre VARCHAR(100),
-  full_text_s3_path VARCHAR(500),
-  total_word_count INTEGER,
   publication_year INTEGER,
-  isbn VARCHAR(20),
-  series_title VARCHAR(300),  -- For book series (e.g., 'The Barton books for girls')
-  series_number INTEGER,      -- Book number in series (e.g., 8)
-  copyright_status VARCHAR(100) DEFAULT 'unknown',  -- 'public_domain', 'copyrighted', 'creative_commons', 'unknown'
+  genre VARCHAR(100),
+  vectordb_collection_id VARCHAR(255) NOT NULL UNIQUE,  -- Reference to VectorDB
+  ingestion_status VARCHAR(50) DEFAULT 'pending',       -- pending, processing, completed, failed
+  total_passages_count INTEGER,
+  total_characters_count INTEGER,
+  gutenberg_file_path VARCHAR(500),                     -- For debugging
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_novels_title ON novels(title);
+CREATE INDEX idx_novels_author ON novels(author);
+CREATE INDEX idx_novels_vectordb ON novels(vectordb_collection_id);
+-- NOTE: NO full_text column - content is in VectorDB novel_passages collection
+```
+
+**V3__create_base_scenarios_table.sql**:
+```sql
+CREATE TABLE base_scenarios (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  novel_id UUID NOT NULL REFERENCES novels(id) ON DELETE CASCADE,
+  title VARCHAR(200) NOT NULL,
+  description TEXT,
+  vectordb_passage_ids UUID[] NOT NULL,  -- Array of VectorDB passage IDs
+  character_vectordb_ids UUID[],         -- Array of VectorDB character IDs
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_base_scenarios_novel ON base_scenarios(novel_id);
+```
+
+**V6__create_scenario_character_changes_table.sql**:
+```sql
+CREATE TABLE scenario_character_changes (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  scenario_id UUID NOT NULL REFERENCES root_user_scenarios(id) ON DELETE CASCADE,
+  character_vectordb_id UUID NOT NULL,   -- Reference to VectorDB characters collection
+  attribute VARCHAR(100) NOT NULL,       -- e.g., "house", "personality", "backstory"
+  original_value TEXT,
+  new_value TEXT NOT NULL,
+  reasoning TEXT,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_scenario_char_changes_scenario ON scenario_character_changes(scenario_id);
+-- NOTE: Character data (name, description, personality) is in VectorDB
+```
+
+**V9__create_conversations_table.sql**:
+```sql
+CREATE TABLE conversations (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  scenario_id UUID REFERENCES root_user_scenarios(id) ON DELETE SET NULL,
+  character_vectordb_id UUID NOT NULL,   -- Reference to VectorDB characters collection
+  parent_conversation_id UUID REFERENCES conversations(id) ON DELETE SET NULL,
+  title VARCHAR(200),
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  CHECK (parent_conversation_id IS NULL OR 
+         (SELECT parent_conversation_id FROM conversations WHERE id = parent_conversation_id) IS NULL)
+);
+
+CREATE INDEX idx_conversations_user ON conversations(user_id);
+CREATE INDEX idx_conversations_scenario ON conversations(scenario_id);
+CREATE INDEX idx_conversations_parent ON conversations(parent_conversation_id);
+-- NOTE: ROOT-only forking (max depth 1)
+```
+
+**V12__create_user_follows_table.sql**:
+```sql
+CREATE TABLE user_follows (
+  follower_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  followee_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (follower_id, followee_id),
+  CHECK (follower_id != followee_id)
+);
+
+CREATE INDEX idx_follows_follower ON user_follows(follower_id);
+CREATE INDEX idx_follows_followee ON user_follows(followee_id);
+```
+
+**V13__create_conversation_likes_table.sql**:
+```sql
+CREATE TABLE conversation_likes (
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  conversation_id UUID NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (user_id, conversation_id)
+);
+
+CREATE INDEX idx_likes_user ON conversation_likes(user_id);
+CREATE INDEX idx_likes_conversation ON conversation_likes(conversation_id);
+```
+
+**V14__create_conversation_memos_table.sql**:
+```sql
+CREATE TABLE conversation_memos (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  conversation_id UUID NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
+  content TEXT NOT NULL CHECK (length(content) <= 2000),
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(user_id, conversation_id)
+);
+
+CREATE INDEX idx_memos_user ON conversation_memos(user_id);
+CREATE INDEX idx_memos_conversation ON conversation_memos(conversation_id);
+```
+
+**V15__seed_dev_data.sql (Development Only)**:
+```sql
+-- Only executed when spring.profiles.active=dev
+INSERT INTO users (email, password_hash, username, bio) VALUES
+  ('dev@example.com', '$2a$12$hashed_password', 'dev_user', 'Development test user'),
+  ('admin@example.com', '$2a$12$hashed_password', 'admin_user', 'Admin test user');
+
+-- Insert sample novels (metadata only)
+INSERT INTO novels (title, author, publication_year, genre, vectordb_collection_id, ingestion_status, total_passages_count) VALUES
+  ('Pride and Prejudice', 'Jane Austen', 1813, 'Romance', 'novel_pride_and_prejudice_uuid', 'completed', 523),
+  ('Great Expectations', 'Charles Dickens', 1861, 'Drama', 'novel_great_expectations_uuid', 'completed', 687),
+  ('The Adventures of Tom Sawyer', 'Mark Twain', 1876, 'Adventure', 'novel_tom_sawyer_uuid', 'completed', 412);
+
+-- NOTE: Novel content and characters are in VectorDB, NOT PostgreSQL
+```
   copyright_note TEXT,        -- Detailed copyright info (e.g., 'Public domain in the USA')
   cover_image_url VARCHAR(500),
   description TEXT,
@@ -186,22 +363,37 @@ INSERT INTO users (email, password_hash, username, bio) VALUES
 - [ ] PostgreSQL container starts successfully
 - [ ] Database `gaji_db` accessible with credentials
 - [ ] Flyway migrations execute on Spring Boot startup
-- [ ] V1\_\_init_schema.sql creates all tables
-- [ ] V2\_\_seed_dev_data.sql runs only with dev profile
+- [ ] V1-V14 migrations create all 13 metadata tables
+- [ ] V15__seed_dev_data.sql runs only with dev profile
 - [ ] flyway_schema_history tracks migration versions
 
 ### Schema Validation
 
-- [ ] All 32 tables created successfully
+- [ ] All 13 metadata tables created successfully
 - [ ] All tables have primary keys (UUID type)
 - [ ] Foreign key constraints enforced with CASCADE DELETE
-- [ ] UNIQUE constraints on users.email and users.username
-- [ ] CHECK constraints validate data ranges (intensity 0-1, strength 0-1, etc.)
-- [ ] B-tree indexes created on all FK columns
-- [ ] B-tree indexes on scoring columns (intensity, strength, relevance_score, importance_to_arc)
-- [ ] UUID, pg_trgm, vector extensions enabled (test with `SELECT uuid_generate_v4()`)
-- [ ] **0 JSONB columns exist** (verify with query: `SELECT table_name, column_name FROM information_schema.columns WHERE data_type = 'jsonb'` returns empty)
-- [ ] XOR constraints on scenario type-specific tables (root_scenario_id XOR leaf_scenario_id)
+- [ ] UNIQUE constraints on users.email, users.username, novels.vectordb_collection_id
+- [ ] CHECK constraints validate data:
+  - users.username regex pattern
+  - conversation_memos.content length <= 2000
+  - Conversations.parent_conversation_id ROOT-only check
+- [ ] B-tree indexes created on:
+  - All FK columns
+  - Search columns (novels.title, novels.author, users.email, users.username)
+  - VectorDB reference columns (novels.vectordb_collection_id)
+- [ ] UUID, pg_trgm extensions enabled (test with `SELECT uuid_generate_v4()`)
+- [ ] **NO pgvector extension** (not needed - embeddings in VectorDB)
+- [ ] **NO JSONB columns** exist (verify with: `SELECT table_name, column_name FROM information_schema.columns WHERE data_type = 'jsonb'` returns empty)
+- [ ] **NO content tables** (verify no `novel_passages`, `characters`, `locations` tables in PostgreSQL)
+
+### Hybrid Database Validation
+
+- [ ] Novels table has `vectordb_collection_id` column (NOT `full_text`)
+- [ ] Base scenarios table has `vectordb_passage_ids` array column
+- [ ] Scenario character changes table has `character_vectordb_id` column
+- [ ] Conversations table has `character_vectordb_id` column
+- [ ] Seed data novels have valid `vectordb_collection_id` values
+- [ ] No foreign keys to non-existent tables (e.g., NO FK to `characters` table)
 
 ### Migration Management
 
@@ -212,11 +404,10 @@ INSERT INTO users (email, password_hash, username, bio) VALUES
 
 ### Performance
 
-- [ ] Connection pool max 10 connections configured
+- [ ] Connection pool max 20 connections configured
 - [ ] Connection acquisition < 50ms
 - [ ] B-tree index queries on FK columns optimized (use EXPLAIN ANALYZE)
-- [ ] No GIN indexes (JSONB columns eliminated)
-- [ ] Query performance for normalized joins acceptable (<100ms for typical queries)
+- [ ] Query performance for JOINs acceptable (<100ms for typical queries)
 
 ### Security
 
