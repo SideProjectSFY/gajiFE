@@ -1,7 +1,7 @@
 # Entity Relationship Diagram (ERD)
 
 **Project**: Gaji - Interactive Fiction Platform  
-**Last Updated**: 2025-01-14  
+**Last Updated**: 2025-11-15
 **Database Architecture**: PostgreSQL 15.x (Metadata) + VectorDB (Content & Embeddings)  
 **Backend Architecture**: MSA (FastAPI AI Service + Spring Boot CRUD Service)  
 **Novel Source**: Project Gutenberg Dataset (Direct Import)  
@@ -1984,8 +1984,8 @@ graph TB
     "progress": 100,  # 0-100
     "result_data": '{"message_count": 12, "total_tokens": 1500}',
     "error_message": null,
-    "created_at": "2025-01-15T10:00:00Z",
-    "updated_at": "2025-01-15T10:05:23Z"
+    "created_at": "2025-11-15T10:00:00Z",
+    "updated_at": "2025-11-15T10:05:23Z"
 }
 
 # Operations:
@@ -2093,7 +2093,7 @@ sequenceDiagram
 
 ## Changelog
 
-**2025-01-15**: Simplified notification architecture
+**2025-11-15**: Simplified notification architecture
 
 - **Removed PostgreSQL table**: `user_notifications`
   - Rationale: Read/unread state tracking not needed for push-only notification system
@@ -2108,7 +2108,7 @@ sequenceDiagram
   - VectorDB collections structure with cross-references (5 collections)
   - Redis data structures with key patterns and data flow (2 types)
 
-**2025-01-15**: Optimized data storage architecture with Redis integration
+**2025-11-15**: Optimized data storage architecture with Redis integration
 
 - **Removed PostgreSQL tables**: `async_task_status`, `user_activity_feed`
   - Rationale: High-frequency read/write patterns better suited for in-memory storage
@@ -2126,7 +2126,7 @@ sequenceDiagram
 - **Added Redis Data Structures**: 2 types (task tracking, activity feed)
 - **Migration Strategy**: Added Phase 2 for Redis setup with code examples
 
-**2025-01-15**: Added system support tables for MSA architecture
+**2025-11-15**: Added system support tables for MSA architecture
 
 - **user_notifications**: Browser notification management system
   - 6 notification types: conversation_complete, new_follower, conversation_liked, system_announcement, task_failed, ai_service_offline
@@ -2146,7 +2146,7 @@ sequenceDiagram
 - Added 4 foreign key relationships (users → new tables)
 - Updated migration strategy to include system support tables
 
-**2025-01-14**: Complete architecture redesign
+**2025-11-14**: Complete architecture redesign
 
 - **MSA Backend Architecture**: Separated Spring Boot (CRUD Service, Port 8080) and FastAPI (AI Service, Port 8000)
 - **Novel Data Source**: Changed from Gutenberg API to Gutenberg Dataset (batch import, not real-time API)

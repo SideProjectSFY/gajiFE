@@ -1,7 +1,7 @@
 # Security Documentation - Gaji Interactive Fiction Platform
 
 **Version**: 1.0  
-**Last Updated**: 2025-01-13  
+**Last Updated**: 2025-11-13  
 **Classification**: Internal  
 **Security Contact**: security@gaji.dev
 

@@ -1,7 +1,7 @@
 # Gaji: System Architecture Document
 
 **Version:** 1.0
-**Date:** 2025-01-14
+**Date:** 2025-11-14
 **Author:** GitHub Copilot (Architect)
 
 ## 1. Introduction
@@ -15,32 +15,37 @@ This document details the MSA backend architecture, hybrid database design, tech
 ## 2. Core Technical Challenges
 
 - **Hybrid Database Architecture**: Managing data split between PostgreSQL (metadata) and VectorDB (content/embeddings)
+
   - **PostgreSQL**: Relational metadata, user data, conversation structure (13 core tables)
   - **VectorDB**: Novel content, embeddings, LLM analysis results (5 collections)
   - **Cross-DB References**: Maintaining consistency between metadata IDs and VectorDB document IDs
 
 - **Conversation Forking with Message Copy**: Two distinct fork types:
+
   - **Scenario Fork**: Unlimited depth meta-scenarios with circular reference prevention
   - **Conversation Fork**: ROOT-only (parent_conversation_id = NULL), max depth = 1
   - **Message Copy Logic**: Copy `min(6, total_message_count)` messages when forking
 
-- **Novel Ingestion Pipeline**: 
+- **Novel Ingestion Pipeline**:
+
   - Source: Project Gutenberg Dataset (batch import, not real-time API)
   - Parse text → Extract metadata (PostgreSQL) → Chunk content (VectorDB)
   - Generate embeddings (Gemini Embedding API: 768 dimensions)
   - LLM analysis for characters/locations/events/themes (stored in VectorDB)
 
-- **RAG with VectorDB**: 
+- **RAG with VectorDB**:
+
   - Semantic search across novel passages for scenario context
   - Retrieve character/location/event metadata from VectorDB collections
   - Combine with PostgreSQL conversation metadata for AI prompts
 
-- **Long Polling for AI Operations**: 
+- **Long Polling for AI Operations**:
+
   - Async task queue (Celery + Redis) for conversation generation
   - Frontend polls Spring Boot every 2 seconds for status updates
   - Browser notifications on task completion
 
-- **MSA Service Communication**: 
+- **MSA Service Communication**:
   - Spring Boot (CRUD, port 8080) ↔ FastAPI (AI/RAG, port 8000)
   - Internal REST API for cross-service operations
   - Secure private network communication
@@ -51,19 +56,20 @@ This document details the MSA backend architecture, hybrid database design, tech
 
 **Separation of Concerns**: The platform uses a **hybrid storage strategy** to optimize different access patterns:
 
-| Aspect | PostgreSQL | VectorDB (ChromaDB/Pinecone) |
-|--------|-----------|------------------------------|
-| **Purpose** | Relational metadata, user data, business logic | Novel content, embeddings, LLM analysis |
-| **Data Types** | User accounts, scenarios, conversations, social graph | Full text passages, character descriptions, semantic vectors |
-| **Query Patterns** | CRUD operations, joins, transactions | Semantic search, similarity queries, embedding retrieval |
-| **Table Count** | 13 core tables | 5 collections |
-| **Storage Size** | ~10GB for 1M users | ~100GB for 1000 novels |
+| Aspect             | PostgreSQL                                            | VectorDB (ChromaDB/Pinecone)                                 |
+| ------------------ | ----------------------------------------------------- | ------------------------------------------------------------ |
+| **Purpose**        | Relational metadata, user data, business logic        | Novel content, embeddings, LLM analysis                      |
+| **Data Types**     | User accounts, scenarios, conversations, social graph | Full text passages, character descriptions, semantic vectors |
+| **Query Patterns** | CRUD operations, joins, transactions                  | Semantic search, similarity queries, embedding retrieval     |
+| **Table Count**    | 13 core tables                                        | 5 collections                                                |
+| **Storage Size**   | ~10GB for 1M users                                    | ~100GB for 1000 novels                                       |
 
 ### 3.2. PostgreSQL Schema (Metadata Only - 13 Tables)
 
 #### Core Tables
 
 **1. users** (User accounts)
+
 ```sql
 CREATE TABLE users (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -78,6 +84,7 @@ CREATE TABLE users (
 ```
 
 **2. novels** (Novel metadata - NO CONTENT)
+
 ```sql
 CREATE TABLE novels (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -104,6 +111,7 @@ CREATE TABLE novels (
 ```
 
 **3. base_scenarios** (Scenario metadata with VectorDB references)
+
 ```sql
 CREATE TABLE base_scenarios (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -126,6 +134,7 @@ CREATE TABLE base_scenarios (
 ```
 
 **4. root_user_scenarios** (User-created "What If" scenarios)
+
 ```sql
 CREATE TABLE root_user_scenarios (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -144,6 +153,7 @@ CREATE TABLE root_user_scenarios (
 ```
 
 **5. leaf_user_scenarios** (Forked scenarios - depth 1)
+
 ```sql
 CREATE TABLE leaf_user_scenarios (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -159,6 +169,7 @@ CREATE TABLE leaf_user_scenarios (
 ```
 
 **6. scenario_character_changes** (References VectorDB characters)
+
 ```sql
 CREATE TABLE scenario_character_changes (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -179,6 +190,7 @@ CREATE TABLE scenario_character_changes (
 ```
 
 **7. conversations** (ROOT-only forking)
+
 ```sql
 CREATE TABLE conversations (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -202,6 +214,7 @@ CREATE TABLE conversations (
 ```
 
 **8. conversation_message_links** (Join table for message reuse)
+
 ```sql
 CREATE TABLE conversation_message_links (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -215,6 +228,7 @@ CREATE TABLE conversation_message_links (
 ```
 
 **9. messages**
+
 ```sql
 CREATE TABLE messages (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -230,6 +244,7 @@ CREATE TABLE messages (
 ```
 
 **10-13. Social Tables**
+
 ```sql
 CREATE TABLE user_follows (
     follower_id UUID REFERENCES users(id) ON DELETE CASCADE,
@@ -275,7 +290,7 @@ CREATE TABLE conversation_memos (
         "character_mentions": [str],  # Character names in passage
         "location_mentions": [str],
         "embedding_model": "text-embedding-004",  # Gemini Embedding API
-        "created_at": "2025-01-14T10:00:00Z"
+        "created_at": "2025-11-14T10:00:00Z"
     },
     "document": "Passage text content (200-500 words)",
     "embedding": [768-dimensional float vector from Gemini]
@@ -283,6 +298,7 @@ CREATE TABLE conversation_memos (
 ```
 
 **Indexes**:
+
 - `novel_id` (for filtering by book)
 - `chapter_number` (for chapter-specific queries)
 - `passage_type` (for filtering narrative vs dialogue)
@@ -315,7 +331,7 @@ CREATE TABLE conversation_memos (
         "appearance_count": int,
         "importance_score": float,  # 0.0-1.0
         "embedding_model": "text-embedding-004",
-        "created_at": "2025-01-14T10:00:00Z"
+        "created_at": "2025-11-14T10:00:00Z"
     },
     "document": "Character full description for semantic search",
     "embedding": [768-dimensional vector]
@@ -323,6 +339,7 @@ CREATE TABLE conversation_memos (
 ```
 
 **Indexes**:
+
 - `novel_id`
 - `role`
 - `importance_score`
@@ -346,7 +363,7 @@ CREATE TABLE conversation_memos (
         "first_appearance_chapter": int,
         "appearance_count": int,
         "embedding_model": "text-embedding-004",
-        "created_at": "2025-01-14T10:00:00Z"
+        "created_at": "2025-11-14T10:00:00Z"
     },
     "document": "Location description for semantic search",
     "embedding": [768-dimensional vector]
@@ -372,7 +389,7 @@ CREATE TABLE conversation_memos (
         "significance_score": float,  # 0.0-1.0
         "chronological_order": int,
         "embedding_model": "text-embedding-004",
-        "created_at": "2025-01-14T10:00:00Z"
+        "created_at": "2025-11-14T10:00:00Z"
     },
     "document": "Event description for semantic search",
     "embedding": [768-dimensional vector]
@@ -395,7 +412,7 @@ CREATE TABLE conversation_memos (
         "related_character_ids": [str],
         "prevalence_score": float,  # 0.0-1.0
         "embedding_model": "text-embedding-004",
-        "created_at": "2025-01-14T10:00:00Z"
+        "created_at": "2025-11-14T10:00:00Z"
     },
     "document": "Theme description for semantic search",
     "embedding": [768-dimensional vector]
@@ -432,7 +449,7 @@ novel = postgresql.query("SELECT * FROM novels WHERE id = ?", novel_id)
 ```python
 # Example: Get all conversations for a character
 conversations = postgresql.query("""
-    SELECT * FROM conversations 
+    SELECT * FROM conversations
     WHERE character_vectordb_id = ?
 """, character_id)
 
@@ -468,19 +485,21 @@ graph LR
 ### 4.2. Ingestion Steps
 
 **Step 1: Parse Gutenberg File**
+
 ```python
 # ai-backend/services/novel_ingestion.py
 def parse_gutenberg_file(file_path: str) -> NovelData:
     with open(file_path, 'r', encoding='utf-8') as f:
         content = f.read()
-    
+
     metadata = extract_gutenberg_metadata(content)
     text = remove_gutenberg_headers(content)
-    
+
     return NovelData(metadata=metadata, full_text=text)
 ```
 
 **Step 2: Save Metadata to PostgreSQL (via Spring Boot API)**
+
 ```python
 async def save_novel_metadata(metadata: NovelMetadata) -> UUID:
     response = await http_client.post(
@@ -491,13 +510,14 @@ async def save_novel_metadata(metadata: NovelMetadata) -> UUID:
 ```
 
 **Step 3: Chunk Text**
+
 ```python
 def chunk_text(text: str, chunk_size: int = 400) -> List[Passage]:
     chunks = []
     sentences = sent_tokenize(text)
     current_chunk = []
     current_word_count = 0
-    
+
     for sentence in sentences:
         words = sentence.split()
         if current_word_count + len(words) > chunk_size:
@@ -507,17 +527,18 @@ def chunk_text(text: str, chunk_size: int = 400) -> List[Passage]:
         else:
             current_chunk.append(sentence)
             current_word_count += len(words)
-    
+
     return chunks
 ```
 
 **Step 4: Generate Embeddings (Gemini)**
+
 ```python
 import google.generativeai as genai
 
 async def generate_embeddings(passages: List[str]) -> List[List[float]]:
     genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
-    
+
     embeddings = []
     for passage in passages:
         result = genai.embed_content(
@@ -526,11 +547,12 @@ async def generate_embeddings(passages: List[str]) -> List[List[float]]:
             task_type="retrieval_document"
         )
         embeddings.append(result['embedding'])
-    
+
     return embeddings
 ```
 
 **Step 5: Store in VectorDB**
+
 ```python
 import chromadb
 
@@ -541,7 +563,7 @@ def store_passages_in_vectordb(
 ):
     client = chromadb.PersistentClient(path="./chroma_data")
     collection = client.get_or_create_collection("novel_passages")
-    
+
     ids = [str(uuid.uuid4()) for _ in passages]
     metadatas = [
         {
@@ -552,18 +574,19 @@ def store_passages_in_vectordb(
         }
         for idx, passage in enumerate(passages)
     ]
-    
+
     collection.add(
         ids=ids,
         embeddings=embeddings,
         documents=passages,
         metadatas=metadatas
     )
-    
+
     return ids  # Return for PostgreSQL reference
 ```
 
 **Step 6: LLM Character Extraction**
+
 ```python
 async def extract_characters(novel_id: UUID, passages: List[str]):
     prompt = f"""Analyze the following novel passages and extract all characters.
@@ -574,27 +597,27 @@ async def extract_characters(novel_id: UUID, passages: List[str]):
     - aliases
     - personality traits (with strength 0.0-1.0)
     - relationships
-    
+
     Passages:
     {" ".join(passages[:10])}  # First 10 passages for context
     """
-    
+
     genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
     model = genai.GenerativeModel("gemini-2.5-flash")
     response = model.generate_content(prompt)
-    
+
     characters = parse_character_response(response.text)
-    
+
     # Store in VectorDB
     client = chromadb.PersistentClient(path="./chroma_data")
     collection = client.get_or_create_collection("characters")
-    
+
     for char in characters:
         char_embedding = genai.embed_content(
             model="models/text-embedding-004",
             content=char.description
         )['embedding']
-        
+
         collection.add(
             ids=[str(uuid.uuid4())],
             embeddings=[char_embedding],
@@ -637,16 +660,16 @@ graph TB
 
     UI -->|Single Entry Point| API1
     UI -->|/api/ai/* Proxy| PROXY
-    
+
     PROXY -->|WebClient Internal| API2
     API2 -.->|httpx Internal| API1
-    
+
     BIZ --> JPA
     JPA --> PG
-    
+
     RAG --> VDB
     RAG --> GEMINI
-    
+
     style UI fill:#4FC3F7
     style PROXY fill:#FFD54F
     style PG fill:#4169E1
@@ -655,6 +678,7 @@ graph TB
 ```
 
 **Spring Boot (Port 8080) - API Gateway & Business Logic Server**:
+
 - **Database Access**: PostgreSQL ONLY (via Spring Data JPA)
 - **Responsibilities**:
   - **API Gateway**: Single entry point for all Frontend requests
@@ -669,6 +693,7 @@ graph TB
 - **Never accesses**: VectorDB (delegates all VectorDB queries to FastAPI)
 
 **FastAPI (Port 8000) - AI & VectorDB Server (Internal Network Only)**:
+
 - **Database Access**: VectorDB ONLY (ChromaDB/Pinecone client)
 - **External Exposure**: ❌ None (accessible only from internal Docker network)
 - **Responsibilities**:
@@ -681,6 +706,7 @@ graph TB
 - **Never accesses**: PostgreSQL (receives metadata from Spring Boot via API calls)
 
 **Why Pattern B Was Chosen**:
+
 1. **Security**: Prevents external exposure of FastAPI and Gemini API keys
 2. **Simplicity**: Frontend manages only 1 API client (coreApi + aiApi → api)
 3. **Centralized Logging**: All requests go through Spring Boot for easy tracking and monitoring
@@ -708,15 +734,16 @@ sequenceDiagram
 ```
 
 **Example (Spring Boot Service)**:
+
 ```java
 @Service
 public class ScenarioService {
     @Autowired
     private WebClient aiServiceClient;
-    
+
     @Autowired
     private BaseScenarioRepository scenarioRepository;
-    
+
     public BaseScenario createScenario(CreateScenarioRequest request) {
         // 1. Call FastAPI to search VectorDB
         PassageSearchResponse passages = aiServiceClient.post()
@@ -729,18 +756,19 @@ public class ScenarioService {
             .retrieve()
             .bodyToMono(PassageSearchResponse.class)
             .block();
-        
+
         // 2. Save scenario in PostgreSQL with VectorDB IDs
         BaseScenario scenario = new BaseScenario();
         scenario.setNovelId(request.getNovelId());
         scenario.setVectordbPassageIds(passages.getPassageIds()); // TEXT[]
-        
+
         return scenarioRepository.save(scenario);
     }
 }
 ```
 
 **Example (FastAPI Endpoint)**:
+
 ```python
 @router.post("/api/ai/search/passages")
 async def search_passages(request: PassageSearchRequest):
@@ -750,20 +778,20 @@ async def search_passages(request: PassageSearchRequest):
     """
     client = chromadb.PersistentClient(path="./chroma_data")
     collection = client.get_collection("novel_passages")
-    
+
     # Generate query embedding
     query_embedding = genai.embed_content(
         model="models/text-embedding-004",
         content=request.query
     )['embedding']
-    
+
     # Search VectorDB
     results = collection.query(
         query_embeddings=[query_embedding],
         where={"novel_id": str(request.novel_id)},
         n_results=request.top_k
     )
-    
+
     return {
         "passage_ids": results['ids'][0],
         "documents": results['documents'][0],
@@ -787,6 +815,7 @@ sequenceDiagram
 ```
 
 **Example (FastAPI calling Spring Boot)**:
+
 ```python
 async def get_novel_metadata(novel_id: UUID) -> NovelMetadata:
     """
@@ -815,17 +844,17 @@ sequenceDiagram
     Spring->>PG: INSERT conversation (status: PENDING)
     Spring->>FastAPI: POST /api/ai/generate<br/>{conversation_id, scenario_id, character_id}
     Spring-->>Frontend: 202 Accepted {conversation_id}
-    
+
     FastAPI->>Spring: GET /api/internal/scenarios/{scenario_id}
     Spring-->>FastAPI: Scenario metadata + passage_ids[]
-    
+
     FastAPI->>VDB: Get passages by IDs
     FastAPI->>VDB: Get character by character_vectordb_id
     FastAPI->>Gemini: Generate response with context
-    
+
     FastAPI->>Spring: POST /api/internal/conversations/{id}/complete<br/>{messages[]}
     Spring->>PG: INSERT messages, UPDATE conversation status
-    
+
     Frontend->>Spring: GET /api/conversations/{id}/status
     Spring-->>Frontend: {status: COMPLETED}
 ```
@@ -845,6 +874,7 @@ sequenceDiagram
 ```
 
 **Why?**
+
 - **Clear separation of concerns**: Each service owns its database
 - **Prevents coupling**: No shared database connection pools
 - **Easier scaling**: Can scale PostgreSQL and VectorDB independently
@@ -853,6 +883,7 @@ sequenceDiagram
 #### Rule 2: Cross-Database Queries via API
 
 When Spring Boot needs VectorDB data:
+
 ```java
 // ❌ BAD: Spring Boot trying to access VectorDB directly
 ChromaClient chroma = new ChromaClient("localhost:8001");  // DON'T DO THIS!
@@ -866,6 +897,7 @@ WebClient.post()
 ```
 
 When FastAPI needs PostgreSQL data:
+
 ```python
 # ❌ BAD: FastAPI trying to query PostgreSQL
 conn = psycopg2.connect("postgresql://...")  # DON'T DO THIS!
@@ -880,6 +912,7 @@ async with httpx.AsyncClient() as client:
 #### Rule 3: Data Flow Patterns
 
 **Pattern A: Novel Ingestion (FastAPI owns VectorDB writes)**
+
 ```
 Gutenberg File → FastAPI → VectorDB (novel_passages, characters, etc.)
                     ↓
@@ -887,6 +920,7 @@ Gutenberg File → FastAPI → VectorDB (novel_passages, characters, etc.)
 ```
 
 **Pattern B: Scenario Creation (Spring Boot orchestrates)**
+
 ```
 User Request → Spring Boot → FastAPI (search VectorDB)
                   ↓              ↓
@@ -895,6 +929,7 @@ User Request → Spring Boot → FastAPI (search VectorDB)
 ```
 
 **Pattern C: Conversation Generation (FastAPI orchestrates AI, Spring Boot stores)**
+
 ```
 Spring Boot → FastAPI → VectorDB (get character/passages)
    ↓                      ↓
@@ -918,7 +953,7 @@ sequenceDiagram
     Spring->>Spring: Create conversation (status: PENDING)
     Spring->>FastAPI: POST /api/ai/generate (async task)
     Spring-->>Frontend: 202 Accepted {conversation_id, status: PENDING}
-    
+
     loop Long Polling (every 2s)
         Frontend->>Spring: GET /api/conversations/{id}/status
         Spring-->>Frontend: {status: PENDING, progress: 30}
@@ -929,7 +964,7 @@ sequenceDiagram
     Celery->>Gemini: Generate response with context
     Celery->>Spring: POST /api/internal/conversations/{id}/complete
     Spring->>Spring: Update status to COMPLETED
-    
+
     Frontend->>Spring: GET /api/conversations/{id}/status
     Spring-->>Frontend: {status: COMPLETED}
     Frontend->>User: Browser notification "Conversation ready!"
@@ -957,7 +992,7 @@ class RAGService:
     VectorDB access is EXCLUSIVELY in FastAPI
     Spring Boot calls FastAPI endpoints, never VectorDB directly
     """
-    
+
     def __init__(self):
         # Only FastAPI has ChromaDB client
         self.chroma_client = chromadb.PersistentClient(path="./chroma_data")
@@ -965,7 +1000,7 @@ class RAGService:
         self.characters = self.chroma_client.get_collection("characters")
         self.locations = self.chroma_client.get_collection("locations")
         self.events = self.chroma_client.get_collection("events")
-    
+
     async def build_conversation_context(
         self,
         scenario_id: UUID,
@@ -974,42 +1009,42 @@ class RAGService:
     ) -> str:
         # 1. Get scenario metadata from Spring Boot (PostgreSQL)
         scenario = await self._get_scenario_from_spring_boot(scenario_id)
-        
+
         # 2. Get character data from VectorDB (FastAPI only)
         character = self.characters.get(ids=[character_vectordb_id])
-        
+
         # 3. Get passages from VectorDB using IDs from PostgreSQL
         passages = self.passages.get(ids=scenario.vectordb_passage_ids)
-        
+
         # 4. Semantic search for additional relevant passages
         query_embedding = genai.embed_content(
             model="models/text-embedding-004",
             content=user_message
         )['embedding']
-        
+
         similar_passages = self.passages.query(
             query_embeddings=[query_embedding],
             n_results=5,
             where={"novel_id": str(scenario.novel_id)}
         )
-        
+
         # 5. Build context string
         context = f"""
         Character: {character.metadata['name']}
         Description: {character.documents[0]}
         Personality: {character.metadata['personality_traits']}
-        
+
         Scenario Passages:
         {" ".join(passages.documents[0])}
-        
+
         Related Context:
         {" ".join(similar_passages.documents[0])}
-        
+
         User Message: {user_message}
         """
-        
+
         return context
-    
+
     async def _get_scenario_from_spring_boot(self, scenario_id: UUID):
         """
         FastAPI calls Spring Boot for PostgreSQL data
@@ -1019,24 +1054,25 @@ class RAGService:
                 f"http://spring-boot:8080/api/internal/scenarios/{scenario_id}"
             )
             return ScenarioMetadata(**response.json())
-    
+
     async def generate_response(self, context: str) -> str:
         """
         Only FastAPI calls Gemini API
         """
         genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
         model = genai.GenerativeModel("gemini-2.5-flash")
-        
+
         response = model.generate_content(
             f"{context}\n\nRespond in character:"
         )
-        
+
         return response.text
 ```
 
 ### 6.3. Semantic Search Patterns (FastAPI Only)
 
 **Pattern 1: Character Search**
+
 ```python
 # ai-backend/api/search.py
 @router.get("/api/ai/characters/search")
@@ -1047,20 +1083,20 @@ async def search_characters(query: str, novel_id: UUID, top_k: int = 10):
     """
     client = chromadb.PersistentClient(path="./chroma_data")
     characters_collection = client.get_collection("characters")
-    
+
     # Generate query embedding (only FastAPI has Gemini client)
     query_embedding = genai.embed_content(
         model="models/text-embedding-004",
         content=query
     )['embedding']
-    
+
     # Search VectorDB
     results = characters_collection.query(
         query_embeddings=[query_embedding],
         n_results=top_k,
         where={"novel_id": str(novel_id)}
     )
-    
+
     return {
         "character_ids": results['ids'][0],
         "characters": [
@@ -1080,12 +1116,13 @@ async def search_characters(query: str, novel_id: UUID, top_k: int = 10):
 ```
 
 **Spring Boot calls this endpoint**:
+
 ```java
 @Service
 public class CharacterSearchService {
     @Autowired
     private WebClient aiServiceClient;
-    
+
     public List<CharacterDTO> searchCharacters(String query, UUID novelId) {
         // Spring Boot never touches VectorDB
         // Always goes through FastAPI
@@ -1105,6 +1142,7 @@ public class CharacterSearchService {
 ```
 
 **Pattern 2: Thematic Search**
+
 ```python
 # ai-backend/api/search.py
 @router.get("/api/ai/themes/search")
@@ -1115,21 +1153,21 @@ async def search_by_theme(theme_query: str, novel_id: UUID):
     client = chromadb.PersistentClient(path="./chroma_data")
     themes_collection = client.get_collection("themes")
     passages_collection = client.get_collection("novel_passages")
-    
+
     # Find matching themes
     theme_results = themes_collection.query(
         query_texts=[theme_query],
         where={"novel_id": str(novel_id)},
         n_results=3
     )
-    
+
     # Get related passages
     passage_ids = []
     for metadata in theme_results['metadatas'][0]:
         passage_ids.extend(metadata['related_passage_ids'])
-    
+
     passages = passages_collection.get(ids=passage_ids)
-    
+
     return {
         "themes": theme_results['documents'][0],
         "related_passages": passages['documents']
@@ -1138,34 +1176,35 @@ async def search_by_theme(theme_query: str, novel_id: UUID):
 
 ## 7. Technology Stack (Updated)
 
-| Category | Technology | Version | Purpose |
-|:---------|:-----------|:--------|:--------|
-| **Core Backend** | **Spring Boot** | **3.x** | **CRUD API, Metadata Management** |
-| | Java | 17+ | Business Logic |
-| | Spring Data JPA | - | PostgreSQL ORM |
-| | WebClient | - | FastAPI communication |
-| **AI Backend** | **FastAPI** | **0.110+** | **AI/RAG Service** |
-| | Python | 3.11+ | AI Integration |
-| | Celery | - | Async task queue |
-| | Redis | - | Message broker |
-| **Frontend** | Vue.js | 3.x | SPA Framework |
-| | PrimeVue | 3.x | UI Components |
-| | PandaCSS | latest | Styling |
-| | Pinia | - | State Management |
-| **Database** | **PostgreSQL** | **15.x** | **Metadata Only (13 tables)** |
-| **VectorDB** | **ChromaDB** | **latest** | **Development (5 collections)** |
-| | **Pinecone** | **-** | **Production (5 collections)** |
-| **AI/ML** | Gemini 2.5 Flash | - | Text Generation |
-| | Gemini Embedding API | - | 768-dim Embeddings |
-| **Migration** | Flyway | - | PostgreSQL Schema Versioning |
-| **Deployment** | Railway | - | Backend Services |
-| | Vercel | - | Frontend CDN |
+| Category         | Technology           | Version    | Purpose                           |
+| :--------------- | :------------------- | :--------- | :-------------------------------- |
+| **Core Backend** | **Spring Boot**      | **3.x**    | **CRUD API, Metadata Management** |
+|                  | Java                 | 17+        | Business Logic                    |
+|                  | Spring Data JPA      | -          | PostgreSQL ORM                    |
+|                  | WebClient            | -          | FastAPI communication             |
+| **AI Backend**   | **FastAPI**          | **0.110+** | **AI/RAG Service**                |
+|                  | Python               | 3.11+      | AI Integration                    |
+|                  | Celery               | -          | Async task queue                  |
+|                  | Redis                | -          | Message broker                    |
+| **Frontend**     | Vue.js               | 3.x        | SPA Framework                     |
+|                  | PrimeVue             | 3.x        | UI Components                     |
+|                  | PandaCSS             | latest     | Styling                           |
+|                  | Pinia                | -          | State Management                  |
+| **Database**     | **PostgreSQL**       | **15.x**   | **Metadata Only (13 tables)**     |
+| **VectorDB**     | **ChromaDB**         | **latest** | **Development (5 collections)**   |
+|                  | **Pinecone**         | **-**      | **Production (5 collections)**    |
+| **AI/ML**        | Gemini 2.5 Flash     | -          | Text Generation                   |
+|                  | Gemini Embedding API | -          | 768-dim Embeddings                |
+| **Migration**    | Flyway               | -          | PostgreSQL Schema Versioning      |
+| **Deployment**   | Railway              | -          | Backend Services                  |
+|                  | Vercel               | -          | Frontend CDN                      |
 
 ## 8. API Endpoints (Updated)
 
 ### 8.1. Spring Boot Public API (Port 8080)
 
 **Novels**:
+
 ```
 GET    /api/v1/novels              # Browse novels (metadata only)
 GET    /api/v1/novels/{id}         # Novel details
@@ -1173,6 +1212,7 @@ POST   /api/v1/novels/ingest       # Trigger ingestion (admin only)
 ```
 
 **Scenarios**:
+
 ```
 GET    /api/v1/scenarios           # List scenarios
 POST   /api/v1/scenarios           # Create scenario (calls FastAPI for passage search)
@@ -1181,6 +1221,7 @@ POST   /api/v1/scenarios/{id}/fork # Fork scenario
 ```
 
 **Conversations**:
+
 ```
 POST   /api/v1/conversations                  # Create conversation (async)
 GET    /api/v1/conversations/{id}/status      # Long polling endpoint
@@ -1191,6 +1232,7 @@ POST   /api/v1/conversations/{id}/fork        # Fork (copy min(6, total) message
 ### 8.2. FastAPI Internal API (Port 8000)
 
 **Novel Ingestion**:
+
 ```python
 @router.post("/api/ai/novels/ingest")
 async def ingest_novel(file: UploadFile):
@@ -1206,6 +1248,7 @@ async def ingest_novel(file: UploadFile):
 ```
 
 **Semantic Search**:
+
 ```python
 @router.post("/api/ai/search/passages")
 async def search_passages(request: PassageSearchRequest):
@@ -1221,6 +1264,7 @@ async def search_passages(request: PassageSearchRequest):
 ```
 
 **Conversation Generation**:
+
 ```python
 @router.post("/api/ai/generate")
 async def generate_conversation(request: ConversationRequest):
@@ -1235,6 +1279,7 @@ async def generate_conversation(request: ConversationRequest):
 ```
 
 **Character Search**:
+
 ```python
 @router.get("/api/ai/characters/search")
 async def search_characters(query: str, novel_id: UUID):
@@ -1253,53 +1298,61 @@ async def search_characters(query: str, novel_id: UUID):
 
 ### Epic 0: Project Infrastructure (8 stories - 54 hours)
 
-| Story | Changes |
-|-------|---------|
-| 0.1 | Repository Setup - **NEW**: Add ChromaDB client |
-| 0.2 | Docker Environment - **NEW**: ChromaDB container |
-| 0.3 | Database Setup - **CHANGED**: PostgreSQL metadata only (removed pgvector) |
-| 0.4 | Backend API Foundation - **CHANGED**: MSA setup (Spring + FastAPI) |
-| 0.7 | **Novel Ingestion Pipeline** - **NEW STORY** (10 hours) |
-| 0.8 | **LLM Character Extraction** - **NEW STORY** (6 hours) |
+| Story | Changes                                                                   |
+| ----- | ------------------------------------------------------------------------- |
+| 0.1   | Repository Setup - **NEW**: Add ChromaDB client                           |
+| 0.2   | Docker Environment - **NEW**: ChromaDB container                          |
+| 0.3   | Database Setup - **CHANGED**: PostgreSQL metadata only (removed pgvector) |
+| 0.4   | Backend API Foundation - **CHANGED**: MSA setup (Spring + FastAPI)        |
+| 0.7   | **Novel Ingestion Pipeline** - **NEW STORY** (10 hours)                   |
+| 0.8   | **LLM Character Extraction** - **NEW STORY** (6 hours)                    |
 
 ### Epic 1: Scenario Foundation (Updated)
 
 **Story 1.1: Scenario Data Model**
+
 - **CHANGED**: `base_scenarios.vectordb_passage_ids[]` stores VectorDB references
 - **CHANGED**: No `passages` table in PostgreSQL
 
 **Story 1.2-1.4: Scenario UI**
+
 - **CHANGED**: Fetch passage content from FastAPI (VectorDB query)
 - Display character summaries (full data in VectorDB)
 
 ### Epic 2: AI Adaptation Layer (Updated)
 
 **Story 2.1: Scenario to Prompt Engine**
+
 - **CHANGED**: Query VectorDB for character/location/event data
 - **CHANGED**: Build RAG context from VectorDB collections
 
 **Story 2.2: Context Window Manager**
+
 - **CHANGED**: Semantic search in VectorDB passages (not PostgreSQL full_text)
 
 ### Epic 4: Conversation System (Updated)
 
 **Story 4.1: Conversation Data Model**
+
 - **CHANGED**: `conversations.character_vectordb_id` (not FK to PostgreSQL)
 - **NEW**: Long polling status field
 
 **Story 4.2: Message Streaming**
+
 - **CHANGED**: FastAPI generates response with VectorDB RAG
 - **NEW**: Browser notification on completion
 
 ## 10. Migration Checklist
 
 ### Phase 1: Infrastructure Setup
+
 - [ ] Install ChromaDB in Docker
 - [ ] Create 5 VectorDB collections
 - [ ] Setup Gemini API keys
 - [ ] Configure FastAPI service
 
 ### Phase 2: PostgreSQL Schema Changes
+
 - [ ] Remove `novels.full_text` column
 - [ ] Remove `chapters`, `passages`, `characters`, `locations`, `events`, `themes` tables
 - [ ] Add `base_scenarios.vectordb_passage_ids` column
@@ -1308,6 +1361,7 @@ async def search_characters(query: str, novel_id: UUID):
 - [ ] Remove `pgvector` extension
 
 ### Phase 3: FastAPI Development
+
 - [ ] Implement novel ingestion endpoint
 - [ ] Implement Gutenberg file parser
 - [ ] Implement text chunking service
@@ -1317,6 +1371,7 @@ async def search_characters(query: str, novel_id: UUID):
 - [ ] Implement semantic search endpoints
 
 ### Phase 4: Spring Boot Updates
+
 - [ ] Add FastAPI client (WebClient)
 - [ ] Update scenario creation to call FastAPI passage search
 - [ ] Update conversation creation to use long polling
@@ -1324,6 +1379,7 @@ async def search_characters(query: str, novel_id: UUID):
 - [ ] Remove direct VectorDB access (delegate to FastAPI)
 
 ### Phase 5: Frontend Updates
+
 - [ ] Add long polling service
 - [ ] Add browser notification support
 - [ ] Update character display to fetch from FastAPI
@@ -1334,16 +1390,19 @@ async def search_characters(query: str, novel_id: UUID):
 ### VectorDB Query Optimization
 
 **Indexing**:
+
 - Novel ID index on all collections
 - Chapter number index on passages
 - Importance score index on characters/events
 
 **Query Limits**:
+
 - Passage search: top_k = 20 (default)
 - Character search: top_k = 10
 - Event search: top_k = 15
 
 **Caching**:
+
 ```python
 from functools import lru_cache
 
@@ -1355,6 +1414,7 @@ def get_character_data(character_vectordb_id: str):
 ### Cross-Database Query Optimization
 
 **Pattern: Batch VectorDB Lookups**
+
 ```python
 # BAD: Multiple single queries
 for conversation in conversations:
@@ -1370,11 +1430,13 @@ characters = vectordb.get(ids=character_ids)
 ### VectorDB Costs
 
 **Development (ChromaDB - Self-hosted)**:
+
 - Storage: Free (local disk)
 - Compute: Included in server costs
 - Scalability: Limited by disk space
 
 **Production (Pinecone)**:
+
 - Starter Plan: $70/month
 - Includes: 100K vectors (768-dim)
 - Estimated capacity: ~50 novels
@@ -1383,16 +1445,19 @@ characters = vectordb.get(ids=character_ids)
 ### API Costs (Gemini)
 
 **Embedding Generation**:
+
 - Input: Free (text-embedding-004)
 - ~1M tokens/month for 100 novels
 
 **Text Generation (Gemini 2.5 Flash)**:
+
 - Input: $0.075 per 1M tokens
 - Output: $0.30 per 1M tokens
 - Estimated: $0.001 per conversation
 - Monthly (1000 conversations): ~$1
 
 **Total Monthly Cost (Production)**:
+
 - VectorDB (Pinecone): $70
 - Gemini API: $5-10
 - **Total: ~$80/month** (vs ~$150 with GPT-4)
@@ -1402,6 +1467,7 @@ characters = vectordb.get(ids=character_ids)
 ### VectorDB Access Control
 
 **Pattern: Service-level isolation**
+
 ```python
 # FastAPI is the ONLY service that accesses VectorDB
 # Spring Boot NEVER accesses VectorDB directly
@@ -1416,11 +1482,12 @@ def _query_vectordb(collection: str, query: dict):
 ### Cross-Database Consistency
 
 **Pattern: Two-phase commit simulation**
+
 ```python
 async def create_scenario_with_passages(scenario_data: dict):
     # Phase 1: Query VectorDB
     passage_ids = await fastapi_client.search_passages(...)
-    
+
     # Phase 2: Save to PostgreSQL with transaction
     try:
         async with db.transaction():
@@ -1439,16 +1506,19 @@ async def create_scenario_with_passages(scenario_data: dict):
 ### Immediate Actions (Week 1-2)
 
 1. **Setup VectorDB Infrastructure**:
+
    - Install ChromaDB
    - Create 5 collections with proper schemas
    - Test embedding generation with Gemini
 
 2. **Implement Novel Ingestion**:
+
    - FastAPI ingestion endpoint
    - Gutenberg file parser
    - VectorDB storage service
 
 3. **Update PostgreSQL Schema**:
+
    - Run Flyway migration to remove content tables
    - Add VectorDB reference columns
    - Test cross-database queries
@@ -1473,7 +1543,7 @@ async def create_scenario_with_passages(scenario_data: dict):
 
 ## Changelog
 
-**2025-01-14** (Version 1.0): Hybrid Database Architecture
+**2025-11-14** (Version 1.0): Hybrid Database Architecture
 
 - **Database Split**: Separated PostgreSQL (metadata) and VectorDB (content/embeddings)
 - **Table Count**: Reduced from 32 to 13 PostgreSQL tables
@@ -1625,22 +1695,22 @@ graph TD
     style B fill:#000000,stroke:#333,stroke-width:2px,color:#fff
 
     classDef forbidden fill:#FFE5E5,stroke:#FF0000,stroke-width:3px,stroke-dasharray: 5 5
-    
+
     %% Forbidden connections (drawn but styled as prohibited)
     C -.->|❌ FORBIDDEN| V
     D -.->|❌ FORBIDDEN| E
-    
+
     class C forbidden
     class D forbidden
 ```
 
 ### 🔒 Database Access Isolation Rules
 
-| Service       | Allowed Database      | Database Client           | Forbidden Access          |
-|---------------|-----------------------|---------------------------|---------------------------|
-| Spring Boot   | ✅ PostgreSQL ONLY    | Spring Data JPA           | ❌ VectorDB (NO ChromaDB client) |
-| FastAPI       | ✅ VectorDB ONLY      | ChromaDB/Pinecone Client  | ❌ PostgreSQL (NO psycopg2/SQLAlchemy) |
-| Frontend      | ❌ No direct DB       | -                         | Must call Spring Boot or FastAPI |
+| Service     | Allowed Database   | Database Client          | Forbidden Access                       |
+| ----------- | ------------------ | ------------------------ | -------------------------------------- |
+| Spring Boot | ✅ PostgreSQL ONLY | Spring Data JPA          | ❌ VectorDB (NO ChromaDB client)       |
+| FastAPI     | ✅ VectorDB ONLY   | ChromaDB/Pinecone Client | ❌ PostgreSQL (NO psycopg2/SQLAlchemy) |
+| Frontend    | ❌ No direct DB    | -                        | Must call Spring Boot or FastAPI       |
 
 ### Diagram Flow Description:
 
@@ -1648,38 +1718,44 @@ graph TD
 
 2.  **Frontend Hosting**: The static frontend assets are served from Vercel.
 
-3.  **Dual Backend Calls**: 
+3.  **Dual Backend Calls**:
+
     - The Vue.js app calls **Spring Boot** for metadata operations (user auth, scenario CRUD, social features)
     - The Vue.js app calls **FastAPI** for AI operations (conversation streaming, semantic search)
 
-4.  **Spring Boot → PostgreSQL (Metadata Only)**: 
+4.  **Spring Boot → PostgreSQL (Metadata Only)**:
+
     - The Core Backend uses **JPA ONLY** to access PostgreSQL
     - Stores user accounts, scenario metadata, conversation metadata
     - **NO VectorDB client libraries** in Spring Boot dependencies
     - Stores VectorDB foreign keys (e.g., `character_vectordb_id`) but never queries VectorDB directly
 
-5.  **Spring Boot → FastAPI (VectorDB Access)**: 
+5.  **Spring Boot → FastAPI (VectorDB Access)**:
+
     - When Spring Boot needs VectorDB data (e.g., search similar passages), it calls FastAPI internal API
     - Uses **WebClient** to make HTTP calls to `http://fastapi:8000/api/ai/*`
     - Example: `POST /api/ai/search/passages` for semantic search
 
-6.  **FastAPI → VectorDB (Content + Embeddings Only)**: 
+6.  **FastAPI → VectorDB (Content + Embeddings Only)**:
+
     - The AI Backend uses **ChromaDB client ONLY** to access VectorDB
     - Stores novel passages, character descriptions, embeddings (768-dim Gemini vectors)
     - **NO PostgreSQL drivers** in FastAPI dependencies
     - Never directly touches PostgreSQL
 
-7.  **FastAPI → Spring Boot (Metadata Access)**: 
+7.  **FastAPI → Spring Boot (Metadata Access)**:
+
     - When FastAPI needs PostgreSQL data (e.g., novel metadata during ingestion), it calls Spring Boot internal API
     - Uses **httpx.AsyncClient** to make HTTP calls to `http://spring-boot:8080/api/internal/*`
     - Example: `POST /api/internal/novels` to save novel metadata
 
-8.  **FastAPI → Gemini API**: 
+8.  **FastAPI → Gemini API**:
+
     - Text generation: **Gemini 2.5 Flash** (conversations, character extraction)
     - Embeddings: **Gemini Embedding API** (768-dimensional vectors for semantic search)
     - Replaces OpenAI API completely
 
-9.  **Response Flow**: 
+9.  **Response Flow**:
     - AI Backend returns results to Core Backend (or directly to Frontend for streaming responses)
     - Core Backend processes and sends final response back to the user's browser
 

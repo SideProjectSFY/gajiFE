@@ -66,7 +66,7 @@ Implement comprehensive health check system with **Pattern B architecture** vali
       "redis": "connected",
       "redis_long_polling_ttl": "600s",
       "celery_workers": 2,
-      "timestamp": "2025-01-14T12:00:00Z"
+      "timestamp": "2025-11-14T12:00:00Z"
     }
     ```
 - [ ] **Frontend `/health`** endpoint (optional):

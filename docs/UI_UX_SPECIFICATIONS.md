@@ -1,7 +1,7 @@
 # UI/UX Specifications - Gaji Interactive Fiction Platform
 
 **Version**: 1.0  
-**Last Updated**: 2025-01-13  
+**Last Updated**: 2025-11-13  
 **Design System**: PrimeVue 3.x + PandaCSS  
 **Target Frameworks**: Vue.js 3.x, Vite 5.x
 
@@ -1270,6 +1270,6 @@ Email: *
 ---
 
 **Document Version**: 1.0  
-**Last Updated**: 2025-01-13  
+**Last Updated**: 2025-11-13  
 **Maintained By**: Design Team  
 **Feedback**: #gaji-design on Slack

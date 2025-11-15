@@ -1,7 +1,7 @@
 # Testing Strategy - Gaji Interactive Fiction Platform
 
 **Version**: 1.0  
-**Last Updated**: 2025-01-13  
+**Last Updated**: 2025-11-13  
 **Project**: Gaji  
 **Test Pyramid**: 70% Unit | 20% Integration | 10% E2E
 
@@ -180,7 +180,7 @@ describe("ScenarioCard.vue", () => {
       username: "hermione_fan",
       avatarUrl: "https://example.com/avatar.jpg",
     },
-    createdAt: "2025-01-13T10:00:00Z",
+    createdAt: "2025-11-13T10:00:00Z",
   };
 
   it("renders scenario details correctly", () => {
@@ -1031,7 +1031,7 @@ export const mockScenarios: Scenario[] = [
       username: "hermione_fan",
       avatarUrl: "https://example.com/avatar.jpg",
     },
-    createdAt: "2025-01-13T10:00:00Z",
+    createdAt: "2025-11-13T10:00:00Z",
   },
   // More scenarios...
 ];
@@ -1135,6 +1135,6 @@ server.use(
 ---
 
 **Document Version**: 1.0  
-**Last Updated**: 2025-01-13  
+**Last Updated**: 2025-11-13  
 **Maintained By**: QA Team  
 **Feedback**: #gaji-testing on Slack

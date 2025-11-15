@@ -1,7 +1,7 @@
 # Development Setup Guide
 
 **Project**: Gaji - Interactive Fiction Platform  
-**Last Updated**: 2025-01-14  
+**Last Updated**: 2025-11-14  
 **Target**: Local Development Environment  
 **Architecture**: Hybrid Database (PostgreSQL + VectorDB)
 
@@ -28,19 +28,19 @@
 
 ### Required Software
 
-| Software           | Version | Purpose                         |
-| ------------------ | ------- | ------------------------------- |
-| **Java JDK**       | 17+     | Core Backend (Spring Boot)      |
-| **Gradle**         | 8.x     | Java build tool                 |
-| **Python**         | 3.11+   | AI Backend (FastAPI)            |
-| **uv**             | Latest  | Python package manager          |
-| **Node.js**        | 18+     | Frontend build                  |
-| **pnpm**           | 8+      | Node package manager            |
-| **PostgreSQL**     | 15.x    | Metadata database               |
-| **ChromaDB**       | Latest  | VectorDB (development)          |
-| **Redis**          | 7+      | Celery message broker           |
-| **Docker**         | 24+     | Container orchestration         |
-| **Docker Compose** | 2.x     | Multi-container setup           |
+| Software           | Version | Purpose                    |
+| ------------------ | ------- | -------------------------- |
+| **Java JDK**       | 17+     | Core Backend (Spring Boot) |
+| **Gradle**         | 8.x     | Java build tool            |
+| **Python**         | 3.11+   | AI Backend (FastAPI)       |
+| **uv**             | Latest  | Python package manager     |
+| **Node.js**        | 18+     | Frontend build             |
+| **pnpm**           | 8+      | Node package manager       |
+| **PostgreSQL**     | 15.x    | Metadata database          |
+| **ChromaDB**       | Latest  | VectorDB (development)     |
+| **Redis**          | 7+      | Celery message broker      |
+| **Docker**         | 24+     | Container orchestration    |
+| **Docker Compose** | 2.x     | Multi-container setup      |
 
 ### Installation Commands
 
@@ -162,6 +162,7 @@ gaji-workspace/
 ```
 
 **Benefits**:
+
 - Independent deployment cycles per service
 - Clear ownership boundaries
 - Easier CI/CD configuration
@@ -351,7 +352,7 @@ CREATE EXTENSION IF NOT EXISTS "pg_trgm";  # For trigram search
 
 Migrations are located in `core-backend/src/main/resources/db/migration/`
 
-**Initial Schema** (V1__initial_schema.sql) - Metadata Only:
+**Initial Schema** (V1\_\_initial_schema.sql) - Metadata Only:
 
 ```sql
 -- Users table
@@ -589,11 +590,11 @@ import chromadb
 
 def test_vectordb_connection():
     client = chromadb.PersistentClient(path="./chroma_data")
-    
+
     # List collections
     collections = client.list_collections()
     assert len(collections) == 5
-    
+
     # Test adding a document
     passages = client.get_collection("novel_passages")
     passages.add(
@@ -601,11 +602,11 @@ def test_vectordb_connection():
         documents=["This is a test passage"],
         metadatas=[{"novel_id": "test", "chapter_number": 1}]
     )
-    
+
     # Query test
     results = passages.get(ids=["test_passage_1"])
     assert len(results['ids']) == 1
-    
+
     print("✓ VectorDB connection test passed")
 
 if __name__ == "__main__":
@@ -636,6 +637,7 @@ LLM_MAX_TOKENS=8192
 ```
 
 Get Gemini API Key:
+
 1. Go to [Google AI Studio](https://makersuite.google.com/app/apikey)
 2. Create a new API key
 3. Add to `.env` file
@@ -649,13 +651,13 @@ import os
 
 def test_gemini_connection():
     genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
-    
+
     # Test text generation
     model = genai.GenerativeModel("gemini-2.5-flash")
     response = model.generate_content("Hello, World!")
     assert response.text
     print(f"✓ Text generation works: {response.text[:50]}...")
-    
+
     # Test embedding generation
     result = genai.embed_content(
         model="models/text-embedding-004",
@@ -670,11 +672,13 @@ if __name__ == "__main__":
 ```
 
 ---
+
     conversation_id UUID NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
     memo_text VARCHAR(1000) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (user_id, conversation_id)
+
 );
 
 -- Indexes
@@ -695,7 +699,8 @@ CREATE INDEX idx_follows_following ON user_follows(following_id);
 
 CREATE INDEX idx_likes_user ON conversation_likes(user_id);
 CREATE INDEX idx_likes_conversation ON conversation_likes(conversation_id);
-```
+
+````
 
 **Run Migrations**:
 
@@ -706,7 +711,7 @@ CREATE INDEX idx_likes_conversation ON conversation_likes(conversation_id);
 
 # Check migration status
 ./gradlew flywayInfo
-```
+````
 
 ### 3. Seed Test Data (Optional)
 
@@ -1200,7 +1205,7 @@ JWT_ACCESS_TOKEN_EXPIRATION=3600000  # 1 hour
 4. **Start Frontend**: `cd gaji-workspace/frontend && pnpm dev`
 5. **Open Browser**: http://localhost:5173
 6. **Check Health**: Visit health endpoints
-7. **Run Tests**: 
+7. **Run Tests**:
    - Backend: `cd core-backend && ./gradlew test`
    - AI Backend: `cd ai-backend && pytest`
    - Frontend: `cd frontend && pnpm test`

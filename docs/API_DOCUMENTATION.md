@@ -1,8 +1,8 @@
 # API Documentation
 
 **Project**: Gaji - Interactive Fiction Platform  
-**Last Updated**: 2025-01-13  
-**API Version**: v1  
+**Last Updated**: 2025-11-13  
+**API Version**: v1
 
 ---
 
@@ -15,10 +15,10 @@ This project uses a **Microservice Architecture (MSA)** with strict database acc
 
 ### Base URLs
 
-| Service       | Base URL                      | Database Access          |
-|---------------|-------------------------------|--------------------------|
-| Spring Boot   | `http://localhost:8080/api`   | PostgreSQL (JPA)         |
-| FastAPI       | `http://localhost:8000/api`   | VectorDB (ChromaDB)      |
+| Service     | Base URL                    | Database Access     |
+| ----------- | --------------------------- | ------------------- |
+| Spring Boot | `http://localhost:8080/api` | PostgreSQL (JPA)    |
+| FastAPI     | `http://localhost:8000/api` | VectorDB (ChromaDB) |
 
 ### Internal APIs
 
@@ -28,6 +28,7 @@ Both services expose **internal endpoints** for cross-service communication:
 - **FastAPI Internal API**: `/api/ai/*` (called by Spring Boot for VectorDB queries)
 
 **Frontend** calls both services directly:
+
 - Spring Boot: User management, scenario CRUD, social features
 - FastAPI: AI conversation, novel ingestion, semantic search
 
@@ -36,6 +37,7 @@ Both services expose **internal endpoints** for cross-service communication:
 ## Table of Contents
 
 ### Spring Boot APIs (PostgreSQL)
+
 1. [Authentication](#authentication)
 2. [Scenarios](#scenarios)
 3. [Conversations - Metadata](#conversations-metadata)
@@ -44,6 +46,7 @@ Both services expose **internal endpoints** for cross-service communication:
 6. [Internal API - Spring Boot](#internal-api-spring-boot)
 
 ### FastAPI APIs (VectorDB)
+
 7. [Novel Ingestion](#novel-ingestion-fastapi)
 8. [AI Conversation](#ai-conversation-fastapi)
 9. [Semantic Search](#semantic-search-fastapi)
@@ -51,6 +54,7 @@ Both services expose **internal endpoints** for cross-service communication:
 11. [Internal API - FastAPI](#internal-api-fastapi)
 
 ### Cross-Cutting Concerns
+
 12. [Error Handling](#error-handling)
 13. [Performance Targets](#performance-targets)
 14. [Code Examples](#code-examples)
@@ -1383,7 +1387,7 @@ Batch import novel from Project Gutenberg dataset (not real-time API).
 async def ingest_novel(file_path: str, metadata: dict):
     # 1. Parse Gutenberg file
     text = parse_gutenberg_file(file_path)
-    
+
     # 2. Save metadata to PostgreSQL via Spring Boot
     async with httpx.AsyncClient() as client:
         response = await client.post(
@@ -1391,13 +1395,13 @@ async def ingest_novel(file_path: str, metadata: dict):
             json=metadata
         )
         novel_id = UUID(response.json()["id"])
-    
+
     # 3. Chunk text (200-500 words per passage)
     passages = chunk_text(text, chunk_size=300)
-    
+
     # 4. Generate embeddings via Gemini Embedding API
     embeddings = await generate_embeddings(passages)  # 768 dims
-    
+
     # 5. Store in VectorDB (FastAPI only)
     chroma = chromadb.PersistentClient(path="./chroma_data")
     passages_collection = chroma.get_collection("novel_passages")
@@ -1407,12 +1411,12 @@ async def ingest_novel(file_path: str, metadata: dict):
         documents=passages,
         metadatas=[{"novel_id": str(novel_id), "chunk_index": i} for i in range(len(passages))]
     )
-    
+
     # 6. Extract characters via Gemini 2.5 Flash
     characters = await extract_characters_with_llm(text)
     characters_collection = chroma.get_collection("characters")
     # ... store in VectorDB
-    
+
     # 7. Update PostgreSQL status via Spring Boot
     await client.patch(
         f"http://spring-boot:8080/api/internal/novels/{novel_id}",
@@ -1442,7 +1446,7 @@ async def ingest_novel(file_path: str, metadata: dict):
     "locations_extracted": 12,
     "events_extracted": 67
   },
-  "completed_at": "2025-01-13T11:00:00Z"
+  "completed_at": "2025-11-13T11:00:00Z"
 }
 ```
 
@@ -1504,7 +1508,7 @@ Semantic search for novel passages using VectorDB cosine similarity.
 public class ScenarioService {
     @Autowired
     private WebClient aiServiceClient;
-    
+
     public Scenario createScenario(CreateScenarioRequest request) {
         // Spring Boot calls FastAPI for VectorDB query
         PassageSearchResponse passages = aiServiceClient.post()
@@ -1517,7 +1521,7 @@ public class ScenarioService {
             .retrieve()
             .bodyToMono(PassageSearchResponse.class)
             .block();
-        
+
         // Save to PostgreSQL with VectorDB passage IDs
         Scenario scenario = new Scenario();
         scenario.setVectordbPassageIds(passages.getPassageIds());
@@ -1560,7 +1564,7 @@ data: {"type": "token", "content": "You know"}
 event: message
 data: {"type": "token", "content": ", Harry"}
 
-event: message  
+event: message
 data: {"type": "token", "content": ", I've always"}
 
 event: message
@@ -1578,7 +1582,7 @@ class RAGService:
             scenario = await client.get(
                 f"http://spring-boot:8080/api/internal/scenarios/{scenario_id}"
             )
-        
+
         # 2. Search VectorDB for relevant passages (FastAPI only)
         chroma = chromadb.PersistentClient(path="./chroma_data")
         passages = chroma.get_collection("novel_passages")
@@ -1587,28 +1591,28 @@ class RAGService:
             where={"novel_id": scenario["novel_id"]},
             n_results=20
         )
-        
+
         # 3. Get character from VectorDB (FastAPI only)
         characters = chroma.get_collection("characters")
         character = characters.get(ids=[scenario["character_vectordb_id"]])
-        
+
         # 4. Build prompt with RAG context
         prompt = f"""
         Character: {character["name"]}
         Personality: {character["personality"]}
         Scenario: {scenario["description"]}
-        
+
         Relevant passages:
         {results["documents"]}
-        
+
         User: {user_message}
         Assistant:
         """
-        
+
         # 5. Call Gemini 2.5 Flash
         async for token in gemini_client.generate_stream(prompt):
             yield token
-        
+
         # 6. Save message to PostgreSQL via Spring Boot
         await client.post(
             f"http://spring-boot:8080/api/internal/conversations/{conversation_id}/messages",
@@ -1720,7 +1724,7 @@ characters_collection.add(
 {
   "id": "550e8400-e29b-41d4-a716-446655440000",
   "title": "Pride and Prejudice",
-  "created_at": "2025-01-13T10:00:00Z"
+  "created_at": "2025-11-13T10:00:00Z"
 }
 ```
 

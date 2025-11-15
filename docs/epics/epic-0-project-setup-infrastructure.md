@@ -1140,8 +1140,8 @@ Response:
 
 | Date       | Version | Change Description                                        | Changed By |
 | ---------- | ------- | --------------------------------------------------------- | ---------- |
-| 2025-01-27 | 1.0     | Initial Epic 0 creation with 12 stories (77h)             | PM         |
-| 2025-01-27 | 2.0     | Updated to Gemini 2.5 Flash + Pre-processed Dataset (32h) | PO         |
+| 2025-11-27 | 1.0     | Initial Epic 0 creation with 12 stories (77h)             | PM         |
+| 2025-11-27 | 2.0     | Updated to Gemini 2.5 Flash + Pre-processed Dataset (32h) | PO         |
 
 - Removed Stories 0.7-0.12 (Local LLM pipeline, 52h)
 - Added new Story 0.7 (VectorDB Data Import, 3h)
