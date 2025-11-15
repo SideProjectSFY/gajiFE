@@ -22,7 +22,7 @@ Implement character trait preservation system that maintains core personality tr
 
 ## Acceptance Criteria
 
-- [ ] `CharacterTraitExtractor` service extracts core traits from base_story using Local LLM (one-time per character)
+- [ ] `CharacterTraitExtractor` service extracts core traits from base_story using **Gemini 2.5 Flash** (one-time per character)
 - [ ] Trait database: `character_traits` table with character_name, base_story, core_traits JSONB, extracted_at
 - [ ] Core traits categorized: personality (brave, intelligent), skills (magic, sword fighting), relationships (friends, enemies), values (loyalty, ambition)
 - [ ] Scenario adaptation preserves core traits while modifying scenario-specific ones
@@ -30,7 +30,8 @@ Implement character trait preservation system that maintains core personality tr
 - [ ] `/api/ai/character-traits/{base_story}/{character}` endpoint retrieves or extracts traits
 - [ ] Prompt injection: "PRESERVE: [core_traits], ADAPT: [scenario_changes]"
 - [ ] Trait cache with Redis (TTL 7 days, popular characters cached indefinitely)
-- [ ] Local LLM extraction cost optimization: batch extract all characters from popular stories
+- [ ] **Gemini API cost optimization**: Batch extract all characters from popular stories, cache aggressively
+- [ ] **VectorDB integration**: Store extracted traits in ChromaDB for semantic similarity search
 - [ ] Unit tests for trait preservation logic >80% coverage
 
 ## Technical Notes
@@ -38,7 +39,16 @@ Implement character trait preservation system that maintains core personality tr
 **Character Trait Extraction** (one-time, cached):
 
 ```python
+from google import generativeai as genai
+import chromadb
+
 class CharacterTraitExtractor:
+
+    def __init__(self):
+        genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
+        self.model = genai.GenerativeModel('gemini-2.5-flash')
+        self.chroma_client = chromadb.HttpClient(host="localhost", port=8000)
+        self.traits_collection = self.chroma_client.get_or_create_collection("character_traits")
 
     async def extract_traits(self, base_story: str, character: str) -> CharacterTraits:
         # Check cache first
@@ -55,7 +65,7 @@ class CharacterTraitExtractor:
         if db_traits:
             return CharacterTraits(**db_traits['core_traits'])
 
-        # Extract using Local LLM (one-time)
+        # Extract using Gemini 2.5 Flash (one-time)
         extraction_prompt = f"""
         Analyze the character '{character}' from '{base_story}'.
         Extract their core traits in these categories:
@@ -65,7 +75,7 @@ class CharacterTraitExtractor:
         3. Relationships: Key people they care about (friends, family, enemies)
         4. Values: What they believe in (loyalty, ambition, justice)
 
-        Return JSON format:
+        Return ONLY valid JSON format:
         {{
           "personality": ["brave", "loyal", "impulsive"],
           "skills": ["magic", "flying", "leadership"],
@@ -74,24 +84,41 @@ class CharacterTraitExtractor:
         }}
         """
 
-        response = await llm_client.generate(
-            prompt=extraction_prompt,
-            temperature=0.3  # Low temperature for consistent extraction
+        response = await self.model.generate_content_async(
+            extraction_prompt,
+            generation_config=genai.types.GenerationConfig(
+                temperature=0.2,  # Low temperature for consistent extraction
+                max_output_tokens=1000
+            )
         )
 
-        traits_json = json.loads(response)
+        traits_json = json.loads(response.text)
         traits = CharacterTraits(**traits_json)
 
-        # Save to database and cache
+        # Save to database
         await db.execute(
             "INSERT INTO character_traits (base_story, character_name, core_traits) "
             "VALUES ($1, $2, $3)",
             base_story, character, traits.dict()
         )
+
+        # Save to Redis cache (7 days)
         await redis.setex(
             f"traits:{base_story}:{character}",
             604800,  # 7 days
             traits.json()
+        )
+
+        # Save to VectorDB for semantic search
+        trait_text = f"{character} from {base_story}: " + \
+                     f"Personality: {', '.join(traits.personality)}. " + \
+                     f"Skills: {', '.join(traits.skills)}. " + \
+                     f"Values: {', '.join(traits.values)}."
+
+        self.traits_collection.add(
+            documents=[trait_text],
+            metadatas=[{"base_story": base_story, "character": character}],
+            ids=[f"{base_story}:{character}"]
         )
 
         return traits
@@ -144,7 +171,7 @@ class CharacterConsistencyInjector:
 
     def infer_new_relationships(self, new_property: str, base_story: str) -> str:
         # Simple heuristic for relationship adaptation
-        # Future: Use Local LLM for intelligent inference
+        # Future: Use Gemini 2.5 Flash for intelligent inference
         if "Slytherin" in new_property and base_story == "Harry Potter":
             return "Draco, Pansy, Blaise"
         elif "Gryffindor" in new_property:
@@ -171,10 +198,11 @@ class CharacterConsistencyInjector:
 
 ### Performance
 
-- [ ] Trait extraction < 3s (Local LLM call)
+- [ ] Trait extraction < 5s (Gemini 2.5 Flash API call)
 - [ ] Cached trait retrieval < 50ms
 - [ ] Prompt adaptation with traits < 100ms
-- [ ] Batch extraction of 10 characters < 20s
+- [ ] Batch extraction of 10 characters < 30s
+- [ ] VectorDB trait query < 100ms
 
 ### Edge Cases
 

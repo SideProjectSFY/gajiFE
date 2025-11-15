@@ -7,6 +7,7 @@ Establish the foundational technical infrastructure for Gaji platform with **Pat
 ## User Value
 
 While users don't directly interact with infrastructure, this epic ensures:
+
 - **Enhanced Security**: FastAPI and Gemini API keys protected from external access
 - **Cost Efficiency**: $700/year saved on SSL certificates and domains
 - **Performance**: SSE streaming for real-time AI responses
@@ -100,7 +101,7 @@ While users don't directly interact with infrastructure, this epic ensures:
 
 **Priority: P0 - Critical**
 
-**Description**: Initialize FastAPI service for **internal AI/ML operations** including RAG pipeline, Gemini API integration, and VectorDB management. Service is **NOT externally exposed** - accessed only via Spring Boot proxy.
+**Description**: Initialize FastAPI service for **internal AI/ML operations** including RAG pipeline, **Gemini 2.5 Flash API integration**, and VectorDB management. Service is **NOT externally exposed** - accessed only via Spring Boot proxy.
 
 **Acceptance Criteria**:
 
@@ -109,12 +110,12 @@ While users don't directly interact with infrastructure, this epic ensures:
   - FastAPI
   - Uvicorn (ASGI server)
   - Pydantic (data validation)
-  - **google-generativeai** (Gemini API SDK)
+  - **google-generativeai** (Gemini API SDK - Gemini 2.5 Flash + Embedding API)
   - **chromadb** (VectorDB for dev)
   - **pinecone-client** (VectorDB for prod)
   - httpx (async HTTP client for Spring Boot callbacks)
   - celery (async task queue)
-  - redis (Celery broker)
+  - redis (Celery broker + Long Polling task storage)
 - [ ] Project structure created:
   ```
   ai-backend/
@@ -141,12 +142,13 @@ While users don't directly interact with infrastructure, this epic ensures:
   - `GEMINI_API_KEY` (Gemini 2.5 Flash API key)
   - `VECTORDB_TYPE=chromadb` (dev) / `pinecone` (prod)
   - `SPRING_BOOT_URL=http://localhost:8080` (for callbacks)
-  - `REDIS_URL=redis://localhost:6379` (Celery broker)
+  - `REDIS_URL=redis://localhost:6379` (Celery broker + Long Polling task storage)
 - [ ] Gemini API client configured:
-  - Model: `gemini-2.5-flash` for text generation
-  - Model: `text-embedding-004` for 768-dim embeddings
-  - Temperature: 0.7-0.8 for character conversations
+  - **Gemini 2.5 Flash** for text generation: `gemini-2.5-flash`
+  - **Gemini Embedding API** for 768-dim embeddings: `text-embedding-004`
+  - Temperature: 0.6-0.8 for character conversations (configurable by scenario type)
   - Timeout: 30 seconds
+  - Retry logic: 3 attempts with exponential backoff (1s, 2s, 4s)
 - [ ] VectorDB client configured:
   - ChromaDB (dev): Persistent client with local storage
   - Pinecone (prod): Cloud-hosted with API key
@@ -169,8 +171,16 @@ While users don't directly interact with infrastructure, this epic ensures:
 - **Database Access**: FastAPI accesses VectorDB ONLY (no PostgreSQL drivers)
 - **No PostgreSQL Access**: Use Spring Boot REST API for metadata queries
 - Use async/await throughout for better performance
-- Configure Gemini API retry logic (3 attempts with exponential backoff)
-- VectorDB connection pooling: min 5, max 15 connections
+- **Gemini API Integration**:
+  - Gemini 2.5 Flash: 1M input tokens, 8K output tokens
+  - Pricing: $0.075 per 1M input, $0.30 per 1M output
+  - Retry logic: 3 attempts with exponential backoff (1s, 2s, 4s)
+  - Circuit breaker: Fail after 5 consecutive errors
+- **VectorDB Configuration**:
+  - ChromaDB (dev): Persistent client with local storage at `./chroma_data`
+  - Pinecone (prod): Cloud-hosted with index name `gaji-prod`
+  - Connection pooling: min 5, max 15 connections
+- **Redis for Long Polling**: Store task status with 600-second TTL (10 minutes)
 
 **Estimated Effort**: 6 hours
 
@@ -302,7 +312,7 @@ CREATE TABLE conversations (
   title VARCHAR(200),
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  CHECK (parent_conversation_id IS NULL OR 
+  CHECK (parent_conversation_id IS NULL OR
          (SELECT parent_conversation_id FROM conversations WHERE id = parent_conversation_id) IS NULL)
 );
 -- NOTE: ROOT-only forking (max depth 1)
@@ -450,10 +460,10 @@ CREATE TABLE conversation_memos (
 
 - **Pattern B Implementation**: Frontend → Spring Boot ONLY. All AI requests proxied internally.
 - **Security Benefit**: No FastAPI URL or Gemini API keys exposed to browser
-- **PandaCSS Benefits**: 
+- **PandaCSS Benefits**:
   - Zero-runtime CSS (all styling extracted at build time)
   - Type-safe styling with TypeScript autocomplete
-  - Smaller bundle size vs Tailwind
+  - Smaller bundle size vs Panda
 - Use `<script setup>` syntax for composition API
 - Configure path aliases: `@/` → `src/`
 - Enable Vite HMR for fast development
@@ -467,7 +477,7 @@ CREATE TABLE conversation_memos (
 
 **Priority: P1 - High**
 
-**Description**: Create Docker containers for all services and configure docker-compose for local development with proper networking and health checks.
+**Description**: Create Docker containers for all services and configure docker-compose for local development with **VectorDB (ChromaDB)** and **Redis** services for Long Polling and async task processing.
 
 **Acceptance Criteria**:
 
@@ -477,21 +487,30 @@ CREATE TABLE conversation_memos (
   - `frontend/Dockerfile` (Vue.js with Nginx)
 - [ ] docker-compose.yml with services:
   - `postgres` (PostgreSQL 15)
+  - **`vectordb`** (ChromaDB for dev)
+  - **`redis`** (Redis 7 for Celery + Long Polling task storage)
   - `backend` (Spring Boot on port 8080)
-  - `ai-service` (FastAPI on port 8001)
+  - `ai-service` (FastAPI on port 8000, internal-only)
   - `frontend` (Nginx on port 80)
 - [ ] Docker network configured for inter-service communication
 - [ ] Health checks configured for all services:
   - postgres: `pg_isready`
+  - **vectordb**: `curl http://localhost:8000/api/v1/heartbeat` (ChromaDB)
+  - **redis**: `redis-cli ping`
   - backend: `GET /actuator/health`
   - ai-service: `GET /health`
   - frontend: `curl localhost:80`
 - [ ] Environment variables managed via .env file
 - [ ] Volumes configured:
-  - PostgreSQL data persistence
+  - PostgreSQL data persistence (`postgres_data`)
+  - **VectorDB data persistence** (`vectordb_data`)
+  - **Redis data persistence** (`redis_data`)
   - Backend logs
-  - AI service models cache
-- [ ] Service dependencies: backend/ai-service wait for postgres
+  - AI service logs
+- [ ] Service dependencies:
+  - backend: waits for postgres, redis
+  - ai-service: waits for postgres, vectordb, redis
+  - frontend: waits for backend
 - [ ] Hot reload enabled for development:
   - Backend: volume mount for target/classes
   - AI service: volume mount for app/
@@ -521,6 +540,34 @@ services:
       timeout: 5s
       retries: 5
 
+  vectordb:
+    image: chromadb/chroma:0.4.18
+    ports:
+      - "8001:8000" # ChromaDB HTTP API
+    volumes:
+      - vectordb_data:/chroma/chroma
+    environment:
+      CHROMA_SERVER_AUTH_PROVIDER: "chromadb.auth.token.TokenAuthServerProvider"
+      CHROMA_SERVER_AUTH_CREDENTIALS: ${VECTORDB_TOKEN}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/heartbeat"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   backend:
     build: ./backend
     ports:
@@ -529,9 +576,12 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/gaji_db
       SPRING_DATASOURCE_USERNAME: gaji
       SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
-      AI_SERVICE_URL: http://ai-service:8001
+      FASTAPI_BASE_URL: http://ai-service:8000
+      REDIS_URL: redis://redis:6379
     depends_on:
       postgres:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
@@ -542,18 +592,22 @@ services:
   ai-service:
     build: ./ai-service
     ports:
-      - "8001:8001"
+      - "8000:8000" # Internal-only, NOT exposed to frontend
     environment:
-      DATABASE_URL: postgresql://gaji:${DB_PASSWORD}@postgres:5432/gaji_db
-      LLM_MODEL_PATH: ${LLM_MODEL_PATH}
-      LLM_MODEL_TYPE: ${LLM_MODEL_TYPE}
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+      VECTORDB_TYPE: chromadb
+      VECTORDB_URL: http://vectordb:8000
+      SPRING_BOOT_URL: http://backend:8080
+      REDIS_URL: redis://redis:6379
     volumes:
-      - ./models:/models
+      - ./ai-service/app:/app # Hot reload for development
     depends_on:
-      postgres:
+      vectordb:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -569,14 +623,25 @@ services:
 
 volumes:
   postgres_data:
+  vectordb_data:
+  redis_data:
 ```
 
 **Technical Notes**:
 
+- **VectorDB Service**: ChromaDB for dev (Pinecone config added in production)
+- **Redis Service**: Used for Celery task queue + Long Polling task storage (600-second TTL)
+- **No External FastAPI Access**: Frontend → Spring Boot only (Pattern B)
 - Use multi-stage builds for smaller images
 - Configure `.dockerignore` to exclude node_modules, target/
-- Set resource limits (memory, CPU) for production
-- Enable BuildKit for faster builds
+- Set resource limits (memory, CPU) for production:
+  - postgres: 2GB RAM
+  - vectordb: 4GB RAM (embeddings require memory)
+  - redis: 512MB RAM
+  - backend: 1GB RAM
+  - ai-service: 2GB RAM (Gemini API client)
+  - frontend: 256MB RAM
+- Enable BuildKit for faster builds: `DOCKER_BUILDKIT=1 docker-compose build`
 
 **Estimated Effort**: 5 hours
 
@@ -654,37 +719,50 @@ Response:
 
 **Priority: P0 - Critical**
 
-**Description**: Import **pre-processed Project Gutenberg dataset** into ChromaDB (dev) / Pinecone (prod) using one-time Python script. Dataset includes pre-chunked passages with 768-dim embeddings, extracted characters, locations, events, and themes. Creates PostgreSQL metadata via Spring Boot API. **No LLM processing needed** (dataset already processed).
+**Description**: Import **pre-processed Project Gutenberg dataset** into VectorDB (ChromaDB dev / Pinecone prod) using one-time Python import script. Dataset includes pre-chunked passages with **768-dim Gemini embeddings**, extracted characters, locations, events, and themes. Creates PostgreSQL metadata via Spring Boot API. **No LLM processing needed** (dataset already processed offline).
 
 **Acceptance Criteria**:
 
-- [ ] **Dataset Structure**:
-  - `novels.json` - Novel metadata (title, author, year, genre)
+- [ ] **Pre-processed Dataset Structure**:
+  - `novels.json` - Novel metadata (title, author, year, genre, language)
   - `passages.parquet` - Text chunks + 768-dim embeddings (200-500 words each)
-  - `characters.json` - Character metadata (name, role, description, personality_traits)
-  - `locations.json` - Setting descriptions
-  - `events.json` - Plot events
-  - `themes.json` - Thematic analysis (optional)
+    - Columns: novel_id, chapter_num, passage_num, text, embedding (768-dim float array), word_count
+  - `characters.json` - Character metadata + embeddings
+    - Fields: character_id, novel_id, name, role, description, personality_traits[], embedding (768-dim)
+  - `locations.json` - Setting descriptions + embeddings
+  - `events.json` - Plot events + embeddings
+  - `themes.json` - Thematic analysis + embeddings (optional for MVP)
 - [ ] **Import Script**: `ai-backend/scripts/import_dataset.py`
-  - CLI tool with args: `--dataset-path`, `--vectordb-host`, `--spring-boot-api`
+  - CLI tool with arguments:
+    - `--dataset-path` (path to dataset directory)
+    - `--vectordb-host` (ChromaDB URL, default: `http://localhost:8001`)
+    - `--spring-boot-api` (Spring Boot API URL, default: `http://localhost:8080`)
+    - `--batch-size` (default: 1000 passages per batch)
   - Workflow:
-    1. Validate dataset structure
-    2. Create 5 ChromaDB collections (passages, characters, locations, events, themes)
-    3. Batch import passages (1000 per batch)
-    4. Batch import characters
-    5. Create PostgreSQL metadata via Spring Boot API
-    6. Verify import (count validation, semantic search test)
+    1. **Validate dataset structure**: Check all required files exist
+    2. **Create 5 ChromaDB collections**: `novel_passages`, `characters`, `locations`, `events`, `themes`
+    3. **Batch import passages**: 1000 passages per batch with embeddings
+    4. **Batch import characters**: With personality traits and embeddings
+    5. **Batch import locations, events, themes**
+    6. **Create PostgreSQL metadata** via Spring Boot API: `POST /api/internal/novels`
+    7. **Verify import**: Count validation, semantic search test
   - Progress tracking: Console output "Importing passages: 1000/5234 (19%)"
-  - Error handling: Rollback on failure, retry API calls 3 times
-- [ ] **ChromaDB Collections** (5 total):
-  - `novel_passages`: Text chunks with embeddings (cosine similarity, HNSW index)
-  - `characters`: Character metadata with description embeddings
-  - `locations`: Setting descriptions
-  - `events`: Plot events
-  - `themes`: Thematic elements
-- [ ] **PostgreSQL Metadata** (via Spring Boot):
+  - Error handling: Rollback on failure, retry Spring Boot API calls 3 times with exponential backoff
+- [ ] **5 VectorDB Collections** (ChromaDB/Pinecone):
+  - **`novel_passages`**:
+    - Document schema: `{id, novel_id, chapter_num, passage_num, text, embedding[768], word_count, metadata}`
+    - Index: HNSW with cosine similarity
+  - **`characters`**:
+    - Document schema: `{id, novel_id, name, role, description, personality_traits[], embedding[768], metadata}`
+  - **`locations`**:
+    - Document schema: `{id, novel_id, name, description, cultural_context, embedding[768], metadata}`
+  - **`events`**:
+    - Document schema: `{id, novel_id, event_name, description, outcomes[], embedding[768], metadata}`
+  - **`themes`**:
+    - Document schema: `{id, novel_id, theme_name, description, embedding[768], metadata}`
+- [ ] **PostgreSQL Metadata Creation** (via Spring Boot API):
   - Endpoint: `POST /api/internal/novels`
-  - Payload:
+  - Request payload:
     ```json
     {
       "title": "Pride and Prejudice",
@@ -695,108 +773,66 @@ Response:
       "vectordb_collection_id": "novel_UUID",
       "total_passages_count": 523,
       "total_characters_count": 47,
-      "ingestion_status": "completed"
+      "total_locations_count": 15,
+      "total_events_count": 32,
+      "ingestion_status": "completed",
+      "dataset_source_path": "/data/gutenberg/pride-and-prejudice"
     }
     ```
-- [ ] **Verification Script**: `scripts/verify_import.py`
-  - Check all 5 collections exist
-  - Count validation: PostgreSQL count == VectorDB count
-  - Semantic search test: "brave protagonist" → returns relevant characters
-  - Cross-reference: PostgreSQL novel_id exists in VectorDB
+  - Spring Boot validates and saves to PostgreSQL `novels` table
+- [ ] **Verification Script**: `ai-backend/scripts/verify_import.py`
+  - Check all 5 collections exist in VectorDB
+  - Count validation: PostgreSQL metadata count == VectorDB document count
+  - Semantic search test: Query "brave protagonist" → returns relevant characters with similarity scores
+  - Cross-reference test: PostgreSQL `novels.vectordb_collection_id` matches VectorDB collection
+  - Output: "✅ All checks passed" or "❌ Validation failed: {errors}"
 - [ ] **Performance Requirements**:
-  - Import speed: > 1000 passages/minute
-  - Total time: < 10 minutes for 10 novels
-  - Memory usage: < 2GB during import
+  - Import speed: > 1000 passages/minute (batch insert optimization)
+  - Total import time: < 10 minutes for 10 novels (~5000 passages total)
+  - Memory usage: < 2GB during import (streaming parquet reads)
+  - VectorDB query latency: < 100ms for top-10 semantic search
 
 **Data Flow**:
 
 ```
 1. Admin runs: python scripts/import_dataset.py --dataset-path /data/gutenberg
-2. Script validates dataset structure (novels.json, passages.parquet, etc.)
-3. Script creates 5 ChromaDB collections
-4. Script imports passages batch (1000 per batch) → ChromaDB novel_passages
-5. Script imports characters → ChromaDB characters collection
-6. Script → Spring Boot API: POST /api/internal/novels (metadata only)
-7. Spring Boot → PostgreSQL: Save novel metadata
-8. Script runs verify_import.py to confirm success
+2. Script validates dataset structure (novels.json, passages.parquet, characters.json, etc.)
+3. Script creates 5 ChromaDB collections (passages, characters, locations, events, themes)
+4. Script imports passages batch (1000 per batch) → ChromaDB `novel_passages` collection
+   - Each passage has pre-computed 768-dim embedding (Gemini text-embedding-004)
+5. Script imports characters → ChromaDB `characters` collection
+6. Script imports locations, events, themes → respective VectorDB collections
+7. Script → Spring Boot API: POST /api/internal/novels (metadata only)
+   - Spring Boot → PostgreSQL: Save novel metadata with vectordb_collection_id
+8. Script runs verify_import.py to confirm success:
+   - Count check: PostgreSQL total_passages_count == VectorDB passages count
+   - Semantic search test: Query "brave protagonist" returns relevant results
+   - Cross-reference: PostgreSQL vectordb_collection_id exists in VectorDB
+9. Output: "✅ Import completed: 10 novels, 5234 passages, 127 characters"
 ```
 
 **Technical Notes**:
 
-- **Why Pre-processed Dataset**: Eliminates 10+ hours of LLM extraction work
-- **Embeddings**: 768-dim vectors compatible with Gemini Embedding API (for future updates)
-- **Import Script**: Python with ChromaDB client, pandas (parquet), httpx (API calls)
-- **Dependencies**: `chromadb==0.4.18`, `pandas==2.1.4`, `pyarrow==14.0.1`, `httpx==0.25.2`
-- Store original dataset path for debugging: `novels.dataset_source_path`
-
-**Estimated Effort**: 3 hours
-
----
-  - Collection: `novel_passages`
-  - Document schema:
-    ```python
-    {
-      "id": "UUID",
-      "novel_id": "UUID (PostgreSQL reference)",
-      "chapter_number": 1,
-      "passage_number": 5,
-      "passage_type": "narrative",
-      "text": "It is a truth universally acknowledged...",
-      "word_count": 387,
-      "embedding": [768-dimensional float vector]
-    }
-    ```
-- [ ] **PostgreSQL Metadata Storage** (via Spring Boot):
-  - FastAPI → Spring Boot: `POST /api/internal/novels`
-  - Request:
-    ```json
-    {
-      "title": "Pride and Prejudice",
-      "author": "Jane Austen",
-      "publication_year": 1813,
-      "genre": "Romance",
-      "vectordb_collection_id": "novel_UUID",
-      "total_passages_count": 523
-    }
-    ```
-  - Spring Boot saves to PostgreSQL `novels` table
-- [ ] **Gemini API Integration**:
-  - Model: `text-embedding-004` (768 dimensions)
-  - Batch embeddings: 100 passages per API call
-  - Error handling: retry 3 times with exponential backoff
-  - Rate limiting: respect Gemini API quotas
-- [ ] **Async Processing** (Celery):
-  - Task: `ingest_novel_task(file_path)`
-  - Status tracking: `GET /api/ingestion/tasks/{task_id}`
-  - Returns: `{status: "processing", progress: "45%", total_passages: 523, processed: 235}`
-- [ ] **Error Handling**:
-  - Invalid file format → 400 Bad Request
-  - File not found → 404 Not Found
-  - Gemini API error → retry then fail gracefully
-  - VectorDB connection error → log and retry
-- [ ] Integration test: Ingest sample Gutenberg book, verify VectorDB + PostgreSQL storage
-
-**Data Flow**:
-
-```
-1. Admin uploads Gutenberg .txt file
-2. FastAPI parses metadata + body text
-3. FastAPI chunks text (200-500 words)
-4. FastAPI → Gemini API: Generate embeddings (768-dim)
-5. FastAPI → VectorDB: Store passages with embeddings
-6. FastAPI → Spring Boot: POST /api/internal/novels (metadata only)
-7. Spring Boot → PostgreSQL: Save novel metadata
-8. FastAPI → Spring Boot: PATCH /api/internal/novels/{id} (update ingestion_status)
-```
-
-**Technical Notes**:
-
-- **Hybrid Database**: Content in VectorDB, metadata in PostgreSQL
-- **Why VectorDB?**: ~100GB for 1000 novels, semantic search 10x faster than PostgreSQL
-- **Why Not Real-Time API?**: Project Gutenberg dataset is static, batch import is sufficient
-- Use Celery + Redis for async processing (novels can take 2-5 minutes)
-- Target processing time: ~3 minutes for 100k-word novel
-- Store original file path for debugging: `novels.gutenberg_file_path`
+- **Why Pre-processed Dataset**: Eliminates 52 hours of Local LLM extraction work
+- **Embeddings**: 768-dim vectors from Gemini Embedding API (`text-embedding-004`)
+  - Compatible with future Gemini API semantic search
+  - Cosine similarity for semantic matching
+- **Import Script Dependencies**:
+  - `chromadb==0.4.18` (VectorDB client)
+  - `pandas==2.1.4` (parquet file reading)
+  - `pyarrow==14.0.1` (parquet backend)
+  - `httpx==0.25.2` (Spring Boot API calls)
+  - `tqdm==4.66.1` (progress bars)
+- **Batch Import Optimization**:
+  - Use `chromadb.add()` with batch_size=1000 for fast insertion
+  - Stream parquet reads to avoid loading entire file into memory
+  - Parallel API calls to Spring Boot (asyncio for metadata creation)
+- **Error Handling**:
+  - VectorDB connection error → Retry 3 times with exponential backoff (1s, 2s, 4s)
+  - Spring Boot API error → Retry 3 times, rollback VectorDB on failure
+  - Validation failure → Print detailed error report, suggest fixes
+- **Dataset Source**: Store original path in PostgreSQL for debugging
+  - `novels.dataset_source_path` (e.g., "/data/gutenberg/pride-and-prejudice")
 
 **Estimated Effort**: 3 hours
 
@@ -806,268 +842,321 @@ Response:
 
 **Total Stories**: 7 (Stories 0.1-0.7)
 
-**Total Effort**: ~39 hours (~5 working days for 2 engineers)
+**Total Effort**: ~32 hours (~4 working days for 2 engineers)
+
+**Effort Breakdown**:
+
+- **Infrastructure Setup** (Stories 0.1-0.6): 28 hours
+  - Story 0.1 (Spring Boot API Gateway): 6h
+  - Story 0.2 (FastAPI AI Service): 6h
+  - Story 0.3 (PostgreSQL Metadata): 5h
+  - Story 0.4 (Vue.js Frontend): 6h
+  - Story 0.5 (Docker + VectorDB + Redis): 5h
+  - Story 0.6 (Health Checks): 4h
+- **Data Import** (Story 0.7): 3 hours
+  - VectorDB import from pre-processed dataset (no LLM processing)
 
 **Success Criteria**:
-- ✅ All 6 services running via Docker Compose
-- ✅ Pattern B architecture validated (FastAPI not externally accessible)
-- ✅ PostgreSQL 13 metadata tables migrated
-- ✅ 5 ChromaDB collections created and populated
-- ✅ Health checks passing for all services
+
+- ✅ All 7 services running via Docker Compose (postgres, vectordb, redis, backend, ai-service, frontend)
+- ✅ Pattern B architecture validated (FastAPI not externally accessible, all frontend requests → Spring Boot)
+- ✅ PostgreSQL 13 metadata tables migrated (no content storage)
+- ✅ 5 VectorDB collections created and populated (passages, characters, locations, events, themes)
+- ✅ Health checks passing for all services (including VectorDB and Redis)
 - ✅ Sample dataset imported (10+ novels, 5000+ passages, 100+ characters)
+- ✅ Semantic search working (query "brave protagonist" returns relevant characters)
+- ✅ Redis configured for Long Polling task storage (600-second TTL)
 
 **Epic Dependencies**:
-- Epic 0 → Epic 1 (Scenario system requires novel data)
-- Epic 0 → Epic 2 (AI conversations require character data)
 
----
-- [ ] Semantic search API:
-  - POST /api/v1/novels/{id}/passages/search
-  - Input: query text, top_k (default 10)
-  - Returns: most similar passages with similarity scores
-- [ ] LLM analysis metadata tracking:
-  - analysis_type = 'embedding_generation'
-  - Track total tokens and costs
-- [ ] Batch job management:
-  - Process 1000 passages at a time
-  - Progress tracking API
-  - Retry logic for API failures
-- [ ] Performance benchmarks:
-  - Embedding generation: <1 minute per 100 passages
-  - Similarity search: <100ms for top-10 results
-- [ ] Cost calculation and budgeting
+- Epic 0 → Epic 1 (Scenario system requires novel data from VectorDB)
+- Epic 0 → Epic 2 (AI conversations require character data from VectorDB + Gemini API)
+- Epic 0 → Epic 4 (Conversation system requires Redis for Long Polling)
 
-**Technical Notes**:
+**Cost Savings**:
 
-- Embeddings enable RAG context retrieval for conversations
-- Required for AI character responses (Story 2.1, 2.2)
-- Use async batch processing for efficiency
-- Cache embedding API responses (24-hour TTL)
-- Target cost: <$0.50 per novel for embeddings
-
-**Estimated Effort**: 6 hours
-
----
-
-### Story 0.11: Base Scenario Auto-Generation from Metadata
-
-**Priority: P1 - High**
-
-**Description**: Auto-generate base_scenarios from extracted novel metadata to seed user scenario creation.
-
-**Acceptance Criteria**:
-
-- [ ] Base scenario generation algorithm:
-  - Identify 5-10 key divergence points per novel
-  - Use extracted characters, locations, events, themes
-  - Populate base_scenarios with **structured columns** (no JSONB):
-    - character_summary TEXT
-    - location_summary TEXT
-    - theme_summary TEXT
-    - page_range VARCHAR
-    - content_summary TEXT
-    - tags TEXT[] (array of searchable tags)
-- [ ] Scenario type classification:
-  - CHARACTER_CHANGE scenarios (personality trait modifications)
-  - EVENT_ALTERATION scenarios (plot event changes)
-  - SETTING_MODIFICATION scenarios (location/time period changes)
-- [ ] Admin verification UI:
-  - List all generated base scenarios
-  - Edit/approve/reject workflow
-  - Bulk approval for verified novels
-- [ ] API endpoints:
-  - GET /api/v1/admin/novels/{id}/base-scenarios
-  - POST /api/v1/admin/base-scenarios/{id}/verify
-  - POST /api/v1/admin/base-scenarios (manual creation)
-- [ ] Seeding script for MVP:
-  - Generate base scenarios for 3-5 popular novels
-  - Verify quality before enabling user access
-- [ ] Quality metrics:
-  - Scenario coherence score
-  - Metadata completeness check
-- [ ] Documentation: base scenario creation guide for admins
-
-**Technical Notes**:
-
-- Runs after all LLM analyses complete (Stories 0.8, 0.9, 0.10)
-- Semi-automated: LLM proposes, admin verifies
-- Enables Epic 1 user scenario creation features
-- Target: 10-15 high-quality base scenarios per novel
-
-**Estimated Effort**: 8 hours
-
----
-
-### Story 0.12: LLM Analysis Dashboard & Cost Monitoring
-
-**Priority: P2 - Medium**
-
-**Description**: Admin dashboard for monitoring LLM analysis jobs, costs, and quality metrics.
-
-**Acceptance Criteria**:
-
-- [ ] Dashboard UI components:
-  - Analysis job list (all novels, filterable by status)
-  - Job detail view (progress, costs, errors)
-  - Cost breakdown by analysis type
-  - Daily/weekly/monthly cost trends
-- [ ] Real-time job monitoring:
-  - WebSocket or polling for progress updates
-  - Status indicators (pending/processing/completed/failed)
-  - ETA calculation based on current progress
-- [ ] Cost analytics:
-  - Total spend by novel
-  - Average cost per analysis type
-  - Cost per 1k words (efficiency metric)
-  - Budget alerts (configurable thresholds)
-- [ ] Quality metrics dashboard:
-  - Character extraction accuracy (sample validation)
-  - Passage segmentation quality
-  - Base scenario coherence scores
-- [ ] Error tracking and retry UI:
-  - View failed jobs with error messages
-  - Retry button for failed analyses
-  - Bulk retry for specific error types
-- [ ] Export functionality:
-  - CSV export for cost reports
-  - JSON export for analysis results
-- [ ] Admin controls:
-  - Pause/resume background jobs
-  - Configure batch sizes
-  - Adjust cost limits
-
-**Technical Notes**:
-
-- Vue.js frontend with real-time updates
-- Chart.js for cost trend visualization
-- Caching for performance (5-minute TTL)
-- Role-based access: admin-only dashboard
-
-**Estimated Effort**: 8 hours
+- **52 hours removed** (Stories 0.7-0.12 Local LLM pipeline)
+- **3 hours added** (Story 0.7 Pre-processed dataset import)
+- **Net savings**: 49 hours (77h → 32h total effort)
+- **Infrastructure cost**: ~$220-270/month for 1000 users (Railway + Pinecone + Gemini API)
 
 ---
 
 ## Epic-Level Acceptance Criteria
 
-- [ ] All services run with single `docker-compose up` command
-- [ ] PostgreSQL database initialized with all tables and indexes
-- [ ] Backend API accessible at http://localhost:8080
-- [ ] AI service accessible at http://localhost:8001
-- [ ] Frontend accessible at http://localhost:80
-- [ ] All health checks passing
-- [ ] Inter-service communication verified (backend ↔ AI service)
-- [ ] **LLM pipeline functional**: Novel upload → passage segmentation → character/location/event extraction → embeddings → base scenarios
-- [ ] **Cost tracking operational**: All LLM analyses tracked in llm_analysis_metadata
-- [ ] Development environment documented in README
-- [ ] CI/CD pipeline configured (GitHub Actions or similar)
-- [ ] Code quality tools configured (linting, formatting, testing)
+### Infrastructure Readiness
+
+- [ ] All services containerized and running via Docker Compose
+- [ ] Docker health checks passing for all 6 services (postgres, vectordb, redis, backend, ai-service, frontend)
+- [ ] Inter-service communication working (backend ↔ AI service, backend ↔ PostgreSQL, AI service ↔ VectorDB, AI service ↔ Redis)
+- [ ] Environment variables documented and example .env files provided
+- [ ] README updated with complete local setup instructions
+- [ ] Database migrations running successfully (Flyway for Spring Boot)
+
+### Data Import Verified
+
+- [ ] Sample dataset imported successfully (10+ novels, 5000+ passages, 100+ characters)
+- [ ] 5 ChromaDB collections created and populated (passages, characters, locations, events, themes)
+- [ ] VectorDB semantic search test passing (query "brave protagonist" returns relevant results)
+- [ ] PostgreSQL metadata synced with VectorDB (count validation passing)
+- [ ] Cross-reference validation: PostgreSQL `vectordb_collection_id` exists in VectorDB
+
+### API Integration Operational
+
+- [ ] Gemini API key configured in FastAPI environment
+- [ ] Gemini 2.5 Flash text generation working (test prompt returns valid response)
+- [ ] Gemini Embedding API working (test text returns 768-dim vector)
+- [ ] Retry logic validated (3 attempts with exponential backoff 1s/2s/4s)
+- [ ] Circuit breaker tested (fails after 5 consecutive errors)
+
+### Developer Experience
+
+- [ ] Development environment can be started with single command: `docker-compose up`
+- [ ] Hot reload working for all services (backend, ai-service, frontend)
+- [ ] Documentation includes troubleshooting guide for common issues
+- [ ] Sample data seeded for testing (10+ novels with passages and characters)
+
+---
 
 ## Dependencies
 
-**Blocks**:
+**External Dependencies**:
 
-- **Epic 1: What If Scenario Foundation**
-  - Requires: Stories 0.1-0.6 (infrastructure), 0.7-0.11 (LLM pipeline)
-  - Reason: Needs base_scenarios populated and database ready
-- **Epic 2: AI Character Adaptation**
-  - Requires: Stories 0.1-0.6 (infrastructure), 0.8 (characters), 0.10 (embeddings)
-  - Reason: Needs character metadata and RAG embeddings for prompt generation
-- **Epic 3: Scenario Discovery & Forking**
-  - Requires: Stories 0.1-0.6 (infrastructure), 0.11 (base scenarios)
-  - Reason: Needs base scenarios to enable forking
-- **Epic 4: Conversation System**
-  - Requires: Stories 0.1-0.6 (infrastructure), 0.10 (embeddings)
-  - Reason: Needs RAG pipeline for context retrieval
-- **Epic 5: Scenario Tree Visualization**
-  - Requires: Stories 0.1-0.6 (infrastructure)
-  - Reason: Needs database and backend API
-- **Epic 6: User Authentication & Social Features**
-  - Requires: Stories 0.1-0.6 (infrastructure)
-  - Reason: Needs user table and backend authentication
+- Docker Desktop installed (version 20+)
+- Docker Compose (bundled with Docker Desktop)
+- JDK 17 (for Spring Boot local development)
+- Node.js 18+ (for Vue.js local development)
+- Python 3.11+ (for FastAPI local development)
+- PostgreSQL 15 client tools (for database management)
+- **Gemini API key** from Google Cloud Console
+- **Pre-processed Project Gutenberg dataset** (download link TBD)
 
 **Internal Dependencies**:
 
-- Story 0.8 → Requires 0.7 (needs passages to extract characters from)
-- Story 0.9 → Requires 0.7 (needs passages to extract locations/events/themes)
-- Story 0.10 → Requires 0.7 (needs passages to generate embeddings)
-- Story 0.11 → Requires 0.8, 0.9, 0.10 (needs metadata to generate base scenarios)
-- Story 0.12 → Requires 0.8-0.11 (needs analysis data to display)
+- None (Epic 0 is the foundation for all other epics)
 
-**Requires**:
+**Required Infrastructure**:
 
-- Development environment (macOS, Linux, or Windows with WSL)
-- Docker Desktop installed
-- Local LLM models (Llama-2-7B or Mistral-7B) downloaded
-- 8GB+ RAM (for running all services, 16GB+ recommended for GPU)
-- GPU recommended for faster inference (CUDA/Metal support)
+- 8GB+ RAM (for running all services)
+- 50GB+ disk space (Docker images, VectorDB data, database storage)
+- Stable internet connection (for Gemini API calls)
+
+**Tools and Services**:
+
+- GitHub account (for repository access)
+- Google Cloud Console (for Gemini API key)
+- ChromaDB OSS (free, self-hosted for dev)
+- Pinecone account (optional, for production VectorDB)
+
+**Pre-requisites**:
+
+- Project repository cloned locally
+- Environment variables configured (.env files)
+- Docker daemon running
+- Database migrations prepared (Flyway scripts in `/db/migrations/`)
+- Pre-processed dataset downloaded to `/data/gutenberg/`
+
+---
+
+## Definition of Done
+
+**Infrastructure Complete**:
+
+- [ ] All 6 Docker containers running without errors
+- [ ] Health check endpoints returning 200 OK for all services (postgres, vectordb, redis, backend, ai-service, frontend)
+- [ ] Database migrations applied successfully (13 PostgreSQL metadata tables created)
+- [ ] Environment variables configured and validated
+- [ ] Local development workflow documented and tested
+
+**Data Import Complete**:
+
+- [ ] Import script working: `python scripts/import_dataset.py --dataset-path /data/gutenberg`
+- [ ] 5 VectorDB collections created (passages, characters, locations, events, themes)
+- [ ] Sample dataset imported (10+ novels, 5000+ passages, 100+ characters)
+- [ ] PostgreSQL metadata created via Spring Boot API
+- [ ] Verification script passing: `python scripts/verify_import.py`
+
+**Gemini API Integration Complete**:
+
+- [ ] Gemini 2.5 Flash configured in FastAPI (text generation)
+- [ ] Gemini Embedding API configured (768-dim embeddings)
+- [ ] Retry logic validated (3 attempts with exponential backoff)
+- [ ] Circuit breaker tested (fails after 5 consecutive API errors)
+- [ ] API key securely stored in environment variables
+
+**Quality Assurance**:
+
+- [ ] Integration tests passing for all Epic 0 features
+- [ ] API documentation generated (Swagger/OpenAPI for FastAPI, Spring REST Docs for Spring Boot)
+- [ ] Performance benchmarks met:
+  - Import speed: >1000 passages/minute
+  - Import completion: <10 minutes for 10 novels
+  - VectorDB semantic search: <100ms response time
+- [ ] Error handling validated:
+  - Gemini API failures gracefully handled with retry
+  - VectorDB connection errors logged and retried
+  - Spring Boot API errors trigger rollback
+
+**Documentation Complete**:
+
+- [ ] README.md updated with quick start guide
+- [ ] DEVELOPMENT.md with detailed setup instructions
+- [ ] API documentation published (accessible via `/api/docs` endpoints)
+- [ ] Architecture diagrams updated in `/docs/ARCHITECTURE.md`
+- [ ] Gemini API key configuration guide documented
+- [ ] Pre-processed dataset structure documented
+- [ ] Troubleshooting guide for common developer issues
+
+**Cost Tracking Validated**:
+
+- [ ] Gemini API usage tracked in llm_analysis_tracking table
+- [ ] Cost estimates documented:
+  - Per-conversation costs (Gemini 2.5 Flash)
+  - Monthly infrastructure costs (Railway + Pinecone + Gemini API)
+  - Estimated costs for 1000 users (~$220-270/month)
+
+**Developer Handoff Ready**:
+
+- [ ] Environment can be started with `docker-compose up`
+- [ ] Sample data loaded (10+ novels with passages and characters)
+- [ ] All tests passing (`npm test`, `pytest`, `./gradlew test`)
+- [ ] Code review completed for all Epic 0 stories
+- [ ] Epic 1 (Scenario Foundation) can begin development
+
+---
 
 ## Success Metrics
 
-**Technical Metrics**:
+### Infrastructure Performance
 
-- All services start within 60 seconds
-- Zero service startup failures
-- Health checks passing 99%+ of the time
-- Inter-service API latency < 100ms (backend → AI service)
-- Database connection pool utilization < 80%
-- **LLM Pipeline Performance**:
-  - Novel processing: <5 minutes for 100k-word novel (all analyses)
-  - Character extraction accuracy: >85% (verified on sample novels)
-  - Embedding generation: <1 minute per 100 passages
-  - Semantic search: <100ms response time
+- **Startup Time**: All services running within 2 minutes of `docker-compose up`
+- **Health Check Latency**: <500ms for all health check endpoints
+- **Database Migration Time**: <10 seconds for full schema creation
+- **Docker Image Sizes**: <500MB per service (optimized builds)
 
-**Cost Metrics**:
+### Data Import Performance
 
-- **LLM Analysis Costs** (per 100k-word novel, local compute):
-  - Character extraction: <$0.50 (compute cost)
-  - Location/event/theme extraction: <$1.00 (combined)
-  - Embedding generation: <$0.20 (local model)
-  - Total per novel: <$2.00 (electricity and compute)
-- Cost tracking accuracy: 100% of analyses logged
-- Resource monitoring: GPU/CPU utilization tracked
+- **Import Speed**: >1000 passages/minute (batch insert optimization)
+- **Total Import Time**: <10 minutes for 10 novels (~5000 passages total)
+- **Memory Usage**: <2GB during import (streaming parquet reads)
+- **VectorDB Query Latency**: <100ms for top-10 semantic search
 
-**Developer Experience Metrics**:
+### Gemini API Performance
 
-- New developer onboarding: < 30 minutes from clone to running
-- Hot reload works for all services (< 3 second refresh)
-- Zero "works on my machine" incidents
-- Documentation clarity: 90%+ developers succeed on first try
+- **Text Generation Latency**: <3 seconds for typical conversation turn (Gemini 2.5 Flash)
+- **Embedding Generation**: <500ms for single text embedding (768-dim)
+- **Retry Success Rate**: >95% of failed API calls succeed on retry
+- **Circuit Breaker Accuracy**: Opens after exactly 5 consecutive errors
 
-**Data Quality Metrics**:
+### Cost Efficiency
 
-- Passage segmentation: 95%+ within 200-500 word range
-- Character deduplication: <5% duplicate character records
-- Base scenario quality: >80% approved by admin verification
+#### Gemini API Costs (estimated monthly for 1000 users)
 
-## Risk Mitigation
+- **Text Generation** (Gemini 2.5 Flash):
+  - Average: 10 conversations/user/month × 20 turns/conversation × 2,000 tokens/turn = 400,000 tokens/user
+  - Total: 1000 users × 400,000 = 400M tokens/month
+  - Input cost: 400M × $0.075 / 1M = **$30/month**
+  - Output cost: 400M × 0.4 (40% output ratio) × $0.30 / 1M = **$48/month**
+  - **Total text generation**: ~$78/month
+- **Embeddings** (Gemini Embedding API):
+  - Negligible (only for scenario validation, ~1000 calls/month)
+  - **Total embeddings**: ~$0.075/month
+- **Gemini API Total**: ~$78/month
 
-**Risk 1: Docker performance issues on macOS/Windows**
+#### Infrastructure Costs (monthly, estimated)
 
-- Mitigation: Document Docker Desktop settings (RAM, CPU allocation)
-- Mitigation: Provide native setup instructions as alternative
-- Mitigation: Use volume mounts wisely (avoid mounting node_modules)
+- **Railway Hosting**: ~$20-30/month for 1000 users
+- **PostgreSQL Database**: ~$10/month (Railway PostgreSQL add-on)
+- **Pinecone VectorDB** (production): ~$70/month for 100M vectors
+- **Redis**: ~$10/month (Railway Redis add-on)
+- **Gemini API**: ~$78/month (text generation + embeddings)
+- **Total Infrastructure**: ~$188-198/month for 1000 users
 
-**Risk 2: Service startup order issues (race conditions)**
+### Developer Productivity
 
-- Mitigation: Use `depends_on` with health checks
-- Mitigation: Implement retry logic in service initialization
-- Mitigation: Document startup order in README
+- **Setup Time**: <30 minutes from clone to running app (for experienced developers)
+- **Hot Reload Speed**: <2 seconds for code changes to reflect
+- **Test Execution Time**: <5 minutes for full test suite
+- **Documentation Clarity**: >90% of developers can set up without support
 
-**Risk 3: Database migration conflicts during team development**
+---
 
-- Mitigation: Flyway versioning convention (V{sprint}\_{story}\_\_{description}.sql)
-- Mitigation: Always pull latest before creating new migration
-- Mitigation: Document migration creation process
+## Notes
 
-**Risk 4: Environment configuration complexity**
+**LLM Integration Approach**:
 
-- Mitigation: Provide .env.example with all required variables
-- Mitigation: Fail fast with clear error if required env var missing
-- Mitigation: Document environment setup for each deployment target
+- Epic 0 uses **Gemini 2.5 Flash API** for all AI interactions:
+  - Character conversations (Epic 2)
+  - Scenario validation (Epic 1)
+  - What-if analysis
+- **Pre-processed dataset** eliminates need for Local LLM extraction pipeline
+- Dataset includes **768-dim Gemini embeddings** for semantic search
 
-## Technical Debt Decisions
+**VectorDB Strategy**:
 
-**Accepted Debt** (to be addressed post-MVP):
+- **Development**: ChromaDB OSS (self-hosted, free)
+- **Production**: Pinecone (cloud-hosted, scalable)
+- **Fallback**: PostgreSQL pgvector extension (if VectorDB unavailable)
+- All code uses abstraction layer for easy switching between VectorDB backends
+
+**Database Migrations**:
+
+- Flyway for Spring Boot (Java-based migrations)
+- Versioned SQL scripts in `/db/migrations/`
+- Baseline version: V1.0\_\_initial_schema.sql (13 metadata tables)
+- Future migrations use incremental versioning (V1.1, V1.2, etc.)
+
+**Docker Optimization**:
+
+- Multi-stage builds for smaller images
+- Layer caching for faster rebuilds
+- Health checks to prevent race conditions
+- Resource limits to prevent memory exhaustion (vectordb 4GB, postgres 2GB, redis 512MB, backend 1GB, ai-service 2GB, frontend 256MB)
+
+**Long Polling Implementation**:
+
+- Frontend polls Spring Boot every 2 seconds for task status
+- Spring Boot forwards to FastAPI internal endpoint
+- Redis stores task status with 600-second TTL (10 minutes)
+- Browser notifications via WebSocket/SSE for task completion
+
+**Risk Mitigation**:
+
+- **Gemini API Downtime**: Retry logic with exponential backoff (1s, 2s, 4s)
+- **VectorDB Downtime**: PostgreSQL pgvector as emergency fallback
+- **Database Corruption**: Daily automated backups
+- **Cost Overruns**: Budget alerts and rate limiting
+
+**Future Considerations** (post-MVP):
+
+- Advanced metadata extraction (sentiment analysis, character relationships)
+- Multi-language support (non-English novels)
+- Real-time collaborative scenario editing
+- Advanced cost optimization (prompt caching, model fine-tuning)
+
+---
+
+## Change Log
+
+| Date       | Version | Change Description                                        | Changed By |
+| ---------- | ------- | --------------------------------------------------------- | ---------- |
+| 2025-01-27 | 1.0     | Initial Epic 0 creation with 12 stories (77h)             | PM         |
+| 2025-01-27 | 2.0     | Updated to Gemini 2.5 Flash + Pre-processed Dataset (32h) | PO         |
+
+- Removed Stories 0.7-0.12 (Local LLM pipeline, 52h)
+- Added new Story 0.7 (VectorDB Data Import, 3h)
+- Updated Story 0.2 (FastAPI with Gemini SDK + Redis for Long Polling)
+- Updated Story 0.5 (Docker with VectorDB ChromaDB + Redis services)
+- Updated Epic Summary (77h → 32h total effort)
+- Updated Dependencies (removed Local LLM models, added Gemini API key)
+- Updated Definition of Done (removed LLM pipeline criteria, added dataset import)
+- Updated Success Metrics (removed LLM processing costs, added Gemini API costs)
+
+---
+
+**Epic Owner**: Platform Team (Backend + AI Engineers)
+**Epic Status**: Draft (awaiting approval to begin Story 0.1)
+**Epic Priority**: P0 - Critical (foundation for all features)
 
 - No Kubernetes/orchestration (Docker Compose sufficient for MVP)
 - No Redis caching layer (use in-memory cache)

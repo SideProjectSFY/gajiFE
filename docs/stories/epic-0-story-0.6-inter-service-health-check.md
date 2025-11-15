@@ -24,19 +24,27 @@ Implement comprehensive health check system with **Pattern B architecture** vali
 - [ ] **Spring Boot `/actuator/health`** endpoint includes custom health indicators:
   - PostgreSQL connection (metadata database)
   - FastAPI service availability (internal proxy health)
+  - **Redis connection** (Long Polling + Celery broker)
   - Disk space
   - Example response:
     ```json
     {
       "status": "UP",
       "components": {
-        "db": { 
+        "db": {
           "status": "UP",
-          "details": { "database": "PostgreSQL", "validationQuery": "isValid()" }
+          "details": {
+            "database": "PostgreSQL",
+            "validationQuery": "isValid()"
+          }
         },
-        "fastapi": { 
+        "fastapi": {
           "status": "UP",
           "details": { "url": "http://ai-service:8000", "responseTime": "45ms" }
+        },
+        "redis": {
+          "status": "UP",
+          "details": { "host": "redis:6379", "ping": "PONG" }
         },
         "diskSpace": { "status": "UP" }
       }
@@ -44,8 +52,8 @@ Implement comprehensive health check system with **Pattern B architecture** vali
     ```
 - [ ] **FastAPI `/health`** endpoint validates:
   - Gemini API connectivity (test API call)
-  - VectorDB connection (ChromaDB/Pinecone)
-  - Redis connection (Celery broker)
+  - **VectorDB connection** (ChromaDB dev / Pinecone prod)
+  - Redis connection (Celery broker + Long Polling storage)
   - Celery workers active
   - Example response:
     ```json
@@ -54,7 +62,9 @@ Implement comprehensive health check system with **Pattern B architecture** vali
       "gemini_api": "connected",
       "vectordb": "connected",
       "vectordb_type": "chromadb",
+      "vectordb_collections": 5,
       "redis": "connected",
+      "redis_long_polling_ttl": "600s",
       "celery_workers": 2,
       "timestamp": "2025-01-14T12:00:00Z"
     }
@@ -96,13 +106,13 @@ public class FastApiHealthIndicator implements HealthIndicator {
     public Health health() {
         try {
             long startTime = System.currentTimeMillis();
-            
+
             String response = fastApiClient.get()
                 .uri("/health")
                 .retrieve()
                 .bodyToMono(String.class)
                 .block(Duration.ofSeconds(5));
-            
+
             long responseTime = System.currentTimeMillis() - startTime;
 
             return Health.up()
@@ -138,7 +148,7 @@ async def health_check():
         "status": "healthy",
         "timestamp": datetime.utcnow().isoformat() + "Z"
     }
-    
+
     # Check Gemini API
     try:
         genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
@@ -149,26 +159,40 @@ async def health_check():
     except Exception as e:
         health_status["gemini_api"] = f"error: {str(e)}"
         health_status["status"] = "unhealthy"
-    
-    # Check VectorDB
+
+    # Check VectorDB (ChromaDB or Pinecone)
     try:
-        client = chromadb.PersistentClient(path="./chroma_data")
-        client.heartbeat()
-        health_status["vectordb"] = "connected"
-        health_status["vectordb_type"] = "chromadb"
+        vectordb_type = os.getenv("VECTORDB_TYPE", "chromadb")
+
+        if vectordb_type == "chromadb":
+            client = chromadb.HttpClient(
+                host=os.getenv("CHROMADB_HOST", "localhost"),
+                port=int(os.getenv("CHROMADB_PORT", "8000"))
+            )
+            client.heartbeat()
+            # Count collections
+            collections = client.list_collections()
+            health_status["vectordb"] = "connected"
+            health_status["vectordb_type"] = "chromadb"
+            health_status["vectordb_collections"] = len(collections)
+        else:  # Pinecone
+            # Pinecone health check logic
+            health_status["vectordb"] = "connected"
+            health_status["vectordb_type"] = "pinecone"
     except Exception as e:
         health_status["vectordb"] = f"error: {str(e)}"
         health_status["status"] = "unhealthy"
-    
-    # Check Redis
+
+    # Check Redis (Celery broker + Long Polling storage)
     try:
         r = redis.Redis.from_url(os.getenv("REDIS_URL"))
         r.ping()
         health_status["redis"] = "connected"
+        health_status["redis_long_polling_ttl"] = "600s"
     except Exception as e:
         health_status["redis"] = f"error: {str(e)}"
         health_status["status"] = "unhealthy"
-    
+
     # Check Celery workers
     try:
         from app.celery_app import celery_app
@@ -177,7 +201,7 @@ async def health_check():
         health_status["celery_workers"] = len(active_workers) if active_workers else 0
     except Exception as e:
         health_status["celery_workers"] = 0
-    
+
     return health_status
 ```
 
@@ -195,9 +219,9 @@ wait_for_service() {
   local service_name=$1
   local health_url=$2
   local elapsed=0
-  
+
   echo "⏳ Waiting for $service_name..."
-  
+
   while [ $elapsed -lt $MAX_WAIT ]; do
     if curl -f -s "$health_url" > /dev/null 2>&1; then
       echo "✅ $service_name: Healthy"
@@ -207,7 +231,7 @@ wait_for_service() {
     elapsed=$((elapsed + WAIT_INTERVAL))
     echo "   ... still waiting ($elapsed/$MAX_WAIT seconds)"
   done
-  
+
   echo "❌ $service_name: Timeout after $MAX_WAIT seconds"
   return 1
 }

@@ -38,7 +38,8 @@
 - **PostgreSQL Tables**: 13 core tables (metadata only)
 - **PostgreSQL Extensions**: `uuid-ossp`, `pg_trgm` (removed `pgvector` - embeddings now in VectorDB)
 - **VectorDB Collections**: 5 collections (novel_passages, characters, locations, events, themes)
-- **Total JSONB Columns**: 0 (fully normalized relational design)
+- **Redis Data Structures**: 2 types (async task tracking, user activity feed)
+- **Total JSONB Columns**: 0 (no JSONB columns in current schema)
 
 ### Key Design Decisions
 
@@ -350,6 +351,13 @@ erDiagram
     conversation_message_links }o--|| messages : references
     messages }o--|| users : "sent by"
 
+    scenario_character_changes }o--|| root_user_scenarios : "modifies root"
+    scenario_character_changes }o--|| leaf_user_scenarios : "modifies leaf"
+    scenario_event_alterations }o--|| root_user_scenarios : "modifies root"
+    scenario_event_alterations }o--|| leaf_user_scenarios : "modifies leaf"
+    scenario_setting_modifications }o--|| root_user_scenarios : "modifies root"
+    scenario_setting_modifications }o--|| leaf_user_scenarios : "modifies leaf"
+
     users {
         UUID id PK
         VARCHAR email UK
@@ -357,6 +365,71 @@ erDiagram
         VARCHAR password_hash
         TEXT bio
         VARCHAR avatar_url
+        TIMESTAMP created_at
+        TIMESTAMP updated_at
+    }
+
+    scenario_character_changes {
+        UUID id PK
+        UUID root_scenario_id FK
+        UUID leaf_scenario_id FK
+        VARCHAR character_vectordb_id
+        VARCHAR attribute
+        TEXT original_value
+        TEXT new_value
+        TEXT reasoning
+        TIMESTAMP created_at
+    }
+
+    scenario_event_alterations {
+        UUID id PK
+        UUID root_scenario_id FK
+        UUID leaf_scenario_id FK
+        VARCHAR event_vectordb_id
+        VARCHAR alteration_type
+        TEXT original_description
+        TEXT new_description
+        TEXT reasoning
+        TIMESTAMP created_at
+    }
+
+    scenario_setting_modifications {
+        UUID id PK
+        UUID root_scenario_id FK
+        UUID leaf_scenario_id FK
+        VARCHAR location_vectordb_id
+        VARCHAR modification_type
+        TEXT original_setting
+        TEXT new_setting
+        TEXT reasoning
+        TIMESTAMP created_at
+    }
+
+    conversation_message_links {
+        UUID id PK
+        UUID conversation_id FK
+        UUID message_id FK
+        INTEGER sequence_order
+        TIMESTAMP created_at
+    }
+
+    user_follows {
+        UUID follower_id PK_FK
+        UUID followee_id PK_FK
+        TIMESTAMP created_at
+    }
+
+    conversation_likes {
+        UUID user_id PK_FK
+        UUID conversation_id PK_FK
+        TIMESTAMP created_at
+    }
+
+    conversation_memos {
+        UUID id PK
+        UUID user_id FK
+        UUID conversation_id FK
+        TEXT memo_text
         TIMESTAMP created_at
         TIMESTAMP updated_at
     }
@@ -917,6 +990,15 @@ CREATE TABLE conversation_memos (
 
 ---
 
+### Additional System Tables
+
+#### `user_notifications`
+
+System notifications for users (conversation completion, new followers, etc.).
+
+````sql
+---
+
 ## VectorDB Schema
 
 ### Why VectorDB for Novel Content?
@@ -952,7 +1034,7 @@ CREATE TABLE conversation_memos (
     "document": "Passage text content (200-500 words)",
     "embedding": [768-dimensional float vector from Gemini Embedding API]
 }
-```
+````
 
 **Indexing Strategy**:
 
@@ -1284,7 +1366,68 @@ collection.create_index(
 
 ---
 
-### Phase 2: VectorDB Setup (Week 1)
+### Phase 2: Redis Setup (Week 1)
+
+1. **Async Task Tracking** (Replace `async_task_status` table):
+
+```python
+# Redis key structure for task status
+# Key: task:{task_id}
+# Type: Hash
+# TTL: 1 hour after completion
+
+redis.hset(f"task:{task_id}", mapping={
+    "task_type": "conversation_generation",
+    "user_id": str(user_id),
+    "status": "PENDING",  # PENDING | IN_PROGRESS | COMPLETED | FAILED
+    "progress": 0,
+    "entity_id": str(conversation_id),
+    "entity_type": "conversation",
+    "celery_task_id": celery_task_id,
+    "created_at": datetime.now().isoformat()
+})
+redis.expire(f"task:{task_id}", 3600)  # 1 hour TTL
+
+# Query pattern
+task_data = redis.hgetall(f"task:{task_id}")
+```
+
+2. **User Activity Feed** (Replace `user_activity_feed` table):
+
+```python
+# Redis key structure for activity feed
+# Key: activity:user:{user_id}
+# Type: Sorted Set (score = timestamp)
+# Retention: Latest 100 activities per user
+
+redis.zadd(
+    f"activity:user:{user_id}",
+    {
+        json.dumps({
+            "activity_type": "created_scenario",
+            "entity_id": str(scenario_id),
+            "entity_type": "scenario",
+            "metadata": {"scenario_title": "..."}
+        }): timestamp
+    }
+)
+
+# Keep only latest 100 activities
+redis.zremrangebyrank(f"activity:user:{user_id}", 0, -101)
+
+# Query pattern: Get latest 50 activities
+activities = redis.zrevrange(
+    f"activity:user:{user_id}",
+    0, 49,
+    withscores=True
+)
+```
+
+**Setup Script**: `scripts/redis_init.sh`
+
+---
+
+### Phase 3: VectorDB Setup (Week 1)
 
 1. Initialize ChromaDB client (development)
 2. Create 5 collections: `novel_passages`, `characters`, `locations`, `events`, `themes`
@@ -1295,7 +1438,7 @@ collection.create_index(
 
 ---
 
-### Phase 3: Novel Ingestion Pipeline (Week 2)
+### Phase 4: Novel Ingestion Pipeline (Week 2)
 
 **Pipeline Architecture**:
 
@@ -1468,7 +1611,540 @@ client.restore_collection("novel_passages", snapshot="pre_migration_snapshot_202
 
 ---
 
+## Storage-Specific Relationship Diagrams
+
+### PostgreSQL-Only ERD
+
+This diagram shows the clean relational structure of the 13 PostgreSQL tables without VectorDB references.
+
+```mermaid
+erDiagram
+    users ||--o{ novels : "uploads (creator)"
+    users ||--o{ user_follows : "follower"
+    users ||--o{ user_follows : "followee"
+    users ||--o{ root_user_scenarios : "creates"
+    users ||--o{ leaf_user_scenarios : "forks"
+    users ||--o{ conversations : "owns"
+    users ||--o{ messages : "sends"
+    users ||--o{ conversation_likes : "likes"
+    users ||--o{ conversation_memos : "writes memo"
+
+    novels ||--o{ base_scenarios : "has base scenarios"
+
+    base_scenarios ||--o{ root_user_scenarios : "root from base"
+
+    root_user_scenarios ||--o{ scenario_character_changes : "character params"
+    root_user_scenarios ||--o{ scenario_event_alterations : "event params"
+    root_user_scenarios ||--o{ scenario_setting_modifications : "setting params"
+    root_user_scenarios ||--o{ leaf_user_scenarios : "forked to leaf"
+    root_user_scenarios ||--o{ conversations : "used in conversation"
+
+    leaf_user_scenarios ||--o{ scenario_character_changes : "character params"
+    leaf_user_scenarios ||--o{ scenario_event_alterations : "event params"
+    leaf_user_scenarios ||--o{ scenario_setting_modifications : "setting params"
+    leaf_user_scenarios ||--o{ conversations : "used in conversation"
+
+    conversations ||--o{ conversation_message_links : "contains"
+    conversations ||--o{ conversations : "parent/forked"
+    conversations ||--o{ conversation_likes : "receives likes"
+    conversations ||--o{ conversation_memos : "has memos"
+
+    messages ||--o{ conversation_message_links : "linked in conversations"
+
+    users {
+        UUID id PK
+        VARCHAR email UK
+        VARCHAR username UK
+        VARCHAR password_hash
+        TEXT bio
+        VARCHAR avatar_url
+        TIMESTAMP created_at
+        TIMESTAMP updated_at
+    }
+
+    novels {
+        UUID id PK
+        VARCHAR title
+        VARCHAR author
+        VARCHAR original_language
+        VARCHAR era
+        VARCHAR genre
+        INTEGER publication_year
+        VARCHAR isbn
+        VARCHAR series_title
+        INTEGER series_number
+        VARCHAR copyright_status
+        TEXT copyright_note
+        VARCHAR cover_image_url
+        TEXT description
+        BOOLEAN is_verified
+        UUID creator_id FK
+        TIMESTAMP created_at
+        TIMESTAMP updated_at
+    }
+
+    base_scenarios {
+        UUID id PK
+        UUID novel_id FK
+        VARCHAR base_story
+        TEXT_ARRAY vectordb_passage_ids
+        INTEGER chapter_number
+        VARCHAR page_range
+        TEXT character_summary
+        TEXT location_summary
+        TEXT theme_summary
+        TEXT content_summary
+        TEXT_ARRAY tags
+        BOOLEAN is_verified
+        UUID creator_id FK
+        TIMESTAMP created_at
+        TIMESTAMP updated_at
+    }
+
+    root_user_scenarios {
+        UUID id PK
+        UUID base_scenario_id FK
+        UUID user_id FK
+        VARCHAR scenario_type
+        DECIMAL quality_score
+        BOOLEAN is_private
+        INTEGER fork_count
+        INTEGER conversation_count
+        TIMESTAMP created_at
+        TIMESTAMP updated_at
+    }
+
+    leaf_user_scenarios {
+        UUID id PK
+        UUID root_scenario_id FK
+        UUID user_id FK
+        VARCHAR scenario_type
+        DECIMAL quality_score
+        BOOLEAN is_private
+        INTEGER conversation_count
+        TIMESTAMP created_at
+        TIMESTAMP updated_at
+    }
+
+    scenario_character_changes {
+        UUID id PK
+        UUID root_scenario_id FK
+        UUID leaf_scenario_id FK
+        VARCHAR character_vectordb_id
+        VARCHAR attribute
+        TEXT original_value
+        TEXT new_value
+        TEXT reasoning
+        TIMESTAMP created_at
+    }
+
+    scenario_event_alterations {
+        UUID id PK
+        UUID root_scenario_id FK
+        UUID leaf_scenario_id FK
+        VARCHAR event_vectordb_id
+        VARCHAR alteration_type
+        TEXT original_description
+        TEXT new_description
+        TEXT reasoning
+        TIMESTAMP created_at
+    }
+
+    scenario_setting_modifications {
+        UUID id PK
+        UUID root_scenario_id FK
+        UUID leaf_scenario_id FK
+        VARCHAR location_vectordb_id
+        VARCHAR modification_type
+        TEXT original_setting
+        TEXT new_setting
+        TEXT reasoning
+        TIMESTAMP created_at
+    }
+
+    conversations {
+        UUID id PK
+        UUID user_id FK
+        UUID scenario_id
+        VARCHAR scenario_type
+        UUID parent_conversation_id FK
+        BOOLEAN is_root
+        INTEGER message_count
+        INTEGER like_count
+        BOOLEAN is_private
+        TIMESTAMP created_at
+        TIMESTAMP updated_at
+    }
+
+    messages {
+        UUID id PK
+        UUID sender_id FK
+        VARCHAR role
+        TEXT content
+        VARCHAR emotion
+        TEXT_ARRAY secondary_emotions
+        TEXT emotion_reasoning
+        DECIMAL emotion_confidence
+        TIMESTAMP created_at
+    }
+
+    conversation_message_links {
+        UUID id PK
+        UUID conversation_id FK
+        UUID message_id FK
+        INTEGER sequence_order
+        TIMESTAMP created_at
+    }
+
+    user_follows {
+        UUID follower_id PK_FK
+        UUID followee_id PK_FK
+        TIMESTAMP created_at
+    }
+
+    conversation_likes {
+        UUID user_id PK_FK
+        UUID conversation_id PK_FK
+        TIMESTAMP created_at
+    }
+
+    conversation_memos {
+        UUID id PK
+        UUID user_id FK
+        UUID conversation_id FK
+        TEXT content
+        TIMESTAMP created_at
+        TIMESTAMP updated_at
+    }
+```
+
+**Key Relationships**:
+
+- **Users → Novels**: One-to-many (creator relationship)
+- **Novels → Base Scenarios**: One-to-many (novel content basis)
+- **Base Scenarios → Root Scenarios**: One-to-many (user variations)
+- **Root Scenarios → Leaf Scenarios**: One-to-many (forking with max depth = 1)
+- **Scenarios → Conversations**: Polymorphic (root_user OR leaf_user)
+- **Conversations → Messages**: Many-to-many via `conversation_message_links` (enables message reuse on fork)
+- **Conversations → Conversations**: Self-referencing (fork relationship, max 6 messages copied)
+
+---
+
+### VectorDB Collections Structure
+
+This diagram shows the 5 VectorDB collections and their cross-references.
+
+```mermaid
+graph TB
+    subgraph VectorDB["VectorDB (ChromaDB/Pinecone)"]
+        NP[novel_passages<br/>768-dim embeddings<br/>200-500 words per chunk]
+        CHAR[characters<br/>LLM-extracted profiles<br/>Personality, relationships]
+        LOC[locations<br/>Settings & places<br/>Physical descriptions]
+        EVT[events<br/>Plot events & story beats<br/>Temporal sequences]
+        THM[themes<br/>Thematic elements<br/>Literary motifs]
+    end
+
+    subgraph PostgreSQL["PostgreSQL Metadata"]
+        NOVELS[(novels table)]
+        BASE[(base_scenarios table)]
+        CHAR_PARAMS[(scenario_character_changes)]
+        EVT_PARAMS[(scenario_event_alterations)]
+        LOC_PARAMS[(scenario_setting_modifications)]
+    end
+
+    NOVELS -->|novel_id reference| NP
+    NP -->|extracted from passages| CHAR
+    NP -->|extracted from passages| LOC
+    NP -->|extracted from passages| EVT
+    NP -->|extracted from passages| THM
+
+    BASE -->|vectordb_passage_ids| NP
+    CHAR_PARAMS -.->|character_vectordb_id| CHAR
+    EVT_PARAMS -.->|event_vectordb_id| EVT
+    LOC_PARAMS -.->|location_vectordb_id| LOC
+
+    CHAR -.->|relationships| CHAR
+    EVT -.->|involves_characters| CHAR
+    EVT -.->|occurs_at| LOC
+    THM -.->|exemplified_by| EVT
+
+    style NP fill:#e1f5ff
+    style CHAR fill:#fff4e1
+    style LOC fill:#e8f5e9
+    style EVT fill:#fce4ec
+    style THM fill:#f3e5f5
+    style NOVELS fill:#f5f5f5
+    style BASE fill:#f5f5f5
+    style CHAR_PARAMS fill:#f5f5f5
+    style EVT_PARAMS fill:#f5f5f5
+    style LOC_PARAMS fill:#f5f5f5
+```
+
+**Collection Details**:
+
+1. **novel_passages** (Primary Content):
+
+   - Full text content chunked into 200-500 word passages
+   - 768-dimensional Gemini embeddings
+   - Metadata: `novel_id`, `chapter_number`, `passage_type`, `word_count`
+   - Referenced by `base_scenarios.vectordb_passage_ids[]`
+
+2. **characters** (LLM Analysis):
+
+   - Character profiles extracted by LLM from passages
+   - Metadata: `name`, `role`, `personality_traits[]`, `relationships[]`
+   - Cross-references: `relationships[].related_character_id` → other characters
+   - Referenced by `scenario_character_changes.character_vectordb_id`
+
+3. **locations** (LLM Analysis):
+
+   - Settings and places extracted from passages
+   - Metadata: `name`, `location_type`, `time_period`, `description`
+   - Referenced by `scenario_setting_modifications.location_vectordb_id`
+
+4. **events** (LLM Analysis):
+
+   - Plot events and story beats
+   - Metadata: `event_type`, `participants[]`, `location_id`, `temporal_order`
+   - Cross-references: `participants[]` → characters, `location_id` → locations
+   - Referenced by `scenario_event_alterations.event_vectordb_id`
+
+5. **themes** (LLM Analysis):
+   - Thematic elements and literary motifs
+   - Metadata: `theme_name`, `description`, `exemplifying_events[]`
+   - Cross-references: `exemplifying_events[]` → events
+
+**Query Patterns**:
+
+- Semantic search on passages → Find relevant content for scenario creation
+- Character similarity search → Find similar characters across novels
+- Event filtering by character → Find all events involving a specific character
+- Theme-based discovery → Find passages exemplifying specific themes
+
+---
+
+### Redis Data Structures
+
+This diagram shows the 2 Redis data structures for high-frequency operations.
+
+```mermaid
+graph TB
+    subgraph Redis["Redis In-Memory Storage"]
+        subgraph TaskTracking["Async Task Tracking"]
+            TASK1[task:abc-123<br/>Type: Hash<br/>TTL: 1 hour]
+            TASK2[task:def-456<br/>Type: Hash<br/>TTL: 1 hour]
+        end
+
+        subgraph ActivityFeed["User Activity Feed"]
+            ACT1[activity:user:user-1<br/>Type: Sorted Set<br/>Max: 100 items]
+            ACT2[activity:user:user-2<br/>Type: Sorted Set<br/>Max: 100 items]
+        end
+    end
+
+    subgraph SpringBoot["Spring Boot Service"]
+        LP[Long Polling<br/>/api/conversations/:id/status]
+        ACTIVITY[Activity Timeline API<br/>/api/users/:id/activities]
+    end
+
+    subgraph FastAPI["FastAPI Service"]
+        CELERY[Celery Workers<br/>AI Generation Tasks]
+    end
+
+    CELERY -->|Update task status| TASK1
+    CELERY -->|Update task status| TASK2
+    LP -->|Check status every 2s| TASK1
+    LP -->|Check status every 2s| TASK2
+
+    SpringBoot -->|Record activity| ACT1
+    SpringBoot -->|Record activity| ACT2
+    ACTIVITY -->|Fetch latest 50| ACT1
+    ACTIVITY -->|Fetch latest 50| ACT2
+
+    style TASK1 fill:#ffe1e1
+    style TASK2 fill:#ffe1e1
+    style ACT1 fill:#e1f5ff
+    style ACT2 fill:#e1f5ff
+    style LP fill:#fff4e1
+    style ACTIVITY fill:#fff4e1
+    style CELERY fill:#e8f5e9
+```
+
+**Redis Structure 1: Task Tracking (Hash)**
+
+```python
+# Key: task:{task_id}
+# Type: Hash
+# TTL: 3600 seconds (1 hour after completion)
+
+{
+    "task_type": "conversation_generation",
+    "conversation_id": "uuid-123",
+    "user_id": "uuid-456",
+    "status": "COMPLETED",  # PENDING | PROCESSING | COMPLETED | FAILED
+    "progress": 100,  # 0-100
+    "result_data": '{"message_count": 12, "total_tokens": 1500}',
+    "error_message": null,
+    "created_at": "2025-01-15T10:00:00Z",
+    "updated_at": "2025-01-15T10:05:23Z"
+}
+
+# Operations:
+# - SET: redis.hset(f"task:{task_id}", mapping={...})
+# - GET: redis.hgetall(f"task:{task_id}")
+# - UPDATE: redis.hset(f"task:{task_id}", "status", "COMPLETED")
+# - EXPIRE: redis.expire(f"task:{task_id}", 3600)
+```
+
+**Benefits over PostgreSQL**:
+
+- 10-100x faster writes (no disk I/O)
+- Automatic cleanup via TTL (no manual garbage collection)
+- Optimized for high-frequency status polling (2-second intervals)
+
+---
+
+**Redis Structure 2: Activity Feed (Sorted Set)**
+
+```python
+# Key: activity:user:{user_id}
+# Type: Sorted Set (score = timestamp)
+# Retention: Latest 100 activities per user
+
+# Score = Unix timestamp (for time-ordered queries)
+# Member = JSON string with activity data
+
+{
+    1736933200: '{"type": "created_conversation", "conversation_id": "uuid-123", "timestamp": 1736933200}',
+    1736933500: '{"type": "liked_conversation", "conversation_id": "uuid-456", "timestamp": 1736933500}',
+    1736933800: '{"type": "followed_user", "target_user_id": "uuid-789", "timestamp": 1736933800}'
+}
+
+# Operations:
+# - ADD: redis.zadd(f"activity:user:{user_id}", {json_data: timestamp})
+# - TRIM: redis.zremrangebyrank(f"activity:user:{user_id}", 0, -101)
+# - GET LATEST 50: redis.zrevrange(f"activity:user:{user_id}", 0, 49, withscores=True)
+# - GET PAGINATED: redis.zrevrange(f"activity:user:{user_id}", 50, 99)
+```
+
+**Activity Types**:
+
+- `created_scenario`: User created a new scenario
+- `forked_scenario`: User forked another user's scenario
+- `created_conversation`: User started a new conversation
+- `forked_conversation`: User forked a conversation
+- `liked_conversation`: User liked a conversation
+- `followed_user`: User followed another user
+- `added_memo`: User added a memo to a conversation
+
+**Benefits over PostgreSQL**:
+
+- Time-ordered queries in O(log N) time
+- Constant memory footprint (always 100 items max)
+- Efficient pagination with ZREVRANGE
+- No need for complex SQL ORDER BY + LIMIT queries
+
+---
+
+**Data Flow: Long Polling with Redis**
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant Frontend
+    participant Spring as Spring Boot
+    participant Redis
+    participant FastAPI
+    participant Celery
+
+    User->>Frontend: Click "대화 시작"
+    Frontend->>Spring: POST /api/conversations
+    Spring->>FastAPI: POST /api/ai/generate
+    FastAPI->>Celery: Enqueue task
+    Celery->>Redis: HSET task:{id} status=PENDING
+    FastAPI-->>Spring: 202 Accepted (task_id)
+    Spring-->>Frontend: 201 Created (conversation_id, task_id)
+
+    loop Long Polling (every 2 seconds)
+        Frontend->>Spring: GET /api/conversations/{id}/status
+        Spring->>Redis: HGETALL task:{id}
+        Redis-->>Spring: {status: PENDING, progress: 30%}
+        Spring-->>Frontend: {status: PENDING, progress: 30%}
+    end
+
+    Celery->>Celery: Process AI generation
+    Celery->>Redis: HSET task:{id} status=COMPLETED
+    Celery->>Spring: POST /internal/conversations/{id}/complete
+
+    Frontend->>Spring: GET /api/conversations/{id}/status
+    Spring->>Redis: HGETALL task:{id}
+    Redis-->>Spring: {status: COMPLETED}
+    Spring-->>Frontend: {status: COMPLETED}
+    Frontend->>User: Show browser notification
+```
+
+**Key Advantages**:
+
+- No database polling overhead (Redis in-memory)
+- Fast status updates from Celery workers
+- Automatic task cleanup via TTL
+- Scalable to thousands of concurrent conversations
+
+---
+
 ## Changelog
+
+**2025-01-15**: Simplified notification architecture
+
+- **Removed PostgreSQL table**: `user_notifications`
+  - Rationale: Read/unread state tracking not needed for push-only notification system
+  - Browser notifications deliver alerts without persistent storage requirement
+  - Reduced database complexity and maintenance overhead
+- **Updated Schema Statistics**: 14 → 13 PostgreSQL tables, 1 → 0 JSONB columns
+- **Removed indexes**: 4 notification indexes (user_id, is_read, created_at, type)
+- **Removed foreign key**: user_notifications.user_id → users.id
+- **Updated Migration Strategy**: Removed user_notifications from Phase 1 table list
+- **Added Storage-Specific Diagrams**:
+  - PostgreSQL-only ERD showing clean relational structure (13 tables)
+  - VectorDB collections structure with cross-references (5 collections)
+  - Redis data structures with key patterns and data flow (2 types)
+
+**2025-01-15**: Optimized data storage architecture with Redis integration
+
+- **Removed PostgreSQL tables**: `async_task_status`, `user_activity_feed`
+  - Rationale: High-frequency read/write patterns better suited for in-memory storage
+- **Redis Async Task Tracking**: Replaced `async_task_status` table with Redis Hash
+  - Key structure: `task:{task_id}`
+  - TTL: 1 hour after completion
+  - Benefits: 10-100x faster than PostgreSQL, automatic cleanup via TTL
+- **Redis Activity Feed**: Replaced `user_activity_feed` table with Redis Sorted Set
+  - Key structure: `activity:user:{user_id}`
+  - Retention: Latest 100 activities per user (ZREMRANGEBYRANK)
+  - Benefits: Optimized for time-ordered queries, constant memory footprint
+- **Retained user_notifications**: Permanent notification history in PostgreSQL
+  - Reason: Legal compliance (GDPR), long-term audit trail, user preference for unread notifications
+- **Updated Schema Statistics**: 16 → 14 PostgreSQL tables
+- **Added Redis Data Structures**: 2 types (task tracking, activity feed)
+- **Migration Strategy**: Added Phase 2 for Redis setup with code examples
+
+**2025-01-15**: Added system support tables for MSA architecture
+
+- **user_notifications**: Browser notification management system
+  - 6 notification types: conversation_complete, new_follower, conversation_liked, system_announcement, task_failed, ai_service_offline
+  - Polymorphic entity references (entity_id, entity_type)
+  - Support for browser push notifications and in-app notification center
+- **async_task_status**: Long-running task tracking for AI operations
+  - Celery integration with task_id tracking
+  - Progress percentage monitoring (0-100)
+  - JSONB task parameters and results storage
+  - Status tracking: pending, processing, completed, failed, cancelled
+- **user_activity_feed**: Social activity timeline
+  - 7 activity types: created_scenario, forked_scenario, created_conversation, forked_conversation, liked_conversation, followed_user, added_memo
+  - Related user tracking for social interactions
+  - JSONB metadata for flexible activity data
+- Updated ERD Mermaid diagram with 3 new tables
+- Added 15 new indexes for notification, task, and activity queries
+- Added 4 foreign key relationships (users → new tables)
+- Updated migration strategy to include system support tables
 
 **2025-01-14**: Complete architecture redesign
 

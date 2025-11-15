@@ -28,19 +28,20 @@ Users can visually explore how scenarios branch from each other (meta-timelines)
   - `getScenarioChildren(UUID scenarioId) → List<ScenarioResponse>` (direct children)
   - `getScenarioSiblings(UUID scenarioId) → List<ScenarioResponse>` (same parent)
 - [ ] ConversationTreeService with methods:
-  - `getConversationTree(UUID conversationId) → ConversationTreeNode` (root + child only, max depth 1)
-  - `getConversationAncestors(UUID conversationId) → List<ConversationResponse>` (breadcrumb)
-  - `getConversationChild(UUID conversationId) → ConversationResponse` (single fork if exists)
+  - `getConversationParent(UUID conversationId) → ConversationResponse` (returns parent if exists, null if root)
+  - `getConversationChild(UUID conversationId) → ConversationResponse` (returns child if exists, null if not forked)
+  - `getConversationForkRelationship(UUID conversationId) → ConversationForkRelationshipDTO` (returns {parent, current, child} - max 2 non-null)
   - `isRootConversation(UUID conversationId) → boolean` (check if parent_conversation_id IS NULL)
+  - `hasBeenForked(UUID conversationId) → boolean` (check has_been_forked flag)
 - [ ] REST API endpoints:
-  - GET /api/v1/scenarios/{id}/tree (full tree structure)
-  - GET /api/v1/scenarios/{id}/ancestors (breadcrumb path)
-  - GET /api/v1/scenarios/{id}/children (direct children only)
+  - GET /api/v1/scenarios/{id}/tree (full tree structure - scenarios only)
+  - GET /api/v1/scenarios/{id}/ancestors (breadcrumb path - scenarios only)
+  - GET /api/v1/scenarios/{id}/children (direct children only - scenarios only)
   - GET /api/v1/scenarios/{id}/siblings (same parent scenarios)
-  - GET /api/v1/conversations/{id}/tree (conversation fork tree - max 2 nodes: root + child)
-  - GET /api/v1/conversations/{id}/ancestors (conversation breadcrumb - max 1 parent)
-  - GET /api/v1/conversations/{id}/child (single conversation fork if exists)
-- [ ] Tree data structure (JSON response):
+  - **GET /api/v1/conversations/{id}/parent** (returns parent conversation if exists, 404 if root)
+  - **GET /api/v1/conversations/{id}/child** (returns child conversation if exists, 404 if not forked)
+  - **GET /api/v1/conversations/{id}/fork-relationship** (returns {parent, current, child} DTO with fork status)
+- [ ] Tree data structure (JSON response - scenarios only):
   ```json
   {
     "id": "uuid",
@@ -64,7 +65,54 @@ Users can visually explore how scenarios branch from each other (meta-timelines)
     ]
   }
   ```
-- [ ] Recursive SQL query using Common Table Expressions (CTE):
+- [ ] **Conversation Fork Relationship DTO** (simplified for max depth 1):
+  ```json
+  {
+    "current": {
+      "id": "current-uuid",
+      "first_message_preview": "How do you feel about...",
+      "is_root": true,
+      "has_been_forked": true,
+      "message_count": 15,
+      "like_count": 5,
+      "creator": { "username": "user1", "avatar_url": "..." }
+    },
+    "parent": null, // null if current is root, otherwise parent conversation data
+    "child": {
+      "id": "child-uuid",
+      "first_message_preview": "But what about...",
+      "is_root": false,
+      "has_been_forked": false,
+      "message_count": 8,
+      "like_count": 2,
+      "copied_message_count": 6, // min(6, parent's total messages)
+      "creator": { "username": "user2", "avatar_url": "..." }
+    },
+    "fork_status": "root_forked" // "root_can_fork" | "root_forked" | "fork"
+  }
+  ```
+- [ ] **Simplified SQL queries for conversations (NO recursive CTE needed)**:
+
+  ```sql
+  -- Get parent (if current is a fork)
+  SELECT * FROM conversations WHERE id = (
+    SELECT parent_conversation_id FROM conversations WHERE id = ?
+  );
+
+  -- Get child (if current is a root that has been forked)
+  SELECT * FROM conversations WHERE parent_conversation_id = ?;
+
+  -- Get fork relationship (max 2 queries, no recursion)
+  -- Query 1: Get current + parent
+  SELECT c1.*, c2.* FROM conversations c1
+  LEFT JOIN conversations c2 ON c1.parent_conversation_id = c2.id
+  WHERE c1.id = ?;
+
+  -- Query 2: Get child (only if c1.has_been_forked = true)
+  SELECT * FROM conversations WHERE parent_conversation_id = ?;
+  ```
+
+- [ ] Recursive SQL query using Common Table Expressions (CTE) **for scenarios only**:
   ```sql
   WITH RECURSIVE scenario_tree AS (
     SELECT id, parent_scenario_id, scenario_title, scenario_type, 0 as depth
@@ -260,75 +308,97 @@ Legend:
 
 ---
 
-### Story 5.3: Conversation Fork Tree UI
+### Story 5.3: Conversation Fork Tree UI (Simplified for Max Depth 1)
 
 **Priority: P2 - Medium**
 
-**Description**: Build conversation fork tree visualization showing simple parent-child relationship (max depth 1: root → fork), integrated into conversation detail page.
+**Description**: Build **simplified** conversation fork relationship display showing parent-child connection (max depth 1: ROOT → fork only), integrated into conversation detail page. No complex tree structure needed - just a simple 2-node parent-child visualization.
 
 **Acceptance Criteria**:
 
-- [ ] ConversationTreeVisualization component (simple 2-node structure)
-  - Vertical or horizontal layout (root → child, max 2 nodes)
+- [ ] ConversationForkRelationship component (simple 2-node structure)
+  - **Simple vertical or horizontal layout** (root → child, max 2 nodes total)
+  - **No tree algorithm needed** - just display parent + child if they exist
   - Node rendering:
     - First user message as node label (truncated to 40 chars)
-    - Badge: "Root" for original conversations, "Fork" for forked conversations
-    - "6 messages preserved" indicator on fork nodes
-    - Like count, message count
+    - Badge: "ROOT" (green) for original conversations, "FORK" (blue) for forked conversations
+    - "📋 6 messages preserved" indicator on fork nodes (shows min(6, total) value)
+    - Like count (♥ X), message count (💬 Y)
     - Creator username
-  - Simple 2-level layout (parent above/left, child below/right)
+  - **Simple 2-level layout** (parent above/left, child below/right)
   - Click node → navigate to that conversation
-  - Highlight current conversation
-  - Show "Cannot fork again" indicator on forked conversations
+  - Highlight current conversation with border
+  - **Show fork status indicators**:
+    - Root not forked: "✓ Can fork" (green)
+    - Root forked: "✗ Already forked" (gray)
+    - Forked conversation: "⚠️ Cannot fork again" (orange)
 - [ ] Integration in ConversationView (Story 4.3):
-  - "View Fork Relationship" button in conversation header (only if parent or child exists)
+  - "View Fork Relationship" button in conversation header (only show if parent or child exists)
   - Opens modal or sidebar showing 2-level structure
-  - If conversation is root: show self + child (if exists)
-  - If conversation is fork: show parent + self
-  - Badge: "Root (can fork)" or "Root (already forked)" or "Fork (cannot fork again)"
-- [ ] ConversationTreeModal component:
+  - **If conversation is ROOT**: show self + child (if child exists via `GET /api/v1/conversations/{id}/child`)
+  - **If conversation is FORK**: show parent + self (via `GET /api/v1/conversations/{id}/parent`)
+  - Badge in conversation header: "ROOT (can fork)" or "ROOT (forked)" or "FORK (depth 1)"
+- [ ] ConversationForkRelationshipModal component:
   - Modal overlay with simple 2-node visualization
   - Close button
   - Mobile-friendly (full-screen on mobile)
-  - Shows parent-child only: root → fork (max 2 nodes)
+  - Shows **parent-child only**: root → fork (max 2 nodes, no recursion)
   - Clear labels: "Original Conversation" and "Forked Conversation"
-- [ ] ConversationStore actions:
-  - `loadConversationTree(conversationId)`
-  - `getConversationPath(conversationId)` (root to current)
-- [ ] Simple navigation:
+  - Display "📋 X messages preserved from parent" on fork node
+- [ ] ConversationStore actions (Pinia):
+  - `loadConversationParent(conversationId)` - fetch parent if exists
+  - `loadConversationChild(conversationId)` - fetch child if exists
+  - `getConversationForkStatus(conversationId)` - returns "root_can_fork" | "root_forked" | "fork"
+- [ ] **Simple navigation** (no complex tree):
   - Click root node → navigate to original conversation
   - Click fork node → navigate to forked conversation
-  - Show "6 messages preserved from parent" indicator on fork node
-  - Show "Cannot be forked again" indicator on fork node
-- [ ] Performance:
-  - Load relationship on demand (simple query: parent + child)
-  - Cache structure (5-minute TTL)
-- [ ] Empty states:
-  - Root not forked: "This conversation has not been forked yet. You can fork it once."
-  - Fork conversation: "This is a forked conversation. It cannot be forked again. Only original conversations can be forked."
+  - Show "📋 6 messages preserved from parent" indicator on fork node
+  - Show "⚠️ Cannot be forked again (max depth 1)" indicator on fork node
+- [ ] Backend API endpoints (from Story 5.1):
 
-**Conversation Fork Relationship** (Max Depth 1: Root → Fork Only):
+  - GET /api/v1/conversations/{id}/parent → returns parent conversation if exists (NULL if root)
+  - GET /api/v1/conversations/{id}/child → returns child conversation if exists (NULL if not forked)
+  - Simple queries (no recursive CTE needed):
+
+    ```sql
+    -- Get parent
+    SELECT * FROM conversations WHERE id = (SELECT parent_conversation_id FROM conversations WHERE id = ?)
+
+    -- Get child
+    SELECT * FROM conversations WHERE parent_conversation_id = ?
+    ```
+
+- [ ] Performance:
+  - Load relationship on demand (simple queries: parent + child)
+  - Cache structure (Redis, 5-minute TTL) - just 2 rows max
+  - No virtualization needed (always ≤ 2 nodes)
+- [ ] Empty states:
+  - Root not forked: "This conversation has not been forked yet. You can fork it **once**."
+  - Fork conversation: "This is a forked conversation (depth 1). It **cannot be forked again**. Only ROOT conversations can be forked."
+  - Orphaned fork (parent deleted): "Parent conversation deleted" (show grayed-out parent placeholder)
+
+**Conversation Fork Relationship** (Max Depth 1: ROOT → Fork Only):
 
 ```
 ┌─────────────────────────────────┐
 │ ROOT: "How do you feel..."      │
 │ 💬 15  ♥ 5                      │
 │ [Original Conversation]         │
-│ Status: Forked ✓                │
+│ ✓ Can fork (not forked yet)     │
 └────────────┬────────────────────┘
-             │ (forked once - only fork allowed)
+             │ (ONE fork allowed only)
              ▼
 ┌─────────────────────────────────┐
 │ FORK: "But what about..."       │
 │ 💬 8  ♥ 2                       │
-│ [Forked Conversation]           │
-│ 6 msgs preserved from parent    │
-│ ⚠️  Cannot fork again           │
+│ [Forked Conversation - Depth 1] │
+│ 📋 6 msgs preserved from parent │
+│ ⚠️  Cannot fork again (max depth 1) │
 └─────────────────────────────────┘
 
 Note: Only ROOT conversations (parent_conversation_id IS NULL)
-can be forked, and only once. Forked conversations cannot be
-forked again (max depth = 1).
+can be forked, and only ONCE. Forked conversations cannot be
+forked again (architectural constraint: max depth = 1).
 
 INVALID (prevented by system):
 ┌─────────────────────────────────┐
@@ -338,26 +408,46 @@ INVALID (prevented by system):
              ▼
 ┌─────────────────────────────────┐
 │ FORK: "But what about..."       │
+│ (is_root = FALSE)               │
 └────────────┬────────────────────┘
-             │ ❌ NOT ALLOWED
+             │ ❌ NOT ALLOWED (403 Forbidden)
              ▼
 ┌─────────────────────────────────┐
 │ FORK of FORK ❌                 │
-│ (Depth 2 - BLOCKED)             │
+│ (Depth 2 - BLOCKED by backend)  │
+│ Backend returns 403 Forbidden   │
 └─────────────────────────────────┘
 ```
 
 **Technical Notes**:
 
-- Extremely simple layout (max 2 nodes: parent + child)
-- No tree algorithm needed - just simple parent-child relationship
-- Simpler styling than scenario tree (less visual weight)
-- Lazy load relationship (only when user clicks "View Fork Relationship")
-- Mobile: full-screen modal, vertical layout
-- Query is trivial: SELECT parent + child (max 2 rows, no recursion needed)
-- Database query: `SELECT * FROM conversations WHERE id = ? OR parent_conversation_id = ? OR id IN (SELECT id FROM conversations WHERE parent_conversation_id = ?)`
+- **Extremely simple layout** (max 2 nodes: parent + child)
+- **No tree algorithm needed** - just simple parent-child relationship display
+- **No recursive queries** - trivial SQL: `SELECT parent WHERE id = parent_conversation_id` or `SELECT child WHERE parent_conversation_id = ?`
+- **Simpler styling than scenario tree** (less visual weight, minimal design)
+- **Lazy load relationship** (only when user clicks "View Fork Relationship" button)
+- **Mobile**: full-screen modal, vertical layout (root above, fork below)
+- **Database query example**:
+  ```sql
+  -- Get fork relationship (max 2 rows returned)
+  SELECT * FROM conversations
+  WHERE id = ? -- current conversation
+     OR parent_conversation_id = ? -- child of current (if current is root)
+     OR id = (SELECT parent_conversation_id FROM conversations WHERE id = ?) -- parent of current (if current is fork)
+  LIMIT 2; -- max 2 rows: parent + current OR current + child
+  ```
+- **Frontend logic**:
+  ```javascript
+  const relationship = await conversationStore.loadForkRelationship(
+    conversationId
+  );
+  // relationship.parent: null if current is root, or parent data if current is fork
+  // relationship.child: null if not forked, or child data if current is root with fork
+  // relationship.current: current conversation data
+  // relationship.forkStatus: "root_can_fork" | "root_forked" | "fork"
+  ```
 
-**Estimated Effort**: 8 hours
+**Estimated Effort**: **6 hours** (reduced from 8 hours due to simplification - no complex tree logic needed)
 
 ---
 
@@ -802,6 +892,19 @@ Featured Scenarios:
 
 **Target Completion**: Week 3, Day 3 (3 working days)
 
-**Estimated Total Effort**: 47 hours (achievable in 3 days for 2 frontend engineers)
+**Estimated Total Effort**: **45 hours** (reduced from 47 hours due to Story 5.3 simplification: 8h → 6h)
+
+**Breakdown**:
+
+- Story 5.1: 8 hours (scenario tree API + simplified conversation fork relationship API)
+- Story 5.2: 14 hours (scenario tree UI with D3.js/Reingold-Tilford)
+- Story 5.3: **6 hours** (conversation fork relationship UI - simplified for max depth 1, reduced from 8h)
+- Story 5.4: 6 hours (scenario breadcrumb navigation)
+- Story 5.5: 4 hours (zoom/pan controls + minimap)
+- Story 5.6: 7 hours (tree export to PNG/SVG)
+
+**Priority**: HIGH - Visual navigation critical for understanding branching timelines
+
+**Note**: Conversation fork visualization is **significantly simpler** than scenario tree due to max depth 1 constraint (ROOT → fork only). No complex tree algorithms or recursive queries needed for conversations.
 
 **Priority**: MEDIUM - Enhances UX significantly but not critical for core functionality

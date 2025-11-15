@@ -126,6 +126,7 @@ docker-compose up -d redis      # Start Redis
 > **CRITICAL**: Spring Boot uses ONLY PostgreSQL, FastAPI uses ONLY VectorDB. Cross-database access must go through REST API.
 
 **PostgreSQL (Metadata Only - 13 Tables)** ← Spring Boot ONLY:
+
 - `users` - User accounts
 - `novels` - Novel metadata (NO full_text, stores vectordb_collection_id)
 - `base_scenarios` - Scenario metadata with VectorDB references
@@ -140,6 +141,7 @@ docker-compose up -d redis      # Start Redis
 - `user_follows`, `conversation_likes`, `conversation_memos` - Social features
 
 **VectorDB (Content + Embeddings - 5 Collections)** ← FastAPI ONLY:
+
 - `novel_passages` - Novel text chunks with 768-dim Gemini embeddings
 - `characters` - Character descriptions and personality traits (extracted via Gemini)
 - `locations` - Setting descriptions
@@ -148,13 +150,14 @@ docker-compose up -d redis      # Start Redis
 
 **Architecture Rules**:
 
-| Component     | Allowed DB Access        | Cross-DB Pattern                                |
-|---------------|--------------------------|------------------------------------------------|
-| Spring Boot   | ✅ PostgreSQL (JPA)      | Call FastAPI `/api/ai/*` for VectorDB          |
-| FastAPI       | ✅ VectorDB (ChromaDB)   | Call Spring Boot `/api/internal/*` for PostgreSQL |
-| Frontend      | ❌ No direct DB          | Call Spring Boot (metadata) + FastAPI (AI)     |
+| Component   | Allowed DB Access      | Cross-DB Pattern                                  |
+| ----------- | ---------------------- | ------------------------------------------------- |
+| Spring Boot | ✅ PostgreSQL (JPA)    | Call FastAPI `/api/ai/*` for VectorDB             |
+| FastAPI     | ✅ VectorDB (ChromaDB) | Call Spring Boot `/api/internal/*` for PostgreSQL |
+| Frontend    | ❌ No direct DB        | Call Spring Boot (metadata) + FastAPI (AI)        |
 
 **Why Hybrid?**:
+
 - **PostgreSQL**: ACID transactions, relational joins, user data integrity
 - **VectorDB**: Semantic search (cosine similarity), high-dimensional embeddings, horizontal scaling
 - **Cost**: VectorDB scales better for large novel collections (~100GB vs PostgreSQL storage costs)
@@ -162,6 +165,7 @@ docker-compose up -d redis      # Start Redis
 - **Separation of Concerns**: Metadata (Spring Boot) vs Content+AI (FastAPI)
 
 **Data Flow Example** (Novel Ingestion):
+
 ```
 1. FastAPI parses Gutenberg file
 2. FastAPI → Spring Boot: POST /api/internal/novels (metadata only)
@@ -176,6 +180,7 @@ docker-compose up -d redis      # Start Redis
 ### Core Features Architecture
 
 **MSA Communication**:
+
 1. **Frontend → Spring Boot**: All requests (single entry point, Pattern B)
 2. **Spring Boot → FastAPI**: AI operations (internal proxy, WebClient)
 3. **FastAPI → VectorDB**: Semantic search, embedding storage
@@ -190,6 +195,7 @@ docker-compose up -d redis      # Start Redis
 - **Streaming**: Server-Sent Events (SSE) for real-time AI responses
 
 **Novel Ingestion Pipeline** (FastAPI):
+
 - Source: Project Gutenberg Dataset (batch import, not real-time API)
 - Book content parsing and chunking (200-500 words per passage)
 - Vector embedding generation (Gemini Embedding API: 768 dimensions)
@@ -205,25 +211,26 @@ docker-compose up -d redis      # Start Redis
 
 ### Technology Stack
 
-| Layer                  | Technology                                        |
-| ---------------------- | ------------------------------------------------- |
-| **Core Backend**       | Spring Boot 3.x (Java 17+), Port 8080            |
-| **AI Backend**         | FastAPI (Python 3.11+), Port 8000                |
-| **Frontend**           | Vue 3 + TypeScript + Vite                        |
-| **Package Managers**   | pnpm (Frontend), uv (Python)                     |
-| **Styling**            | Panda CSS (CSS-in-JS with static extraction)     |
-| **UI Components**      | PrimeVue                                         |
-| **State Management**   | Pinia                                            |
-| **Database**           | PostgreSQL 15+ (metadata only, 13 core tables)   |
-| **VectorDB**           | ChromaDB (dev) / Pinecone (prod)                 |
-| **ORM**                | Spring Data JPA (Spring Boot)                    |
-| **Migrations**         | Flyway                                           |
-| **AI/ML**              | Gemini 2.5 Flash (text gen), Gemini Embedding API (768 dims) |
-| **Task Queue**         | Celery + Redis (async AI operations)            |
-| **Testing**            | JUnit 5 + Mockito (Java), pytest (Python), Vitest (Frontend) |
-| **Code Quality**       | ESLint + Prettier (Frontend), Checkstyle (Java), Black (Python) |
+| Layer                | Technology                                                      |
+| -------------------- | --------------------------------------------------------------- |
+| **Core Backend**     | Spring Boot 3.x (Java 17+), Port 8080                           |
+| **AI Backend**       | FastAPI (Python 3.11+), Port 8000                               |
+| **Frontend**         | Vue 3 + TypeScript + Vite                                       |
+| **Package Managers** | pnpm (Frontend), uv (Python)                                    |
+| **Styling**          | Panda CSS (CSS-in-JS with static extraction)                    |
+| **UI Components**    | PrimeVue                                                        |
+| **State Management** | Pinia                                                           |
+| **Database**         | PostgreSQL 15+ (metadata only, 13 core tables)                  |
+| **VectorDB**         | ChromaDB (dev) / Pinecone (prod)                                |
+| **ORM**              | Spring Data JPA (Spring Boot)                                   |
+| **Migrations**       | Flyway                                                          |
+| **AI/ML**            | Gemini 2.5 Flash (text gen), Gemini Embedding API (768 dims)    |
+| **Task Queue**       | Celery + Redis (async AI operations)                            |
+| **Testing**          | JUnit 5 + Mockito (Java), pytest (Python), Vitest (Frontend)    |
+| **Code Quality**     | ESLint + Prettier (Frontend), Checkstyle (Java), Black (Python) |
 
 **Database Access Enforcement**:
+
 - Spring Boot: `spring-boot-starter-data-jpa` (PostgreSQL), NO VectorDB libraries
 - FastAPI: `chromadb` (dev) / `pinecone-client` (prod), NO PostgreSQL drivers
 - Inter-service: `spring-webflux.WebClient` (Java), `httpx` (Python)
@@ -240,10 +247,10 @@ docker-compose up -d redis      # Start Redis
 public class ScenarioService {
     @Autowired
     private ScenarioRepository scenarioRepository;  // PostgreSQL via JPA
-    
+
     @Autowired
     private WebClient aiServiceClient;  // Call FastAPI for VectorDB
-    
+
     public Scenario createScenario(CreateScenarioRequest request) {
         // 1. Call FastAPI for VectorDB query
         PassageSearchResponse passages = aiServiceClient.post()
@@ -252,7 +259,7 @@ public class ScenarioService {
             .retrieve()
             .bodyToMono(PassageSearchResponse.class)
             .block();
-        
+
         // 2. Save to PostgreSQL with VectorDB IDs
         Scenario scenario = new Scenario();
         scenario.setVectordbPassageIds(passages.getPassageIds());
@@ -277,7 +284,7 @@ class RAGService:
         # Only FastAPI has VectorDB client
         self.chroma = PersistentClient(path="./chroma_data")
         self.passages = self.chroma.get_collection("novel_passages")
-    
+
     async def search_passages(self, query: str, novel_id: UUID):
         # VectorDB query ONLY in FastAPI
         results = self.passages.query(
@@ -285,13 +292,13 @@ class RAGService:
             where={"novel_id": str(novel_id)},
             n_results=10
         )
-        
+
         # Call Spring Boot for PostgreSQL metadata
         async with httpx.AsyncClient() as client:
             novel_metadata = await client.get(
                 f"http://spring-boot:8080/api/internal/novels/{novel_id}"
             )
-        
+
         return {"passages": results, "metadata": novel_metadata.json()}
 
 # ❌ WRONG: FastAPI trying to access PostgreSQL
@@ -309,21 +316,21 @@ engine = create_engine("postgresql://...")  # FORBIDDEN!
 
 ```typescript
 // Frontend: 단일 API 클라이언트 (Spring Boot만 호출)
-import api from '@/services/api';
+import api from "@/services/api";
 
 // AI 검색 요청 (Spring Boot Proxy를 통해 FastAPI 호출)
 export const searchPassages = async (query: string, novelId: string) => {
-  return api.post('/ai/search/passages', {
+  return api.post("/ai/search/passages", {
     query,
     novel_id: novelId,
-    top_k: 10
+    top_k: 10,
   });
 };
 
 // 대화 생성 요청
 export const generateConversation = async (scenarioId: string) => {
-  return api.post('/ai/generate', {
-    scenario_id: scenarioId
+  return api.post("/ai/generate", {
+    scenario_id: scenarioId,
   });
 };
 ```
@@ -333,10 +340,10 @@ export const generateConversation = async (scenarioId: string) => {
 @RestController
 @RequestMapping("/api/ai")
 public class AIProxyController {
-    
+
     @Autowired
     private WebClient fastApiClient;
-    
+
     @PostMapping("/search/passages")
     @PreAuthorize("isAuthenticated()")
     public Mono<ResponseEntity<PassageSearchResponse>> searchPassages(
@@ -344,21 +351,21 @@ public class AIProxyController {
         @CurrentUser User user
     ) {
         log.info("[Proxy] Passage search from user={}", user.getId());
-        
+
         // FastAPI 내부 호출 (외부 노출 안 됨)
         return fastApiClient.post()
             .uri("/api/ai/search/passages")
             .bodyValue(request)
             .retrieve()
             .toEntity(PassageSearchResponse.class)
-            .doOnSuccess(response -> 
-                log.info("[Proxy] Search completed: {} results", 
+            .doOnSuccess(response ->
+                log.info("[Proxy] Search completed: {} results",
                          response.getBody().getPassageIds().size())
             );
     }
-    
+
     // SSE 스트리밍 프록시
-    @GetMapping(value = "/stream/{conversationId}", 
+    @GetMapping(value = "/stream/{conversationId}",
                 produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     @PreAuthorize("isAuthenticated()")
     public Flux<ServerSentEvent<String>> streamMessage(
@@ -393,15 +400,15 @@ class NovelIngestionService:
             )
             response.raise_for_status()
             return UUID(response.json()["id"])
-    
+
     async def ingest_novel(self, file_path: str):
         # 1. Parse Gutenberg file
         text = self.parse_gutenberg_file(file_path)
         metadata = self.extract_metadata(text)
-        
+
         # 2. Save metadata to PostgreSQL via Spring Boot
         novel_id = await self.save_novel_metadata(metadata)
-        
+
         # 3. Process content and save to VectorDB (FastAPI only)
         passages = self.chunk_text(text)
         embeddings = await self.generate_embeddings(passages)
@@ -409,6 +416,7 @@ class NovelIngestionService:
 ```
 
 **Architecture Benefits (Pattern B)**:
+
 - ✅ **Security**: Prevents external FastAPI exposure, protects Gemini API keys
 - ✅ **Simplicity**: Frontend manages only 1 API client
 - ✅ **Centralized Logging**: All requests go through Spring Boot for unified tracking
@@ -417,7 +425,8 @@ class NovelIngestionService:
 
 **Migration Guide**: [docs/PATTERN_B_MIGRATION_GUIDE.md](./docs/PATTERN_B_MIGRATION_GUIDE.md)  
 **Pattern Comparison**: [docs/FRONTEND_BACKEND_ACCESS_PATTERN_COMPARISON.md](./docs/FRONTEND_BACKEND_ACCESS_PATTERN_COMPARISON.md)
-```
+
+````
 
 ### Database Schema Patterns
 
@@ -452,7 +461,7 @@ CREATE TABLE novels (
 
 CREATE INDEX idx_novels_series ON novels(series_title, series_number);
 CREATE INDEX idx_novels_copyright ON novels(copyright_status);
-```
+````
 
 **Normalized Character Analysis Tables**:
 
@@ -916,7 +925,7 @@ app.use(PrimeVue, {
       darkModeSelector: ".dark-mode",
       cssLayer: {
         name: "primevue",
-        order: "tailwind-base, primevue, tailwind-utilities",
+        order: "Panda-base, primevue, Panda-utilities",
       },
     },
   },

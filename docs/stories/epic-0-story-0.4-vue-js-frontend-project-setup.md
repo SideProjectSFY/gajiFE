@@ -104,23 +104,26 @@ Initialize Vue 3 + TypeScript + Vite frontend project with **PandaCSS**, **Prime
 ## Technical Notes
 
 **Single endpoint Implementation**:
+
 - Frontend → Spring Boot ONLY (single API client)
 - All AI requests go through Spring Boot proxy (`/api/v1/ai/*`)
 - **Security Benefit**: No FastAPI URL or Gemini API keys exposed to browser
 - **Simplicity**: Single API client, single authentication flow
 
 **PandaCSS Benefits**:
+
 - **Zero-runtime CSS**: All styling extracted at build time
 - **Type-safe styling**: TypeScript autocomplete for style props
-- **Smaller bundle**: ~40% smaller than Tailwind
+- **Smaller bundle**: ~40% smaller than Panda
 
 **Example Axios Configuration** (`services/api.ts`):
+
 ```typescript
-import axios from 'axios';
-import { useAuthStore } from '@/stores/auth';
+import axios from "axios";
+import { useAuthStore } from "@/stores/auth";
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api/v1',
+  baseURL: import.meta.env.VITE_API_BASE_URL || "http://localhost:8080/api/v1",
   timeout: 60000, // 60s for AI operations
 });
 

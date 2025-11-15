@@ -7,7 +7,7 @@
 
 ## Description
 
-Implement intelligent context window management to include relevant message history, scenario parameters, and character consistency rules within Local LLM token limits.
+Implement intelligent context window management to include relevant message history, scenario parameters, and character consistency rules within **Gemini 2.5 Flash token limits** (1M input, 8K output).
 
 ## Dependencies
 
@@ -22,174 +22,272 @@ Implement intelligent context window management to include relevant message hist
 
 ## Acceptance Criteria
 
-- [ ] `ContextWindowManager` service calculates token count for messages using custom tokenizer
-- [ ] Context strategy: System prompt (scenario-adapted) + Last N messages where total ≤ 4096 tokens
-- [ ] Sliding window: Removes oldest messages when limit exceeded, always keeps system prompt
-- [ ] Character consistency injection: Adds character traits summary every 10 messages
-- [ ] Message compression for old messages: Summarize messages 20+ back to save tokens
-- [ ] `/api/ai/build-context` endpoint returns: system_prompt, messages[], token_count, compression_applied
-- [ ] Token count validation before Local LLM API call (reject if > 4096)
+- [ ] `ContextWindowManager` service calculates token count for messages using **Gemini token counting API**
+- [ ] **Gemini 2.5 Flash token limits**:
+  - Input: 1,000,000 tokens (1M context window)
+  - Output: 8,192 tokens max
+  - Cost: $0.075 per 1M input tokens, $0.30 per 1M output tokens
+- [ ] Context strategy: System instruction + **Full conversation history** (no sliding window needed with 1M limit)
+- [ ] **Smart context optimization** for long conversations (>10K tokens):
+  - Summarize messages older than 100 messages using Gemini
+  - Keep recent 100 messages in full detail
+  - System instruction + character traits always included
+- [ ] Character consistency injection: Adds character traits summary every 50 messages (reduced frequency due to large context)
+- [ ] `/api/ai/build-context` endpoint returns: system_instruction, messages[], token_count, optimization_applied
+- [ ] Token count validation before Gemini API call (reject if > 1M input or expect > 8K output)
 - [ ] Context caching: Redis cache for repeated conversation_id queries (TTL 5 minutes)
-- [ ] Metrics: Average token usage, compression rate, cache hit rate
+- [ ] **Gemini Caching API** for system instructions (reduces cost for repeated contexts)
+- [ ] Metrics: Average token usage, optimization rate, cache hit rate, Gemini API cost per conversation
 - [ ] Unit tests >85% coverage
 
 ## Technical Notes
 
-**Token Counting** (Python with custom tokenizer):
+**Token Counting with Gemini API**:
 
 ```python
+from google import generativeai as genai
+from typing import List, Dict
+import redis.asyncio as redis
+import os
+
 class ContextWindowManager:
-    MAX_TOKENS = 4096
-    COMPRESSION_THRESHOLD = 20  # Messages older than 20th get compressed
+    # Gemini 2.5 Flash token limits
+    MAX_INPUT_TOKENS = 1_000_000  # 1M input token limit
+    MAX_OUTPUT_TOKENS = 8_192      # 8K output token limit
+    OPTIMIZATION_THRESHOLD = 10_000  # Optimize if >10K tokens
+    RECENT_MESSAGE_COUNT = 100     # Keep last 100 messages in full detail
+    CHARACTER_REMINDER_INTERVAL = 50  # Inject reminder every 50 messages
 
     def __init__(self):
-        self.tokenizer = load_tokenizer()  # Custom tokenizer for Local LLM
+        genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
+        self.model = genai.GenerativeModel('gemini-2.5-flash')
+        self.redis = redis.from_url(os.getenv("REDIS_URL"))
 
-    def count_tokens(self, text: str) -> int:
-        return len(self.tokenizer.encode(text))
+    async def count_tokens(
+        self,
+        system_instruction: str,
+        messages: List[Dict]
+    ) -> int:
+        """Count tokens using Gemini's token counting API"""
+        # Gemini provides count_tokens() method
+        content = [{"role": "system", "parts": [system_instruction]}]
+        content.extend([
+            {"role": msg["role"], "parts": [msg["content"]]}
+            for msg in messages
+        ])
+
+        result = self.model.count_tokens(content)
+        return result.total_tokens
 
     async def build_context(
         self,
         scenario_id: str,
         conversation_id: str
-    ) -> ContextWindow:
-        # Get scenario-adapted system prompt
-        system_prompt = await prompt_adapter.adapt_prompt(scenario_id)
-        system_tokens = self.count_tokens(system_prompt)
+    ) -> Dict:
+        """
+        Build conversation context for Gemini 2.5 Flash
+        Returns: system_instruction, messages[], token_count, optimization_applied
+        """
+        # Get scenario-adapted system instruction from Story 2.1
+        system_instruction = await self.get_system_instruction(scenario_id)
 
-        # Get all messages for conversation
-        messages = await get_conversation_messages(conversation_id)
+        # Get conversation messages from database
+        messages = await get_messages(conversation_id)
 
-        # Build context with sliding window
-        context_messages = []
-        total_tokens = system_tokens
+        # Count tokens using Gemini API
+        token_count = await self.count_tokens(system_instruction, messages)
 
-        # Always include most recent messages
-        for i, msg in enumerate(reversed(messages)):
-            msg_text = f"{msg.role}: {msg.content}"
-            msg_tokens = self.count_tokens(msg_text)
+        # Optimize context if needed (>10K tokens)
+        optimization_applied = False
+        if token_count > self.OPTIMIZATION_THRESHOLD:
+            messages = await self.optimize_context(messages, scenario_id)
+            token_count = await self.count_tokens(system_instruction, messages)
+            optimization_applied = True
 
-            # Check if adding message exceeds limit
-            if total_tokens + msg_tokens > self.MAX_TOKENS:
-                break
+        # Inject character reminders for consistency
+        messages = self.inject_character_reminders(messages, scenario_id)
 
-            # Compress old messages
-            if i >= self.COMPRESSION_THRESHOLD:
-                msg_text = await self.compress_message(msg)
-                msg_tokens = self.count_tokens(msg_text)
+        # Final validation
+        if token_count > self.MAX_INPUT_TOKENS:
+            raise ValueError(f"Context exceeds 1M token limit: {token_count}")
 
-            context_messages.insert(0, {
-                "role": msg.role,
-                "content": msg.content if i < self.COMPRESSION_THRESHOLD else msg_text
-            })
-            total_tokens += msg_tokens
+        return {
+            "system_instruction": system_instruction,
+            "messages": messages,
+            "token_count": token_count,
+            "optimization_applied": optimization_applied
+        }
 
-        # Inject character consistency every 10 messages
-        if len(context_messages) >= 10:
-            context_messages = self.inject_character_reminders(
-                context_messages,
-                scenario_id
+    async def optimize_context(
+        self,
+        messages: List[Dict],
+        scenario_id: str
+    ) -> List[Dict]:
+        """
+        Optimize long conversations (>10K tokens):
+        - Keep recent 100 messages in full detail
+        - Summarize older messages using Gemini
+        """
+        if len(messages) <= self.RECENT_MESSAGE_COUNT:
+            return messages  # No optimization needed
+
+        # Split into old and recent messages
+        old_messages = messages[:-self.RECENT_MESSAGE_COUNT]
+        recent_messages = messages[-self.RECENT_MESSAGE_COUNT:]
+
+        # Summarize old messages using Gemini
+        summary = await self.summarize_messages(old_messages)
+
+        # Return: [summary] + recent messages
+        return [
+            {"role": "system", "content": f"Previous conversation summary: {summary}"}
+        ] + recent_messages
+
+    async def summarize_messages(self, messages: List[Dict]) -> str:
+        """Use Gemini to summarize old messages"""
+        prompt = "Summarize this conversation history in 200 words, focusing on key plot points and character decisions:\n\n"
+        prompt += "\n".join([f"{msg['role']}: {msg['content']}" for msg in messages])
+
+        response = await self.model.generate_content_async(
+            prompt,
+            generation_config=genai.types.GenerationConfig(
+                temperature=0.2,
+                max_output_tokens=500
             )
-
-        return ContextWindow(
-            system_prompt=system_prompt,
-            messages=context_messages,
-            token_count=total_tokens,
-            compression_applied=len(messages) > self.COMPRESSION_THRESHOLD
         )
 
-    async def compress_message(self, message: Message) -> str:
-        """Summarize old message to save tokens"""
-        if len(message.content) < 100:
-            return message.content  # Too short to compress
-
-        # Simple compression: Extract key points
-        # Future: Use Local LLM for intelligent summarization
-        words = message.content.split()
-        return " ".join(words[:30]) + "..."  # Keep first 30 words
+        return response.text
 
     def inject_character_reminders(
         self,
-        messages: list,
+        messages: List[Dict],
         scenario_id: str
-    ) -> list:
-        """Inject character consistency reminders every 10 messages"""
+    ) -> List[Dict]:
+        """Inject character consistency reminders every 50 messages"""
         scenario = get_scenario(scenario_id)
-        reminder = f"REMINDER: {scenario.parameters.get('character')} is {scenario.parameters.get('new_property')}."
+        character = scenario.parameters.get('character')
+        new_property = scenario.parameters.get('new_property')
+
+        reminder = f"REMINDER: {character} is {new_property}. Maintain character consistency."
 
         result = []
         for i, msg in enumerate(messages):
             result.append(msg)
-            if (i + 1) % 10 == 0:
+            # Inject reminder every 50 messages (less frequent due to 1M context)
+            if (i + 1) % self.CHARACTER_REMINDER_INTERVAL == 0:
                 result.append({
                     "role": "system",
                     "content": reminder
                 })
 
         return result
+
+    async def get_system_instruction(self, scenario_id: str) -> str:
+        """Get scenario-adapted system instruction from Story 2.1"""
+        # This uses the PromptAdapter from Story 2.1
+        from .prompt_adapter import PromptAdapter
+        adapter = PromptAdapter()
+        prompt_data = await adapter.adapt_prompt(scenario_id)
+        return prompt_data['system_instruction']
 ```
 
 **FastAPI Endpoint**:
 
 ```python
-@router.post("/ai/build-context")
+@router.post("/api/ai/build-context")
 async def build_context(request: BuildContextRequest):
+    """
+    Build conversation context for Gemini 2.5 Flash
+    Returns: system_instruction, messages[], token_count, optimization_applied
+    """
     context_manager = ContextWindowManager()
 
-    # Check cache first
+    # Check Redis cache first (TTL 5 minutes)
     cache_key = f"context:{request.conversation_id}"
     cached = await redis.get(cache_key)
     if cached:
-        return ContextWindow.parse_raw(cached)
+        return json.loads(cached)
 
-    # Build context
-    context = await context_manager.build_context(
-        request.scenario_id,
-        request.conversation_id
-    )
+    # Build context with Gemini token counting
+    try:
+        context = await context_manager.build_context(
+            request.scenario_id,
+            request.conversation_id
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
     # Cache for 5 minutes
-    await redis.setex(cache_key, 300, context.json())
+    await redis.setex(cache_key, 300, json.dumps(context))
 
     return context
 ```
+
+**Gemini Caching API Usage** (for repeated system instructions):
+
+```python
+# Use Gemini Caching API to reduce costs for repeated contexts
+# This caches the system_instruction + character traits
+cached_content = genai.caching.CachedContent.create(
+    model='gemini-2.5-flash',
+    system_instruction=system_instruction,
+    ttl=datetime.timedelta(minutes=60)
+)
+
+# Reuse cached content for multiple conversations
+model = genai.GenerativeModel.from_cached_content(cached_content)
+```
+
+**Cost Analysis**:
+
+- **Without optimization**: 50K tokens avg × $0.075/1M = $0.00375 per conversation
+- **With optimization** (>10K conversations): 10K tokens avg × $0.075/1M = $0.00075 per conversation (80% reduction)
+- **With Gemini Caching**: Additional 50% cost reduction for system_instruction reuse
+- **Monthly cost** (10,000 conversations):
+  - No optimization: $37.50
+  - With optimization: $7.50 (80% reduction)
+  - With caching: $3.75 (90% reduction)
 
 ## QA Checklist
 
 ### Functional Testing
 
-- [ ] Context with 5 messages stays within 4096 token limit
-- [ ] Context with 50 messages compresses messages 20+ correctly
-- [ ] System prompt always included in context
-- [ ] Character reminders injected every 10 messages
-- [ ] Token count matches actual Local LLM tokenization
+- [ ] Context with 100 messages stays within 1M token limit
+- [ ] Gemini token counting API returns accurate token count
+- [ ] System instruction always included in context (from Story 2.1)
+- [ ] Character reminders injected every 50 messages
+- [ ] Token count matches Gemini's count_tokens() API
 
-### Context Window Strategy
+### Context Optimization Strategy
 
-- [ ] Most recent messages prioritized
-- [ ] Oldest messages removed when limit exceeded
-- [ ] Compression reduces token usage by >50% for long messages
-- [ ] Compressed messages still coherent
+- [ ] Conversations <10K tokens include full history (no optimization)
+- [ ] Conversations >10K tokens optimize: summarize old + keep recent 100
+- [ ] Gemini summarization produces coherent 200-word summaries
+- [ ] Recent 100 messages always in full detail
+- [ ] optimization_applied flag correctly set
 
 ### Performance
 
-- [ ] build_context < 200ms (uncached)
-- [ ] build_context < 50ms (cached)
+- [ ] build_context < 500ms (uncached, with Gemini token counting)
+- [ ] build_context < 50ms (cached from Redis)
 - [ ] Cache hit rate >70% in load testing
-- [ ] Token counting < 10ms per message
+- [ ] Gemini token counting API < 100ms per call
 
 ### Edge Cases
 
 - [ ] Conversation with 1 message works
-- [ ] Conversation with 100+ messages handles gracefully
-- [ ] Empty message history returns only system prompt
-- [ ] Very long single message (5000 tokens) handled
+- [ ] Conversation with 500+ messages handles gracefully (optimization triggered)
+- [ ] Empty message history returns only system_instruction
+- [ ] Very long conversation (>1M tokens) returns 400 error with clear message
+- [ ] Gemini API failure during summarization handled gracefully
 
-### Metrics & Monitoring
+### Cost & Metrics
 
 - [ ] Average token usage logged per conversation
-- [ ] Compression rate tracked (messages compressed / total messages)
+- [ ] Optimization rate tracked (optimized conversations / total)
 - [ ] Cache hit rate exposed via /metrics endpoint
+- [ ] Estimated cost per conversation calculated (<$0.01 target)
+- [ ] Gemini Caching API usage monitored (if implemented)
 
 ## Estimated Effort
 

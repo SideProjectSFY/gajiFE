@@ -27,7 +27,7 @@ Build comprehensive testing framework to validate AI prompt quality, scenario co
 - [ ] Test categories: Character consistency (10 tests), Event coherence (10 tests), Setting adaptation (10 tests)
 - [ ] Each test includes: scenario definition, expected AI behavior, evaluation criteria
 - [ ] Automated quality metrics: Coherence score (1-10), Character consistency score (1-10), Creativity score (1-10)
-- [ ] Local LLM as judge: Meta-prompting to evaluate AI responses for quality
+- [ ] **Gemini 2.5 Flash as judge**: Meta-prompting to evaluate AI responses for quality
 - [ ] Test report generation: JSON output with pass/fail status, scores, example responses
 - [ ] Regression testing: Compare new prompt versions against baseline quality
 - [ ] `/api/ai/test-scenario` admin endpoint to run individual scenario tests
@@ -153,7 +153,13 @@ SCENARIO_TESTS = [
 **Automated Quality Evaluation**:
 
 ```python
+from google import generativeai as genai
+
 class ScenarioQualityEvaluator:
+
+    def __init__(self):
+        genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
+        self.judge_model = genai.GenerativeModel('gemini-2.5-flash')
 
     async def evaluate_scenario_test(self, test: ScenarioTest) -> TestResult:
         # Generate AI responses for test messages
@@ -167,7 +173,7 @@ class ScenarioQualityEvaluator:
             )
             responses.append(response)
 
-        # Evaluate using Local LLM as judge
+        # Evaluate using Gemini 2.5 Flash as judge
         evaluation_prompt = f"""
         Evaluate this AI conversation for quality.
 
@@ -183,7 +189,7 @@ class ScenarioQualityEvaluator:
         2. Character Consistency: Are character traits preserved correctly?
         3. Creativity: Is the response engaging and imaginative?
 
-        Return JSON:
+        Return ONLY valid JSON:
         {{
           "coherence_score": X,
           "consistency_score": X,
@@ -194,12 +200,15 @@ class ScenarioQualityEvaluator:
         }}
         """
 
-        judge_response = await llm_client.generate(
-            prompt=evaluation_prompt,
-            temperature=0.2
+        judge_response = await self.judge_model.generate_content_async(
+            evaluation_prompt,
+            generation_config=genai.types.GenerationConfig(
+                temperature=0.2,  # Low temp for consistent evaluation
+                max_output_tokens=1000
+            )
         )
 
-        evaluation = json.loads(judge_response)
+        evaluation = json.loads(judge_response.text)
 
         # Calculate overall score
         avg_score = (
@@ -261,7 +270,7 @@ async def run_test_suite(category: str = None):
 
 ### Automated Evaluation
 
-- [ ] Local LLM judge provides consistent scores (±0.5 variance on re-run)
+- [ ] Gemini 2.5 Flash judge provides consistent scores (±0.5 variance on re-run)
 - [ ] Evaluation detects obvious failures (nonsensical responses)
 - [ ] Evaluation recognizes high-quality responses
 - [ ] Scores correlate with human judgment (validate with 10 manual reviews)

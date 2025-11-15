@@ -2,11 +2,20 @@
 
 ## Epic Goal
 
-Enable AI characters to authentically embody their alternate timeline selves by dynamically generating context-aware prompts that incorporate scenario parameters, ensuring characters discuss their experiences in "What If" realities with coherence and depth.
+Enable AI characters to authentically embody their alternate timeline selves by dynamically generating context-aware prompts that incorporate scenario parameters and VectorDB novel content, ensuring characters discuss their experiences in "What If" realities with coherence and depth using **Gemini 2.5 Flash** as the LLM backend.
 
 ## User Value
 
 When users converse with "Hermione in Slytherin," the AI doesn't just pretend—it deeply understands the alternate timeline's cascading effects, discusses how Slytherin house shaped her differently, and maintains consistency across the entire alternative reality. This creates immersive "What If" exploration that feels authentic, not superficial.
+
+## Architecture Context
+
+- **LLM**: **Gemini 2.5 Flash** (1M input tokens, 8K output tokens)
+- **Embedding**: Gemini Embedding API (text-embedding-004, 768 dimensions)
+- **Backend**: Spring Boot (Port 8080) handles business logic, FastAPI (Port 8000) handles AI/LLM operations
+- **Database**: PostgreSQL for metadata, **VectorDB (ChromaDB/Pinecone)** for novel content and embeddings
+- **Novel Source**: Project Gutenberg Dataset (batch import via FastAPI, **not real-time API**)
+- **Communication Pattern**: Spring Boot → FastAPI → Gemini 2.5 Flash, with Long Polling (2-second intervals) for async operations
 
 ## Timeline
 
@@ -14,28 +23,37 @@ When users converse with "Hermione in Slytherin," the AI doesn't just pretend—
 
 ## Stories
 
-### Story 2.1: Dynamic Scenario-to-Prompt Engine
+### Story 2.1: Dynamic Scenario-to-Prompt Engine with VectorDB Integration
 
 **Priority: P0 - Critical**
 
-**Description**: Build Spring Boot service that transforms scenario JSONB parameters into comprehensive AI character prompts with full alternate timeline context.
+**Description**: Build Spring Boot service that transforms scenario parameters into comprehensive AI character prompts with full alternate timeline context, integrating with **FastAPI + VectorDB** for novel content retrieval.
 
 **Acceptance Criteria**:
 
 - [ ] PromptGenerationService with method: `generateCharacterPrompt(Scenario scenario, String characterName)`
+- [ ] **VectorDB Integration via FastAPI**:
+  - Call `POST /api/ai/vectordb/characters/search` for character personality/traits
+  - Call `POST /api/ai/vectordb/events/search` for event details/outcomes
+  - Call `POST /api/ai/vectordb/locations/search` for setting descriptions/cultural context
+  - Call `POST /api/ai/vectordb/passages/search` for novel passage content using `base_scenarios.vectordb_passage_ids[]`
 - [ ] Prompt templates for each scenario type:
   - CHARACTER_CHANGE template
   - EVENT_ALTERATION template
   - SETTING_MODIFICATION template
-- [ ] Template variables populated from scenario JSONB:
-  - `{character}`, `{property_change}`, `{cascading_effects}`, `{divergence_point}`
-  - `{event}`, `{alternate_outcome}`, `{ripple_effects}`
-  - `{original_setting}`, `{alternate_setting}`, `{cultural_context}`
+- [ ] Template variables populated from scenario parameters + VectorDB data:
+  - `{character}`, `{property_change}`, `{cascading_effects}`, `{divergence_point}` (from VectorDB character collection)
+  - `{event}`, `{alternate_outcome}`, `{ripple_effects}` (from VectorDB events collection)
+  - `{original_setting}`, `{alternate_setting}`, `{cultural_context}` (from VectorDB locations collection)
+  - `{passage_content}` (from VectorDB novel_passages collection)
+- [ ] **Parallel VectorDB Queries**: Use CompletableFuture for concurrent FastAPI calls
 - [ ] Multi-scenario support: nested scenarios combine prompts (meta-fork handling)
-- [ ] Prompt length optimization: target 600-800 tokens for scenario context
-- [ ] Caching: identical scenario_id + character combinations cached (5-minute TTL)
+- [ ] Prompt length optimization: target 1,000-2,000 tokens for scenario context (well within Gemini 2.5 Flash's 1M input token limit)
+- [ ] Caching: identical scenario_id + character combinations cached (5-minute TTL in Redis)
+- [ ] **Error Handling**: Circuit breaker for FastAPI calls, fallback to base_scenarios metadata if VectorDB query fails
+- [ ] **Long Polling Integration**: Return task_id for async prompt generation, poll `GET /api/prompts/{taskId}/status` every 2 seconds
 - [ ] Unit tests for each scenario type prompt generation
-- [ ] Integration test: retrieve scenario from DB → generate prompt → validate structure
+- [ ] Integration test: retrieve scenario from PostgreSQL → query VectorDB via FastAPI → generate prompt → validate structure
 
 **Prompt Template Examples**:
 
@@ -46,16 +64,19 @@ You are {character} in an alternate timeline where {property_change}.
 
 DIVERGENCE POINT: {divergence_point}
 
-CASCADING EFFECTS IN THIS TIMELINE:
-{cascading_effects as numbered list}
+ORIGINAL PASSAGE CONTEXT:
+{passage_content from VectorDB}
 
-You have complete knowledge of this alternate timeline. You experienced all events of {base_story} through this altered lens. You remember:
+CASCADING EFFECTS IN THIS TIMELINE:
+{cascading_effects as numbered list from VectorDB character data}
+
+You have complete knowledge of this alternate timeline. You experienced all events through this altered lens. You remember:
 - How {property_change} shaped your personality differently
-- Key relationships that formed because of this change
+- Key relationships that formed because of this change (from VectorDB character relationships)
 - Pivotal moments that played out differently due to your altered circumstances
 - How you reflected on your journey in this timeline
 
-When discussing your experiences, draw from THIS timeline's events, not the canonical story. Reflect on how different choices and circumstances shaped who you became.
+When discussing your experiences, draw from THIS timeline's events, not the canonical story.
 
 Tone: Thoughtful, introspective, aware of your alternate path.
 ```
@@ -65,39 +86,70 @@ Tone: Thoughtful, introspective, aware of your alternate path.
 ```
 You are {character} in an alternate timeline where {event_description}.
 
-ORIGINAL EVENT: {event} - {original_outcome}
+ORIGINAL EVENT: {event} - {original_outcome} (from VectorDB events collection)
 ALTERNATE EVENT: {event} - {alternate_outcome}
 DIVERGENCE POINT: {divergence_point}
 
+PASSAGE CONTEXT:
+{passage_content from VectorDB showing original event}
+
 RIPPLE EFFECTS IN THIS TIMELINE:
-{ripple_effects as numbered list}
+{ripple_effects as numbered list from VectorDB}
 
-This change fundamentally altered the story's trajectory. You experienced {base_story} in a reality where {alternate_outcome}. You remember:
-- How the altered event changed your path
-- Relationships that never formed or formed differently
-- Consequences that cascaded from this pivotal change
-- How life played out in this divergent timeline
-
-Discuss your experiences as someone who lived through THIS version of events. Reflect on what might have been different, and what this timeline taught you.
+This change fundamentally altered the story's trajectory. Reflect on what might have been different.
 
 Tone: Reflective, aware of the pivotal change, grounded in alternate reality.
 ```
 
-**SETTING_MODIFICATION Template**:
+**Technical Guidance**:
 
-```
-You are {character} in an alternate timeline set in {alternate_setting} instead of {original_setting}.
+- Spring Boot service: `PromptGenerationService.java`
+- **FastAPI VectorDB Client**: `VectorDbClient.java` with RestTemplate for HTTP calls
+  - `POST /api/ai/vectordb/characters/search` → JSON response with character data
+  - `POST /api/ai/vectordb/events/search` → JSON response with event data
+  - `POST /api/ai/vectordb/locations/search` → JSON response with location data
+  - `POST /api/ai/vectordb/passages/retrieve` → JSON response with passage content
+- Template engine: Thymeleaf or Spring Expression Language (SpEL)
+- Caching: Redis with `@Cacheable(key="#scenarioId + '_' + #characterName", expire=300)`
+- Prompt structure: System prompt (1,500 tokens) + Context window (500 tokens) = ~2,000 tokens total
+- **Error Handling**: Circuit breaker (Resilience4j) for VectorDB calls, fallback to base_scenarios table metadata
+- **Performance**: Parallel VectorDB queries using `CompletableFuture.allOf(...)`
+- **Long Polling**: Store task status in Redis, return task_id immediately, poll for completion
+- Tests: JUnit 5 + Mockito for service mocking, TestContainers for Redis integration tests
 
-TIME PERIOD: {alternate_time} (originally {original_time})
-LOCATION: {alternate_location} (originally {original_location})
+**Estimated Effort**: 10 hours
 
-CULTURAL CONTEXT:
-{cultural_context}
+---
 
-CHARACTER ADAPTATIONS IN THIS SETTING:
-{character_adaptations as list}
+### Story 2.2: Context Window Manager for Gemini 2.5 Flash
+
+**Priority: P0 - Critical**
+
+**Description**: Implement intelligent context window management that maximizes **Gemini 2.5 Flash's 1M input token capacity** by strategically including novel passages from VectorDB, character backgrounds, and scenario history while maintaining conversation coherence across long interactions.
+
+**Acceptance Criteria**:
+
+- [ ] ContextWindowService with method: `buildContextWindow(Conversation conversation, int messageCount)`
+- [ ] **Token Budget Management for Gemini 2.5 Flash**:
+  - Total input budget: **1,000,000 tokens** (Gemini 2.5 Flash limit)
+  - Reserved for system prompt: **2,000 tokens** (character adaptation prompt from Story 2.1 + VectorDB context)
+  - Reserved for user message: **1,000 tokens** (current user input)
+  - Available for context: **997,000 tokens** (remaining budget)
+  - Target context usage: **10,000-20,000 tokens** (optimal for conversation coherence, far below Gemini's capacity)
+- [ ] **Context Priority Ranking** (highest to lowest):
+  1. System prompt with scenario context (2,000 tokens)
+  2. Last 50 messages (10,000-15,000 tokens estimated)
+  3. VectorDB passage content (3,000-5,000 tokens, fetched via FastAPI)
+  4. Character background from VectorDB (1,000-2,000 tokens)
+  5. Older conversation history (truncated if needed)
+- [ ] Token allocation strategy:
+  - Scenario prompt: **2,000 tokens** (from Story 2.1 + VectorDB context)
+  - Conversation history: **10,000-15,000 tokens** (last 50 messages)
+  - VectorDB content: **3,000-5,000 tokens** (novel passages + character data)
+  - Response buffer: **8,000 tokens** (Gemini output limit)
 
 You experienced the core story of {base_story} but in a completely different cultural and temporal context. The themes, conflicts, and relationships were filtered through {alternate_setting}'s lens. You remember:
+
 - How the different time period/location changed social dynamics
 - Technology, customs, and cultural norms of this setting
 - How core story conflicts translated to this context
@@ -106,7 +158,8 @@ You experienced the core story of {base_story} but in a completely different cul
 Discuss your journey in THIS setting, drawing parallels to the original story's themes while grounding experiences in {alternate_setting}'s reality.
 
 Tone: Culturally aware, reflective on universal vs. context-specific themes.
-```
+
+````
 
 **Technical Notes**:
 
@@ -165,7 +218,7 @@ Tone: Culturally aware, reflective on universal vs. context-specific themes.
     // ... last 10-15 messages
   ]
 }
-```
+````
 
 **Re-injection Logic** (every 10 turns):
 
@@ -319,106 +372,181 @@ public void testHermioneInSlytherin() {
 
 ---
 
+- **Long Polling Integration**: Return task_id for async operations, poll every 2 seconds
+- **Cost Estimate (Gemini 2.5 Flash)**: $0.075 per 1M input tokens, $0.30 per 1M output tokens
+
+## Total Estimated Effort
+
+**32 hours** (Story 2.1: 10h + Story 2.2: 8h + Story 2.3: 6h + Story 2.4: 8h)
+
 ## Epic-Level Acceptance Criteria
 
-- [ ] All three scenario types generate coherent, timeline-specific character prompts
-- [ ] Characters maintain consistency across 20+ message conversations
+- [ ] All three scenario types generate coherent, timeline-specific character prompts with VectorDB content
+- [ ] Characters maintain consistency across 100+ message conversations (far longer than Local LLM's 20-message limit)
 - [ ] No "canonical story bleed" (characters don't reference events from original timeline when in alternate timeline)
-- [ ] Token management keeps conversations under 4,096 token limit (Local LLM)
-- [ ] Scenario context re-injection prevents timeline drift after 10+ turns
-- [ ] 30+ test scenarios pass manual QA with 90%+ coherence rating
-- [ ] Temperature settings optimized for each scenario type
-- [ ] Prompt generation latency < 50ms (excluding Local LLM inference call)
+- [ ] Token management keeps conversations under **20,000 tokens** on average (leaving 980K tokens margin with Gemini 2.5 Flash)
+- [ ] Scenario context re-injection prevents timeline drift after **20+ turns** (less frequent than Local LLM's 10-turn re-injection)
+- [ ] 30+ test scenarios pass automated QA with **80%+ coherence rating** (keyword match + semantic similarity)
+- [ ] **Gemini generation configs** optimized for each scenario type (temperature, top_p, top_k)
+- [ ] Prompt generation latency **<3 seconds** (including VectorDB queries via FastAPI)
+- [ ] **Long polling** works for all async operations (prompt generation, context building, testing) with 2-second intervals
+- [ ] **Browser notifications** trigger on async task completion via WebSocket/SSE
 
 ## Dependencies
 
 **Blocks**:
 
-- Epic 4: Conversation System (needs character prompts to enable conversations)
+- Epic 4: Conversation System (needs character prompts to enable Gemini conversations)
 - Epic 5: Scenario Tree Visualization (displays scenario metadata, needs prompts working)
 
 **Requires**:
 
-- Epic 1: What If Scenario Foundation (needs scenario data structure, JSONB parameters)
-- Local LLM integration (Llama-2-7B or Mistral-7B)
-- Spring Boot backend with PromptGenerationService, ContextWindowService
+- Epic 1: What If Scenario Foundation (needs scenario data structure, base_scenarios table, vectordb_passage_ids[])
+- **FastAPI AI Service** (Port 8000): VectorDB queries, Gemini 2.5 Flash integration
+- **Gemini 2.5 Flash**: Text generation API
+- **Gemini Embedding API**: 768-dimensional embeddings for semantic search
+- **VectorDB (ChromaDB/Pinecone)**: 5 collections (novel_passages, characters, locations, events, themes)
+- Spring Boot backend with PromptGenerationService, ContextWindowService, CharacterConsistencyService, ScenarioTestingService
 
 ## Success Metrics
 
 **Technical Metrics**:
 
-- Prompt generation latency < 50ms (p95)
-- Token counting accuracy 99%+ (vs. Local LLM's actual count)
-- Cache hit rate >60% for popular scenarios (reduces prompt generation load)
+- Prompt generation latency **<3 seconds** (p95, including VectorDB queries via FastAPI)
+- Token counting accuracy **99%+** (using Gemini Tokenizer API)
+- Cache hit rate **>60%** for popular scenarios (reduces prompt generation load)
 - Zero timeline inconsistency errors in production (first 3 months)
+- **VectorDB query latency <500ms** (p95 for FastAPI calls)
+- **Long polling efficiency**: <10% overhead vs. WebSocket (fewer connections)
+- **Gemini API cost**: <$1 per 1,000 conversations (input + output tokens combined)
 
 **User Metrics** (Phase 1 - 3 months):
 
-- 80%+ of conversations exceed 10 messages (proves engagement)
+- **90%+ of conversations exceed 20 messages** (proves engagement, far higher than Local LLM's 10-message target)
 - User feedback: "Character felt authentic to timeline" (qualitative surveys)
-- <5% user reports of "character breaking timeline" (scenario consistency)
+- **<2% user reports of "character breaking timeline"** (scenario consistency, improved from Local LLM's <5% target)
 - 60%+ of scenarios forked have conversations (proves scenarios inspire engagement)
+- **Human rating avg 4.2+ for Gemini-generated responses** (out of 5 stars)
 
 ## Risk Mitigation
 
-**Risk 1: Prompts too long, exceed token limits**
+**Risk 1: Gemini API costs exceed budget**
 
-- Mitigation: Strict token budgets (600-800 for scenario, 2,000 for history)
-- Mitigation: Condensed re-injection prompts (300-400 tokens)
-- Mitigation: Automated tests fail if prompts exceed limits
+- Mitigation: Token budget target 10,000-20,000 tokens per conversation (far below 1M limit)
+- Mitigation: Caching for identical prompts (5-minute TTL in Redis)
+- Mitigation: Monitor usage via Gemini API dashboard, set alerts at $100/day
+- Mitigation: Fallback to smaller context window (5,000 tokens) if costs spike
 
 **Risk 2: Characters drift from timeline after extended conversations**
 
-- Mitigation: Re-inject scenario context every 10 turns (Story 2.2)
-- Mitigation: Temperature tuning per scenario type (Story 2.3)
-- Mitigation: Manual QA on 20+ message conversations (Story 2.4)
+- Mitigation: Re-inject scenario context every **20 turns** with VectorDB-refreshed data (Story 2.2)
+- Mitigation: **Gemini generation config tuning** per scenario type (temperature, top_p, top_k) (Story 2.3)
+- Mitigation: Automated QA with semantic similarity checks via VectorDB (Story 2.4)
 
-**Risk 3: Cultural insensitivity in SETTING_MODIFICATION scenarios**
+**Risk 3: VectorDB query failures disrupt prompt generation**
 
-- Mitigation: Validation system (Story 1.5) checks for stereotypes
-- Mitigation: User-provided cultural context reviewed before publish
+- Mitigation: **Circuit breaker pattern** (Resilience4j) with 5-second timeout for FastAPI calls
+- Mitigation: Fallback to base_scenarios metadata if VectorDB unavailable
+- Mitigation: Redis caching for VectorDB results (5-minute TTL)
+- Mitigation: Health checks for FastAPI service, alert on 3+ consecutive failures
+
+**Risk 4: Cultural insensitivity in SETTING_MODIFICATION scenarios**
+
+- Mitigation: **Gemini Safety Settings** (BLOCK_MEDIUM_AND_ABOVE for all harm categories)
+- Mitigation: VectorDB cultural context validation via FastAPI semantic search
+- Mitigation: User-provided cultural context reviewed before publish (Story 1.5 from Epic 1)
 - Mitigation: Community reporting (Phase 2) for offensive scenarios
 
-**Risk 4: Prompt engineering complexity delays MVP**
+**Risk 5: Long polling overhead slows down UI**
 
-- Mitigation: Fixed time-box (6 hours for Story 2.4 testing)
-- Mitigation: Ship "good enough" prompts in MVP, iterate based on user feedback
+- Mitigation: 2-second polling interval balances responsiveness vs. server load
+- Mitigation: Browser notifications trigger immediately on task completion (via WebSocket/SSE)
+- Mitigation: Exponential backoff for failed polls (2s → 4s → 8s → max 30s)
+- Mitigation: Cancel polling when user navigates away (cleanup on component unmount)
+
+**Risk 6: Prompt engineering complexity delays MVP**
+
+- Mitigation: Fixed time-box (8 hours for Story 2.4 testing with Gemini)
+- Mitigation: Ship "good enough" prompts in MVP, iterate based on Gemini API feedback
 - Mitigation: Prompt versioning (v1.0, v1.1...) enables gradual improvement
+- Mitigation: A/B testing framework for comparing Gemini generation configs (Story 2.3)
 
 ## Technical Debt Decisions
 
 **Accepted Debt** (to be addressed post-MVP):
 
-- No dynamic personality extraction from book text (using user-defined parameters only)
+- No dynamic personality extraction from novel text (using VectorDB character data only, not real-time LLM analysis)
 - No multi-character conversations (one character per conversation in MVP)
-- No sentiment analysis to detect timeline drift (manual QA only)
-- No A/B testing framework for prompt variations (deferred to Phase 2)
-- Hardcoded temperature settings (not ML-optimized per scenario)
+- No sentiment analysis to detect timeline drift (automated keyword/semantic checks only)
+- A/B testing framework limited to generation configs (not full prompt variations)
+- Hardcoded Gemini generation configs (not ML-optimized per user/scenario)
+- No prompt version rollback (forward-only versioning)
+- No real-time VectorDB updates during conversation (refresh only every 20 turns)
 
 **Won't Build** (architectural decisions):
 
-- Real-time prompt optimization based on conversation quality
-- User-editable prompts (security risk, prompt injection attacks)
-- Prompt version rollback (prompts forward-only versioning)
+- Real-time prompt optimization based on Gemini conversation quality (too complex for MVP)
+- User-editable prompts (security risk, prompt injection attacks with Gemini API)
+- Multiple LLM provider support (Gemini-only for MVP, OpenAI/Claude in Phase 2)
+- Custom fine-tuned LLM (Gemini 2.5 Flash with prompt engineering sufficient for MVP)
+- Real-time embedding generation (VectorDB embeddings pre-computed during novel ingestion)
 
 ## Testing Strategy
 
 **Unit Tests** (Story 2.1):
 
-- Prompt generation for all three scenario types
+- Prompt generation for all three scenario types with VectorDB mock data
+- FastAPI VectorDB client methods with RestTemplate mocking
 - JSONB parameter extraction and template population
-- Token counting accuracy
-- Cache hit/miss logic
+- Token counting accuracy with Gemini Tokenizer API mock
+- Cache hit/miss logic with Redis TestContainers
 
 **Integration Tests** (Stories 2.1-2.2):
 
-- Retrieve scenario from database → generate prompt → validate structure
-- 20-message conversation → context window management → token limits respected
-- Scenario context re-injection after 10 turns
+- Retrieve scenario from PostgreSQL → query VectorDB via FastAPI → generate prompt → validate structure
+- 100-message conversation → context window management → token limits respected (using Gemini tokenizer)
+- Scenario context re-injection after 20 turns with VectorDB-refreshed data
+- Long polling: submit task → poll status every 2 seconds → verify completion within 10 seconds
+
+**API Integration Tests** (Story 2.1):
+
+- FastAPI VectorDB endpoints: `/api/ai/vectordb/characters/search`, `/events/search`, `/locations/search`, `/passages/retrieve`
+- Gemini 2.5 Flash API: generate response with different generation configs (temperature, top_p, top_k)
+- Gemini Embedding API: compute semantic similarity for consistency validation
+- Gemini Tokenizer API: count tokens for context window management
 
 **Manual QA Tests** (Story 2.4):
 
-- 30+ scenarios with seed questions
+- 30+ scenarios with seed questions, Gemini-generated responses evaluated by humans
+- Rating scale: 1-5 stars for timeline authenticity, character voice, coherence
+- Edge cases: 100+ message conversations, nested scenarios (meta-forks), unusual cultural settings
+
+**Performance Tests**:
+
+- Prompt generation latency: target p95 <3 seconds (including VectorDB queries)
+- VectorDB query latency: target p95 <500ms (FastAPI → ChromaDB/Pinecone)
+- Gemini API latency: target p95 <2 seconds (text generation)
+- Long polling overhead: <10% CPU vs. WebSocket equivalent
+
+## Cost Estimates (Gemini 2.5 Flash)
+
+**Per Conversation** (avg 50 messages, 20 turns):
+
+- Input tokens: ~25,000 tokens total (prompts + context + messages)
+- Output tokens: ~50,000 tokens total (50 messages × 1,000 tokens avg)
+- Cost: (25K × $0.075 / 1M) + (50K × $0.30 / 1M) = $0.0019 + $0.015 = **$0.0169 per conversation**
+
+**Monthly Estimates** (1,000 active users, 5 conversations each):
+
+- Total conversations: 5,000/month
+- Total cost: 5,000 × $0.0169 = **$84.50/month for Gemini API**
+- VectorDB cost (Pinecone): ~$70/month for 100K vectors (768-dim)
+- **Total AI cost: ~$155/month**
+
+---
+
+**Epic 2 Total**: **32 hours** | **4 stories** | **Gemini 2.5 Flash + VectorDB + FastAPI integration**
+
 - Character personality consistency across different scenarios
 - Cultural sensitivity review for SETTING_MODIFICATION scenarios
 - Long conversation testing (30+ messages) for timeline drift

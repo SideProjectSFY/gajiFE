@@ -60,6 +60,7 @@ networks:
 volumes:
   postgres-data:
   chromadb-data:
+  redis-data:
 
 services:
   # PostgreSQL - Metadata storage only (13 tables)
@@ -82,33 +83,40 @@ services:
       timeout: 5s
       retries: 5
 
-  # Redis - Celery task queue (async operations)
+  # Redis - Celery broker + Long Polling task storage (600s TTL)
   redis:
     image: redis:7-alpine
     container_name: gaji-redis
+    volumes:
+      - redis-data:/data
     ports:
       - "6379:6379"
     networks:
       - gaji-network
+    command: redis-server --appendonly yes # AOF persistence
+    mem_limit: 512m # Redis memory limit
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
 
-  # ChromaDB - VectorDB for development (5 collections)
+  # ChromaDB - VectorDB for development (768-dim embeddings, 5 collections)
   chromadb:
-    image: chromadb/chroma:latest
+    image: chromadb/chroma:0.4.18
     container_name: gaji-chromadb
     environment:
       - CHROMA_SERVER_HOST=0.0.0.0
       - CHROMA_SERVER_HTTP_PORT=8000
+      - IS_PERSISTENT=TRUE
+      - ANONYMIZED_TELEMETRY=FALSE
     volumes:
       - chromadb-data:/chroma/chroma
     ports:
-      - "8001:8000"  # Expose on 8001 to avoid conflict with FastAPI
+      - "8001:8000" # Expose on 8001 to avoid conflict with FastAPI
     networks:
       - gaji-network
+    mem_limit: 4g # ChromaDB memory limit
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/heartbeat"]
       interval: 30s
@@ -141,7 +149,7 @@ services:
       - gaji-network
     volumes:
       - ./core-backend:/app
-      - /app/build  # Exclude build directory
+      - /app/build # Exclude build directory
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
       interval: 30s
@@ -164,8 +172,10 @@ services:
       CHROMADB_PORT: 8000
       # Spring Boot URL (for callbacks)
       SPRING_BOOT_URL: http://backend:8080
-      # Redis for Celery
+      # Redis for Celery + Long Polling (600s TTL)
       REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/1
     # NO ports exposed externally (Pattern B: internal network only)
     expose:
       - "8000"
@@ -208,7 +218,7 @@ services:
     volumes:
       - ./frontend:/app
       - /app/node_modules
-      - /app/styled-system  # Panda CSS generated files
+      - /app/styled-system # Panda CSS generated files
     command: pnpm dev --host 0.0.0.0
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000"]
@@ -242,6 +252,7 @@ VECTORDB_TYPE=chromadb
 ```
 
 **Why FastAPI is NOT Exposed Externally**:
+
 - **Pattern B**: Frontend → Spring Boot → FastAPI (internal proxy)
 - **Security**: Gemini API key never exposed to browser
 - **Simplicity**: Single authentication flow
@@ -250,6 +261,7 @@ VECTORDB_TYPE=chromadb
 **Dockerfile.dev Examples**:
 
 **Spring Boot (core-backend/Dockerfile.dev)**:
+
 ```dockerfile
 FROM eclipse-temurin:17-jdk-alpine
 WORKDIR /app
@@ -261,6 +273,7 @@ CMD ["./gradlew", "bootRun", "--no-daemon"]
 ```
 
 **FastAPI (ai-backend/Dockerfile.dev)**:
+
 ```dockerfile
 FROM python:3.11-slim
 WORKDIR /app
@@ -272,6 +285,7 @@ CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload & cel
 ```
 
 **Frontend (frontend/Dockerfile.dev)**:
+
 ```dockerfile
 FROM node:20-alpine
 WORKDIR /app

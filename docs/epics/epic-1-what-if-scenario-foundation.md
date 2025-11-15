@@ -22,35 +22,43 @@ Users can begin exploring alternative timelines by creating structured "What If"
 
 **Acceptance Criteria**:
 
-- [ ] **Normalized scenario tables** created (no JSONB):
-  - `base_scenarios` with structured columns (character_summary, location_summary, theme_summary, page_range, content_summary, tags TEXT[])
+- [ ] **Normalized scenario tables** created in PostgreSQL (metadata only):
+  - `base_scenarios` with structured columns + **vectordb_passage_ids TEXT[]** (references to VectorDB)
   - `root_user_scenarios` and `leaf_user_scenarios` for user-created scenarios
-  - `scenario_character_changes` table for CHARACTER_CHANGE type parameters
+  - `scenario_character_changes` table with **character_vectordb_id** (references VectorDB characters collection)
   - `scenario_event_alterations` table for EVENT_ALTERATION type parameters
   - `scenario_setting_modifications` table for SETTING_MODIFICATION type parameters
+- [ ] **VectorDB integration via FastAPI**:
+  - Spring Boot calls FastAPI endpoints for character/passage search
+  - `POST /api/ai/search/characters` (semantic search in VectorDB)
+  - `POST /api/ai/search/passages` (retrieve passages for scenarios)
 - [ ] Recursive CTE query support for scenario tree retrieval (meta-timeline forking)
-- [ ] CRUD API endpoints:
-  - POST /api/v1/scenarios (create root scenario)
-  - GET /api/v1/scenarios/{id} (retrieve with type-specific parameters)
+- [ ] CRUD API endpoints (Spring Boot):
+  - POST /api/v1/scenarios (create root scenario, store passage IDs from FastAPI)
+  - GET /api/v1/scenarios/{id} (retrieve with type-specific parameters + VectorDB references)
   - GET /api/v1/scenarios (list with filtering)
   - PUT /api/v1/scenarios/{id} (update)
   - DELETE /api/v1/scenarios/{id} (soft delete)
 - [ ] Scenario forking endpoint: POST /api/v1/scenarios/{id}/fork
 - [ ] Circular reference prevention in fork logic
-- [ ] B-tree indexes on all FK columns (base_scenario_id, parent_scenario_id, creator_id, character_id, event_id, location_id)
+- [ ] B-tree indexes on all FK columns (base_scenario_id, parent_scenario_id, creator_id)
+- [ ] **GIN index on vectordb_passage_ids** for fast array queries
 - [ ] Soft delete pattern with deleted_at timestamp
 - [ ] Java entity classes with proper JPA relationships to normalized tables
-- [ ] Response time < 100ms for single scenario retrieval with type-specific parameters
+- [ ] Response time < 100ms for single scenario retrieval (PostgreSQL metadata only)
 - [ ] Unit tests >80% coverage on repository and service layers
 
 **Technical Notes**:
 
-- Fully normalized relational design with type-specific tables for CHARACTER_CHANGE, EVENT_ALTERATION, SETTING_MODIFICATION scenarios
-- parent_scenario_id (in root/leaf_user_scenarios) enables infinite meta-scenario branching ("Hermione in Slytherin AND Head Girl")
-- Structured columns enable type-safe queries, better indexing, and data validation vs JSONB
+- **Hybrid Database Architecture**: PostgreSQL stores metadata, VectorDB stores full content
+- **Cross-service communication**: Spring Boot → FastAPI for all VectorDB queries
+- **character_vectordb_id** replaces character_id FK (characters now in VectorDB)
+- parent_scenario_id (in root/leaf_user_scenarios) enables infinite meta-scenario branching
+- Structured columns enable type-safe queries, better indexing vs JSONB
 - XOR constraints ensure each scenario has exactly one type-specific parameter set
 - CASCADE DELETE on FKs ensures automatic cleanup when scenarios are deleted
 - fork_count, conversation_count, quality_score support future recommendation algorithms
+- **Never access VectorDB directly from Spring Boot** - always call FastAPI endpoints
 
 **Estimated Effort**: 8 hours
 
@@ -64,13 +72,14 @@ Users can begin exploring alternative timelines by creating structured "What If"
 
 **Acceptance Criteria**:
 
-- [ ] CharacterPropertySelector component with character dropdown (from book's character list)
+- [ ] CharacterPropertySelector component with character dropdown
+  - **Character list from FastAPI VectorDB search**: semantic search in `characters` collection
+  - Frontend calls Spring Boot → Spring Boot proxies to FastAPI `/api/ai/search/characters`
 - [ ] Property selector: house, personality_trait, friend_group, mentor, ambition_level
 - [ ] Original vs. Alternate value input fields
 - [ ] CascadingEffectsInput component for listing timeline consequences (min 2, max 5 effects)
 - [ ] Divergence point selector (timeline moment dropdown)
-- [ ] Real-time JSONB parameter preview showing generated structure
-- [ ] Form validation: required fields, character exists, property is valid
+- [ ] Form validation: required fields, character exists in VectorDB, property is valid
 - [ ] Integration with POST /api/scenarios endpoint from Story 1.1
 - [ ] Success state: redirect to scenario detail page showing created timeline
 - [ ] Mobile responsive (375px+ width)
@@ -80,19 +89,19 @@ Users can begin exploring alternative timelines by creating structured "What If"
 ```
 User selects:
 - Base Scenario: "Hermione's Sorting"
-- Character: "Hermione Granger"
+- Character: "Hermione Granger" (from VectorDB semantic search)
 - Attribute: "house"
 - Original: "Gryffindor"
 - Alternate: "Slytherin"
 - Reasoning: "What if the Sorting Hat prioritized her ambition over bravery?"
 
-System creates records:
-1. root_user_scenarios table:
-   - base_scenario_id, creator_id, title, description
-
-2. scenario_character_changes table:
-   - root_scenario_id (from step 1)
-   - character_id (Hermione's UUID)
+Frontend → Spring Boot → FastAPI:
+1. FastAPI searches VectorDB characters collection
+2. Returns character metadata including vectordb_id
+3. Spring Boot creates root_user_scenarios record
+4. Spring Boot creates scenario_character_changes record with:
+   - root_scenario_id (from step 3)
+   - character_vectordb_id (from FastAPI response)
    - attribute = "house"
    - original_value = "Gryffindor"
    - new_value = "Slytherin"
@@ -103,8 +112,10 @@ Response returns structured scenario with character change details.
 
 **Technical Notes**:
 
-- Character list fetched from RAG pipeline (future: Story 4.1)
-- For MVP, hardcode 5-10 popular book characters
+- **Character search via API Gateway Pattern**: Frontend → Spring Boot (API Gateway) → FastAPI (VectorDB)
+- Spring Boot never accesses VectorDB directly, always proxies through FastAPI
+- Character list populated from VectorDB semantic search (not hardcoded)
+- Store **character_vectordb_id** in PostgreSQL scenario_character_changes table
 - panda CSS utility classes for consistent styling
 - Pinia store manages scenario creation state
 
@@ -219,16 +230,18 @@ System generates JSONB:
 
 ---
 
-### Story 1.5: Scenario Validation System
+### Story 1.5: Scenario Validation System with Gemini 2.5 Flash
 
 **Priority: P1 - High**
 
-**Description**: Implement Local LLM-powered validation to ensure scenario coherence and prevent contradictions before publication.
+**Description**: Implement **Gemini 2.5 Flash via FastAPI** validation to ensure scenario coherence and prevent contradictions before publication.
 
 **Acceptance Criteria**:
 
-- [ ] Validation service endpoint: POST /api/scenarios/validate (called before creation)
-- [ ] Local LLM integration checking for:
+- [ ] **Validation service endpoint** (Spring Boot): POST /api/v1/scenarios/validate
+  - Spring Boot proxies to FastAPI: POST /api/ai/scenarios/validate
+  - FastAPI calls Gemini 2.5 Flash for validation analysis
+- [ ] **Gemini 2.5 Flash validation** via FastAPI checking for:
   - Logical coherence (changes make sense given book context)
   - Character plausibility (altered characters remain recognizable)
   - Timeline consistency (no contradictions in cascading effects)
@@ -241,10 +254,10 @@ System generates JSONB:
   - Suggestions for improvement
 - [ ] Frontend displays validation results before scenario creation
 - [ ] User can force-publish despite warnings (quality_score penalized)
-- [ ] Validation results cached for 5 minutes (prevent duplicate calls)
-- [ ] Token budget: max 500 tokens per validation (minimal compute cost)
+- [ ] Validation results cached in Redis for 5 minutes (prevent duplicate calls)
+- [ ] Token budget: max **2,000 tokens per validation** (Gemini 2.5 Flash allows richer analysis)
 
-**Validation Prompt Template**:
+**Validation Prompt Template** (Gemini 2.5 Flash via FastAPI):
 
 ```
 Analyze this "What If" scenario for logical coherence:
@@ -269,10 +282,14 @@ Respond with JSON:
 
 **Technical Notes**:
 
-- Local LLM inference cost minimal (compute only, ~$0.01 per 1000 validations)
-- Cache validation results using scenario hash (Guava cache, 5-minute TTL)
-- Validation runs async, shows loading spinner (2-3 second response time expected)
-- Failed validations saved to database for quality analytics
+- **API Gateway Pattern**: Frontend → Spring Boot → FastAPI → Gemini 2.5 Flash
+- **Gemini API cost**: ~$0.00015 per validation (2,000 tokens × $0.075 / 1M input)
+  - Example: 1,000 validations/month = $0.15 (negligible cost)
+- **Cache validation results** in Redis using scenario hash (5-minute TTL)
+- Validation runs async via FastAPI background task, shows loading spinner
+- Expected response time: **2-3 seconds** (Gemini 2.5 Flash inference)
+- Failed validations saved to PostgreSQL for quality analytics
+- **Retry logic**: 3 retries with exponential backoff for Gemini API failures
 
 **Estimated Effort**: 6 hours
 
@@ -298,10 +315,10 @@ Respond with JSON:
 
 **Requires**:
 
-- Spring Boot backend infrastructure (Week 1 setup)
-- PostgreSQL database (Week 1 setup)
-- Vue.js frontend foundation (Week 1 setup)
-- Local LLM integration (for validation in Story 1.5)
+- **Epic 0**: Project Setup & Infrastructure (Spring Boot, PostgreSQL, FastAPI, VectorDB, Redis)
+- **FastAPI AI Service**: Deployed with Gemini 2.5 Flash API key configured
+- **VectorDB (ChromaDB dev / Pinecone prod)**: Seeded with characters, passages, events collections
+- **Redis**: For validation result caching (5-minute TTL)
 
 ## Success Metrics
 
