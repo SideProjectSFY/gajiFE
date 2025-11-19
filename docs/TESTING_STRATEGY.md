@@ -172,7 +172,6 @@ describe("ScenarioCard.vue", () => {
     baseStory: "harry_potter",
     scenarioType: "CHARACTER_CHANGE",
     title: "Hermione in Slytherin",
-    qualityScore: 0.85,
     forkCount: 12,
     conversationCount: 45,
     creator: {
@@ -192,7 +191,6 @@ describe("ScenarioCard.vue", () => {
     });
 
     expect(wrapper.text()).toContain("Hermione in Slytherin");
-    expect(wrapper.text()).toContain("0.85");
     expect(wrapper.text()).toContain("12 forks");
     expect(wrapper.text()).toContain("45 convos");
     expect(wrapper.text()).toContain("@hermione_fan");
@@ -410,13 +408,15 @@ const scenarios = [
   {
     id: "uuid-1",
     title: "Hermione in Slytherin",
-    qualityScore: 0.85,
+    forkCount: 12,
+    conversationCount: 45,
     // ...
   },
   {
     id: "uuid-2",
     title: "Draco Redeemed",
-    qualityScore: 0.72,
+    forkCount: 8,
+    conversationCount: 23,
     // ...
   },
 ];
@@ -1023,7 +1023,6 @@ export const mockScenarios: Scenario[] = [
     baseStory: "harry_potter",
     scenarioType: "CHARACTER_CHANGE",
     title: "Hermione in Slytherin",
-    qualityScore: 0.85,
     forkCount: 12,
     conversationCount: 45,
     creator: {

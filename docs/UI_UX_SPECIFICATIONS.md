@@ -26,7 +26,7 @@
 
 ### Core Principles
 
-1. **Exploration-First**: Encourage users to explore scenarios and conversations through visual discovery
+1. **Book-Centric Discovery**: Users explore books first, then scenarios within each book
 2. **Mobile-First**: Design for mobile experience, enhance for desktop
 3. **Progressive Disclosure**: Show essential information first, reveal complexity on demand
 4. **Feedback-Rich**: Provide immediate visual feedback for all user actions
@@ -34,9 +34,9 @@
 
 ### Design Goals
 
-- **Intuitive Scenario Creation**: Users should create "What If" scenarios in < 60 seconds
-- **Engaging Conversations**: Chat interface feels natural and responsive
-- **Discoverable Forks**: Tree visualizations make scenario relationships obvious
+- **Intuitive Scenario Creation**: Users should create "What If" scenarios in < 60 seconds with validation (min 10 chars per field)
+- **Engaging Conversations**: Chat interface feels natural and responsive with scenario context visible
+- **Discoverable Books**: Book-centric navigation makes finding stories obvious
 - **Social First**: Following, liking, and sharing feel native
 
 ---
@@ -48,20 +48,20 @@
 **Name**: Sarah, 28, Marketing Manager  
 **Goals**:
 
-- Explore alternate storylines in favorite novels
-- Create unique scenarios and share with friends
+- Explore books she loves through alternate scenarios
+- Create unique scenarios within her favorite books and share with friends
 - Discover creative interpretations from community
 
 **Pain Points**:
 
-- Overwhelmed by too many options
-- Uncertain how to start creating scenarios
+- Overwhelmed by too many scenario options
+- Uncertain how to start creating scenarios with proper content
 - Wants inspiration from others' work
 
 **Design Needs**:
 
-- Guided scenario creation wizard
-- Featured scenarios on homepage
+- Guided scenario creation with validation (min 10 chars)
+- Book-centric browsing with featured scenarios
 - Simple fork/like interactions
 - Social feed of followed users
 
@@ -86,7 +86,7 @@
 
 - Advanced search/filter UI
 - Conversation tree visualization
-- Memo sidebar in conversations
+- Book-based organization
 - Keyboard shortcuts
 
 ---
@@ -108,8 +108,8 @@
 
 **Design Needs**:
 
-- Browse scenarios without login
-- One-click scenario preview
+- Browse books and scenarios without login
+- One-click book preview
 - Guest conversation mode (future)
 - Minimal onboarding friction
 
@@ -433,42 +433,45 @@ shadows: {
 **Desktop Enhancements**:
 
 - Hero section full-width with background illustration
-- Featured scenarios: 3-column grid (instead of scroll)
+- Featured books with scenarios: 3-column grid (instead of scroll)
 - Trending conversations: 2-column layout with preview
 
 **Components**:
 
 - Header: Custom navigation bar
 - Hero: Custom hero component with gradient background
-- Featured: `DataView` with `grid` layout
+- Featured: `DataView` with `grid` layout (book-centric)
 - Trending: `DataView` with `list` layout
 
 ---
 
-### 2. Scenario Browse Page
+### 2. Book Browse Page
 
-**Purpose**: Discover scenarios through filtering and search
+**Purpose**: Discover books and their scenarios through filtering and search
 
 **Layout** (Mobile):
 
 ```
 ┌─────────────────────────────────┐
-│ [Search: "hermione slytherin"] │ ← Search Bar
+│ [Search: "harry potter"]       │ ← Search Bar
 │ [Filters ▼]                    │ ← Filter Toggle
 ├─────────────────────────────────┤
-│ Showing 23 results              │
+│ Showing 23 books                │
 │                                 │
 │ ┌─────────────────────────────┐ │
-│ │ 📘 HP: Hermione in Slytherin│ │ ← Scenario Card
-│ │ By: @hermione_fan           │ │
-│ │ ⭐ 0.85 | 💬 12 | 🍴 5      │ │ (Quality, Convos, Forks)
-│ │ "What if Hermione was       │ │
-│ │  sorted into..."            │ │
+│ │ 📘 Harry Potter Series      │ │ ← Book Card
+│ │ by J.K. Rowling             │ │
+│ │ 45 scenarios | 230 convos   │ │
+│ │                             │ │
+│ │ [Explore Scenarios →]       │ │
 │ └─────────────────────────────┘ │
 │                                 │
 │ ┌─────────────────────────────┐ │
-│ │ 📘 HP: Draco Redeemed       │ │
-│ │ ...                         │ │
+│ │ � Pride and Prejudice      │ │
+│ │ by Jane Austen              │ │
+│ │ 18 scenarios | 92 convos    │ │
+│ │                             │ │
+│ │ [Explore Scenarios →]       │ │
 │ └─────────────────────────────┘ │
 │                                 │
 │ [Load More]                     │
@@ -481,19 +484,16 @@ shadows: {
 ┌─────────────────────────────────┐
 │ 📂 Filters                       │
 │                                 │
-│ 📚 Novel:                       │
-│ ☐ Harry Potter (23)             │
-│ ☐ Pride and Prejudice (5)       │
-│ ☐ The Great Gatsby (12)         │
+│ 📚 Genre:                       │
+│ ☐ Fantasy (23)                  │
+│ ☐ Romance (15)                  │
+│ ☐ Classic (32)                  │
+│ ☐ Mystery (8)                   │
 │                                 │
-│ 🎭 Scenario Type:               │
-│ ⚪ All                          │
-│ ⚫ Character Change             │
-│ ⚪ Event Alteration             │
-│ ⚪ Setting Modification         │
-│                                 │
-│ ⭐ Min Quality:                 │
-│ [────────●──] 0.7               │ (Slider)
+│ 🔥 Popularity:                  │
+│ ⚫ All                          │
+│ ⚪ Most Scenarios               │
+│ ⚪ Most Active                  │
 │                                 │
 │ [Apply] [Reset]                 │
 └─────────────────────────────────┘
@@ -506,11 +506,11 @@ shadows: {
 │           │ [Search Bar]                  [View: Grid]  │
 │           ├─────────────────────────────────────────────┤
 │  Filters  │ ┌─────┐ ┌─────┐ ┌─────┐ ┌─────┐            │
-│  (Sidebar)│ │Card │ │Card │ │Card │ │Card │  3-col grid│
+│  (Sidebar)│ │Book │ │Book │ │Book │ │Book │  3-col grid│
 │           │ └─────┘ └─────┘ └─────┘ └─────┘            │
-│  📚 Novel │ ┌─────┐ ┌─────┐ ┌─────┐ ┌─────┐            │
-│  🎭 Type  │ │Card │ │Card │ │Card │ │Card │            │
-│  ⭐ Score │ └─────┘ └─────┘ └─────┘ └─────┘            │
+│  📚 Genre │ ┌─────┐ ┌─────┐ ┌─────┐ ┌─────┐            │
+│  🔥 Pop   │ │Book │ │Book │ │Book │ │Book │            │
+│           │ └─────┘ └─────┘ └─────┘ └─────┘            │
 │           │                                             │
 │           │ [← Previous] [1] [2] [3] [Next →]          │
 └───────────┴─────────────────────────────────────────────┘
@@ -519,13 +519,68 @@ shadows: {
 **Components**:
 
 - Search: `AutoComplete` with debounce
-- Filters: Custom filter panel with `Checkbox`, `RadioButton`, `Slider`
-- Results: `DataView` with `grid`/`list` toggle
+- Filters: Custom filter panel with `Checkbox`, `RadioButton`
+- Results: `DataView` with `grid`/`list` toggle (book cards)
 - Pagination: `Paginator`
 
 ---
 
-### 3. Scenario Detail Page
+### 3. Book Detail Page (with Scenarios)
+
+**Purpose**: Display book info and its scenarios, enable scenario creation
+
+**Layout** (Mobile):
+
+```
+┌─────────────────────────────────┐
+│ ← Back to Books                 │ ← Breadcrumb
+├─────────────────────────────────┤
+│ 📘 Harry Potter Series          │ ← Book Cover/Title
+│ by J.K. Rowling                 │ ← Author
+│                                 │
+│ 45 scenarios | 230 conversations│ ← Stats Row
+│                                 │
+│ [+ Create Scenario]             │ ← Primary Action
+│                                 │
+├─────────────────────────────────┤
+│ 📝 Scenarios (45)               │ ← Scenarios Tab
+│                                 │
+│ [Filter: All ▼]                 │ ← Scenario Type Filter
+│                                 │
+│ ┌─────────────────────────────┐ │
+│ │ Hermione in Slytherin       │ │ ← Scenario Card
+│ │ By @hermione_fan · 2d ago   │ │
+│ │ 💬 12 convos | 🍴 5 forks    │ │
+│ │ [View →]                    │ │
+│ └─────────────────────────────┘ │
+│                                 │
+│ ┌─────────────────────────────┐ │
+│ │ Draco Redeemed              │ │
+│ │ By @draco_stan · 5d ago     │ │
+│ │ 💬 8 convos | 🍴 3 forks     │ │
+│ │ [View →]                    │ │
+│ └─────────────────────────────┘ │
+└─────────────────────────────────┘
+```
+
+**Desktop Enhancements**:
+
+- Book cover image on left
+- 2-column scenario grid
+- Sticky "Create Scenario" button
+
+**Components**:
+
+- Header: Book info with stats
+- Create Button: Primary CTA button (opens modal)
+- Scenarios: `DataView` with `grid` layout
+- Filter: `Dropdown` for scenario type
+
+**Note**: Quality scores removed in v1.1 - scenarios ranked by engagement metrics (forks, conversations) only
+
+---
+
+### 4. Scenario Detail Page
 
 **Purpose**: Display scenario details, list conversations, enable forking
 
@@ -533,33 +588,32 @@ shadows: {
 
 ```
 ┌─────────────────────────────────┐
-│ ← Back to Browse                │ ← Breadcrumb
+│ ← Back to Book                  │ ← Breadcrumb
 ├─────────────────────────────────┤
-│ 📘 Harry Potter                 │ ← Novel Badge
+│ 📘 Book: Harry Potter           │ ← Book Context
 │                                 │
-│ Hermione Sorted into Slytherin  │ ← Title (h1)
+│ Hermione in Slytherin           │ ← Title (h1)
 │ By @hermione_fan · 2 days ago   │ ← Meta
 │                                 │
-│ ⭐ Quality Score: 0.85           │ ← Stats Row
-│ 💬 12 conversations | 🍴 5 forks│
+│ 💬 12 conversations | 🍴 5 forks│ ← Stats (no quality)
 │                                 │
-│ [❤️ Like] [🍴 Fork] [Share]     │ ← Action Buttons
+│ [Start Chat] [🍴 Fork] [Share]  │ ← Action Buttons
 │                                 │
 ├─────────────────────────────────┤
 │ 📝 Scenario Details              │ ← Collapsible Panel
 │                                 │
-│ Type: Character Change          │
-│ Character: Hermione Granger     │
-│ Property: House                 │
-│ Original: Gryffindor            │
-│ New: Slytherin                  │
+│ 👤 Character Changes:           │
+│ Hermione sorted into Slytherin  │
+│ instead of Gryffindor           │
 │                                 │
-│ Ripple Effects:                 │
-│ • Different friend group        │
-│ • Changed house dynamics        │
-│ • Academic rivalry with Draco   │
+│ 🎬 Event Alterations:           │
+│ Troll incident: saved by Draco  │
+│ and Pansy instead               │
+│                                 │
+│ 🌍 Setting Modifications:       │
+│ (None)                          │
 ├─────────────────────────────────┤
-│ 💬 Conversations (12)            │ ← Conversations Tab
+│ 💬 Conversations (12)            │ ← Conversations List
 │                                 │
 │ ┌─────────────────────────────┐ │
 │ │ 📖 Hermione's First Day     │ │ ← Conversation Card
@@ -575,58 +629,38 @@ shadows: {
 └─────────────────────────────────┘
 ```
 
-**Fork Modal**:
-
-```
-┌─────────────────────────────────┐
-│ 🍴 Fork Scenario                │ ← Dialog Header
-├─────────────────────────────────┤
-│                                 │
-│ You're creating a meta-scenario │
-│ based on "Hermione in Slytherin"│
-│                                 │
-│ Scenario Type:                  │
-│ ⚪ Character Change             │
-│ ⚫ Event Alteration             │
-│ ⚪ Setting Modification         │
-│                                 │
-│ [Continue to Details →]         │
-│                                 │
-│ [Cancel]                        │
-└─────────────────────────────────┘
-```
+**Scenario Fork Button**: Opens creation modal with this book pre-selected
 
 **Desktop Enhancements**:
 
 - 2-column layout: Details (left) + Conversations (right)
 - Sticky scenario summary on scroll
-- Forking tree visualization below conversations
 
 **Components**:
 
-- Header: Custom hero section with stats
-- Actions: `Button` group
-- Details: `Panel` (collapsible)
+- Header: Book context + scenario info
+- Actions: `Button` group (Start Chat, Fork, Share)
+- Details: `Panel` (collapsible) showing 3 scenario types
 - Conversations: `DataView` with `list` layout
-- Fork Modal: `Dialog` with multi-step form
 
 ---
 
-### 4. Conversation Detail Page
+### 5. Conversation Detail Page
 
-**Purpose**: Display conversation messages, enable messaging, forking
+**Purpose**: Display conversation messages with scenario context, enable messaging and forking
 
 **Layout** (Mobile):
 
 ```
 ┌─────────────────────────────────┐
-│ ← Back | [Fork] [Like] [Memo]  │ ← Header Actions
+│ ← Back | [Fork Chat] [Like]    │ ← Header Actions
 ├─────────────────────────────────┤
-│ Hermione's First Day in         │ ← Title
-│ Slytherin                       │
+│ 📘 Book: Harry Potter           │ ← Book Context
+│ Scenario: Hermione in Slytherin │ ← Scenario Context
 │                                 │
-│ 📘 Scenario: Hermione in        │ ← Scenario Link
-│ Slytherin                       │
+│ [View Scenario Details ▼]       │ ← Expandable Scenario
+│                                 │
+│ Hermione's First Day            │ ← Conversation Title
 │ By @hermione_fan                │ ← Creator
 │                                 │
 ├─────────────────────────────────┤
@@ -665,6 +699,23 @@ shadows: {
 └─────────────────────────────────┘
 ```
 
+**Expandable Scenario Details**:
+
+```
+┌─────────────────────────────────┐
+│ [View Scenario Details ▼]       │ ← Click to expand
+├─────────────────────────────────┤
+│ 👤 Character Changes:           │ ← Scenario context
+│ Hermione sorted into Slytherin  │
+│                                 │
+│ 🎬 Event Alterations:           │
+│ Troll incident: saved by Draco  │
+│                                 │
+│ 🌍 Setting Modifications:       │
+│ (None)                          │
+└─────────────────────────────────┘
+```
+
 **Message States**:
 
 - **User Message**: Right-aligned, blue background
@@ -672,250 +723,297 @@ shadows: {
 - **Typing Indicator**: Animated dots "..."
 - **Streaming Message**: Text appears word-by-word
 
-**Memo Sidebar** (Slide-in from right):
-
-```
-┌─────────────────────────────────┐
-│ 📝 Personal Memo         [X]    │
-│                                 │
-│ ┌─────────────────────────────┐ │
-│ │ Interesting take on         │ │ ← Editable Textarea
-│ │ Hermione's adaptability.    │ │
-│ │                             │ │
-│ │ Should explore Draco        │ │
-│ │ relationship more in next   │ │
-│ │ fork.                       │ │
-│ │                             │ │
-│ └─────────────────────────────┘ │
-│                                 │
-│ [Save Memo]                     │
-└─────────────────────────────────┘
-```
-
 **Desktop Layout**:
 
 ```
 ┌───────────┬─────────────────────────────────┬───────────┐
-│ Scenario  │ 💬 Messages                      │ 📝 Memo   │
-│ Summary   │                                 │ (Sidebar) │
+│ Scenario  │ 💬 Messages                      │ 🌳 Tree   │
+│ Context   │                                 │ (Sidebar) │
 │           │ ┌─────────────────────────────┐ │           │
-│ 📘 HP     │ │ 👤 You                      │ │ [Memo]    │
-│ Hermione  │ │ Message text...             │ │           │
-│ in        │ └─────────────────────────────┘ │ [Edit]    │
-│ Slytherin │                                 │           │
-│           │ ┌─────────────────────────────┐ │ [Delete]  │
-│ [Details] │ │ 🤖 Hermione                 │ │           │
-│           │ │ Response text...            │ │           │
-│           │ └─────────────────────────────┘ │           │
+│ 📘 Book:  │ │ 👤 You                      │ │ [Tree]    │
+│ Harry     │ │ Message text...             │ │ View      │
+│ Potter    │ └─────────────────────────────┘ │           │
+│           │                                 │ [Expand]  │
+│ Scenario: │ ┌─────────────────────────────┐ │           │
+│ Hermione  │ │ 🤖 Hermione                 │ │           │
+│ in        │ │ Response text...            │ │           │
+│ Slytherin │ └─────────────────────────────┘ │           │
 │           │                                 │           │
-│           │ [Type message...]          [→] │           │
+│ [Details] │ [Type message...]          [→] │           │
 └───────────┴─────────────────────────────────┴───────────┘
 ```
 
 **Components**:
 
+- Scenario Context: Expandable panel showing book + scenario details
 - Message Thread: `ScrollPanel` with custom message components
 - Message Input: `Textarea` with auto-resize
 - Streaming: Custom component with SSE integration
-- Memo: `OverlayPanel` (mobile) or sidebar (desktop)
+- Tree View: Conversation tree visualization (sidebar on desktop)
 
 ---
 
-### 5. Scenario Creation Wizard
+### 5. Scenario Creation Modal
 
-**Purpose**: Guide users through scenario creation step-by-step
+**Purpose**: Create scenarios with validation (min 10 chars per field, at least 1 filled)
 
-**Step 1: Select Novel** (Mobile):
+**Trigger**: Click "Create Scenario" button from Book Detail page
+
+**Modal Layout** (Mobile):
 
 ```
 ┌─────────────────────────────────┐
-│ Create New Scenario (1/4)       │ ← Progress Indicator
-│ ━━━━━━                          │
+│ 📝 Create Scenario       [X]    │ ← Modal Header
+├─────────────────────────────────┤
 │                                 │
-│ 📚 Select a Novel               │
+│ � Book: Harry Potter           │ ← Selected Book (read-only)
 │                                 │
-│ [Search novels...]              │ ← AutoComplete
-│                                 │
-│ Popular Choices:                │
+│ Scenario Title: *               │
 │ ┌─────────────────────────────┐ │
-│ │ 📘 Harry Potter Series      │ │ ← Novel Card
-│ │ by J.K. Rowling             │ │
-│ │ [Select]                    │ │
+│ │ Hermione in Slytherin       │ │ ← Input
 │ └─────────────────────────────┘ │
 │                                 │
+│ ━━━ Scenario Details ━━━        │
+│ (At least one required, min 10  │
+│  characters each)               │
+│                                 │
+│ 👤 Character Changes:           │
 │ ┌─────────────────────────────┐ │
-│ │ 📖 Pride and Prejudice      │ │
-│ │ by Jane Austen              │ │
-│ │ [Select]                    │ │
+│ │ Hermione sorted into        │ │ ← Textarea
+│ │ Slytherin instead of        │ │   (min 10 chars)
+│ │ Gryffindor                  │ │   15/10 chars
 │ └─────────────────────────────┘ │
 │                                 │
-│ [Cancel]                [Next →]│ (Disabled until selection)
+│ 🎬 Event Alterations:           │
+│ ┌─────────────────────────────┐ │
+│ │ Troll incident: saved by    │ │ ← Textarea
+│ │ Draco instead               │ │   (min 10 chars)
+│ └─────────────────────────────┘ │   32/10 chars
+│                                 │
+│ 🌍 Setting Modifications:       │
+│ ┌─────────────────────────────┐ │
+│ │                             │ │ ← Textarea (empty OK)
+│ └─────────────────────────────┘ │   0/10 chars
+│                                 │
+│ ⚠️ Please fill at least one     │ ← Validation message
+│    field with 10+ characters    │   (shows on error)
+│                                 │
+│ [Cancel]            [Create]    │
 └─────────────────────────────────┘
 ```
 
-**Step 2: Choose Scenario Type**:
+**Validation Rules**:
+
+- Title: Required, max 100 chars
+- At least ONE of (Character/Event/Setting) must be filled
+- Each filled field must have ≥ 10 characters
+- Real-time character counter
+- Submit button disabled until valid
+
+**Error States**:
 
 ```
-┌─────────────────────────────────┐
-│ Create New Scenario (2/4)       │
-│ ━━━━━━━━━━                      │
-│                                 │
-│ 🎭 Scenario Type                │
-│                                 │
-│ ┌─────────────────────────────┐ │
-│ │ ⚪ 👤 Character Change       │ │ ← Radio Card
-│ │ Alter a character's          │ │
-│ │ properties or traits         │ │
-│ └─────────────────────────────┘ │
-│                                 │
-│ ┌─────────────────────────────┐ │
-│ │ ⚫ 🎬 Event Alteration       │ │ (Selected)
-│ │ Change key events or         │ │
-│ │ their outcomes               │ │
-│ └─────────────────────────────┘ │
-│                                 │
-│ ┌─────────────────────────────┐ │
-│ │ ⚪ 🌍 Setting Modification   │ │
-│ │ Modify the world or          │ │
-│ │ environment                  │ │
-│ └─────────────────────────────┘ │
-│                                 │
-│ [← Back]                [Next →]│
-└─────────────────────────────────┘
+❌ All fields empty or < 10 chars:
+   "Please provide at least one scenario type with 10+ characters"
+
+❌ Title empty:
+   "Scenario title is required"
 ```
 
-**Step 3: Fill Parameters** (Dynamic based on type):
-
-```
-┌─────────────────────────────────┐
-│ Create New Scenario (3/4)       │
-│ ━━━━━━━━━━━━━━                  │
-│                                 │
-│ 🎬 Event Alteration Details     │
-│                                 │
-│ Event Name: *                   │
+│ Timeline Point: _ │
 │ ┌─────────────────────────────┐ │
-│ │ Gatsby and Daisy reunion    │ │ ← Input
+│ │ Chapter 5, Summer 1922 │ │
 │ └─────────────────────────────┘ │
-│                                 │
-│ Timeline Point: *               │
+│ │
+│ Alteration Type: _ │
+│ [Prevent ▼] (Dropdown) │
+│ │
+│ Original Outcome: │
 │ ┌─────────────────────────────┐ │
-│ │ Chapter 5, Summer 1922      │ │
+│ │ They reunite and rekindle │ │ ← Textarea
+│ │ romance │ │
 │ └─────────────────────────────┘ │
-│                                 │
-│ Alteration Type: *              │
-│ [Prevent ▼] (Dropdown)          │
-│                                 │
-│ Original Outcome:               │
-│ ┌─────────────────────────────┐ │
-│ │ They reunite and rekindle   │ │ ← Textarea
-│ │ romance                     │ │
-│ └─────────────────────────────┘ │
-│                                 │
-│ New Outcome: *                  │
+│ │
+│ New Outcome: \* │
 │ ┌─────────────────────────────┐ │
 │ │ Gatsby moves to California, │ │
-│ │ never looks back            │ │
+│ │ never looks back │ │
 │ └─────────────────────────────┘ │
-│                                 │
-│ [← Back]                [Next →]│
+│ │
+│ [← Back] [Next →]│
 └─────────────────────────────────┘
+
 ```
 
 **Step 4: Preview & Publish**:
 
 ```
+
 ┌─────────────────────────────────┐
-│ Create New Scenario (4/4)       │
-│ ━━━━━━━━━━━━━━━━━━              │
-│                                 │
-│ 👀 Preview Your Scenario        │
-│                                 │
+│ Create New Scenario (4/4) │
+│ ━━━━━━━━━━━━━━━━━━ │
+│ │
+│ 👀 Preview Your Scenario │
+│ │
 │ ┌─────────────────────────────┐ │
-│ │ 📘 The Great Gatsby         │ │ ← Scenario Preview Card
-│ │                             │ │
-│ │ Gatsby Never Met Daisy      │ │ (Title auto-generated)
-│ │                             │ │
-│ │ Type: Event Alteration      │ │
-│ │ Event: Gatsby and Daisy...  │ │
+│ │ 📘 The Great Gatsby │ │ ← Scenario Preview Card
+│ │ │ │
+│ │ Gatsby Never Met Daisy │ │ (Title auto-generated)
+│ │ │ │
+│ │ Type: Event Alteration │ │
+│ │ Event: Gatsby and Daisy... │ │
 │ │ New Outcome: Gatsby moves...│ │
-│ │                             │ │
-│ │ Quality Score: Calculating..│ │
 │ └─────────────────────────────┘ │
-│                                 │
-│ Privacy:                        │
-│ ⚫ Public ⚪ Private             │ ← Radio Buttons
-│                                 │
-│ [← Back]          [🚀 Publish]  │
+│ │
+│ Privacy: │
+│ ⚫ Public ⚪ Private │ ← Radio Buttons
+│ │
+│ [← Back] [🚀 Publish] │
 └─────────────────────────────────┘
+
 ```
-
-**Progress Indicators**:
-
-- Step count: "1/4", "2/4", etc.
-- Progress bar visual: `ProgressBar` component
-- Breadcrumb trail on desktop
-
-**Validation**:
-
-- Real-time validation on each field
-- Next button disabled until valid
-- Error messages below fields
 
 **Components**:
 
-- Wizard Container: Custom stepper component
-- Novel Search: `AutoComplete`
-- Type Selection: Custom radio cards
-- Form Fields: `InputText`, `Textarea`, `Dropdown`
-- Preview: Custom scenario card
+- Modal Container: `Dialog` component
+- Form Fields: `InputText`, `Textarea` with character counters
+- Validation: Real-time validation with error messages
+- Submit: `Button` (disabled until valid)
 
 ---
 
-### 6. User Profile Page
+### 6. Fork Chat Modal
+
+**Purpose**: Fork existing conversation with original scenario context visible
+
+**Trigger**: Click "Fork Chat" button from Conversation page
+
+**Modal Layout** (Mobile):
+
+```
+
+┌─────────────────────────────────┐
+│ 🍴 Fork Conversation [X] │ ← Modal Header
+├─────────────────────────────────┤
+│ │
+│ 📘 Original Book: │
+│ Harry Potter │
+│ │
+│ 📝 Original Scenario: │ ← Read-only context
+│ ┌─────────────────────────────┐ │
+│ │ 👤 Character Changes: │ │
+│ │ Hermione sorted into │ │
+│ │ Slytherin instead of │ │
+│ │ Gryffindor │ │
+│ │ │ │
+│ │ 🎬 Event Alterations: │ │
+│ │ Troll incident: saved by │ │
+│ │ Draco instead │ │
+│ │ │ │
+│ │ 🌍 Setting Modifications: │ │
+│ │ (None) │ │
+│ └─────────────────────────────┘ │
+│ │
+│ ━━━ Your Fork ━━━ │
+│ │
+│ Fork Title: \* │
+│ ┌─────────────────────────────┐ │
+│ │ Hermione in Slytherin + │ │ ← Input
+│ │ Head Girl │ │
+│ └─────────────────────────────┘ │
+│ │
+│ ✏️ Edit Scenario (Optional): │
+│ │
+│ 👤 Character Changes: │
+│ ┌─────────────────────────────┐ │
+│ │ Hermione sorted into │ │ ← Pre-filled, editable
+│ │ Slytherin AND becomes │ │ (min 10 chars)
+│ │ Head Girl in Year 7 │ │
+│ └─────────────────────────────┘ │ 52/10 chars
+│ │
+│ 🎬 Event Alterations: │
+│ ┌─────────────────────────────┐ │
+│ │ Troll incident: saved by │ │ ← Pre-filled, editable
+│ │ Draco instead │ │
+│ └─────────────────────────────┘ │ 32/10 chars
+│ │
+│ 🌍 Setting Modifications: │
+│ ┌─────────────────────────────┐ │
+│ │ │ │ ← Empty, can add
+│ └─────────────────────────────┘ │ 0/10 chars
+│ │
+│ ℹ️ Will copy last 6 messages │ ← Info message
+│ │
+│ [Cancel] [Fork & Start] │
+└─────────────────────────────────┘
+
+```
+
+**Features**:
+- Shows original scenario in read-only section
+- Pre-fills edit fields with original content
+- Allows modifications (or keep as-is)
+- Same validation: at least 1 field with 10+ chars
+- Character counters for each field
+
+**Components**:
+
+- Modal: `Dialog` component
+- Original Context: Read-only display panel
+- Edit Fields: `Textarea` components with pre-filled values
+- Validation: Same as creation modal
+- Submit: `Button` with fork icon
+
+---
+
+### 7. User Profile Page
 
 **Purpose**: Display user activity, scenarios, conversations, followers
 
 **Layout** (Mobile):
 
 ```
+
 ┌─────────────────────────────────┐
-│ ← Back                          │
+│ ← Back │
 ├─────────────────────────────────┤
-│       ┌───────────┐              │ ← Avatar
-│       │  Avatar   │              │
-│       └───────────┘              │
-│                                 │
-│      @hermione_fan              │ ← Username (h1)
-│                                 │
-│ Slytherin Hermione enthusiast.  │ ← Bio
-│ Exploring alternate timelines.  │
-│                                 │
+│ ┌───────────┐ │ ← Avatar
+│ │ Avatar │ │
+│ └───────────┘ │
+│ │
+│ @hermione_fan │ ← Username (h1)
+│ │
+│ Slytherin Hermione enthusiast. │ ← Bio
+│ Exploring alternate timelines. │
+│ │
 │ 👥 234 followers · 89 following │ ← Stats
-│ 📖 12 scenarios · 💬 45 convos  │
-│                                 │
-│ [Follow] [Share]                │ ← Actions (if not self)
-│ [Edit Profile]                  │ (if self)
-│                                 │
+│ 📖 12 scenarios · 💬 45 convos │
+│ │
+│ [Follow] [Share] │ ← Actions (if not self)
+│ [Edit Profile] │ (if self)
+│ │
 ├─────────────────────────────────┤
-│ ┌─────┬─────┬─────┬─────┐       │ ← Tabs
-│ │Scen │Conv │Liked│Memo │       │
-│ └─────┴─────┴─────┴─────┘       │
-│                                 │
-│ 📖 Scenarios (12)               │ ← Active Tab Content
-│                                 │
+│ ┌─────┬─────┬─────┐ │ ← Tabs (Memo removed)
+│ │Scen │Conv │Liked│ │
+│ └─────┴─────┴─────┘ │
+│ │
+│ 📖 Scenarios (12) │ ← Active Tab Content
+│ │
 │ ┌─────────────────────────────┐ │
-│ │ 📘 Hermione in Slytherin    │ │ ← Scenario Card
-│ │ ⭐ 0.85 | 💬 12 | 🍴 5      │ │
-│ │ 2 days ago                  │ │
+│ │ 📘 Book: Harry Potter │ │ ← Scenario Card
+│ │ Hermione in Slytherin │ │
+│ │ 💬 12 | 🍴 5 │ │
+│ │ 2 days ago │ │
 │ └─────────────────────────────┘ │
-│                                 │
+│ │
 │ ┌─────────────────────────────┐ │
-│ │ 📘 Draco Redeemed           │ │
-│ │ ⭐ 0.72 | 💬 8 | 🍴 3       │ │
-│ │ 1 week ago                  │ │
+│ │ 📘 Book: Harry Potter │ │
+│ │ Draco Redeemed │ │
+│ │ 💬 8 | 🍴 3 │ │
+│ │ 1 week ago │ │
 │ └─────────────────────────────┘ │
 └─────────────────────────────────┘
+
 ```
 
 **Tabs**:
@@ -923,60 +1021,65 @@ shadows: {
 1. **Scenarios**: User's created scenarios
 2. **Conversations**: User's conversations
 3. **Liked**: Liked conversations (private if not self)
-4. **Memos**: Personal memos (private, only visible to self)
+
+**Note**: Memo tab removed per requirements
 
 **Edit Profile Modal** (if self):
 
 ```
+
 ┌─────────────────────────────────┐
-│ ✏️ Edit Profile          [X]    │
+│ ✏️ Edit Profile [X] │
 ├─────────────────────────────────┤
-│                                 │
-│ Avatar:                         │
-│ ┌───────────┐ [Upload New]      │
-│ │  Current  │                   │
-│ │  Avatar   │                   │
-│ └───────────┘                   │
-│                                 │
-│ Username: @hermione_fan         │ (Read-only)
-│                                 │
-│ Bio:                            │
+│ │
+│ Avatar: │
+│ ┌───────────┐ [Upload New] │
+│ │ Current │ │
+│ │ Avatar │ │
+│ └───────────┘ │
+│ │
+│ Username: @hermione_fan │ (Read-only)
+│ │
+│ Bio: │
 │ ┌─────────────────────────────┐ │
-│ │ Slytherin Hermione          │ │ ← Editable Textarea
-│ │ enthusiast. Exploring       │ │ (500 char max)
-│ │ alternate timelines.        │ │
+│ │ Slytherin Hermione │ │ ← Editable Textarea
+│ │ enthusiast. Exploring │ │ (500 char max)
+│ │ alternate timelines. │ │
 │ └─────────────────────────────┘ │
-│ 45 / 500 characters             │
-│                                 │
-│ [Cancel]            [Save]      │
+│ 45 / 500 characters │
+│ │
+│ [Cancel] [Save] │
 └─────────────────────────────────┘
+
 ```
 
 **Desktop Layout**:
 
 ```
+
 ┌───────────────────────────────────────────────────┐
-│ ← Back                                            │
+│ ← Back │
 ├─────────────────┬─────────────────────────────────┤
-│                 │                                 │
-│  ┌───────────┐  │  @hermione_fan                  │
-│  │  Avatar   │  │                                 │
-│  └───────────┘  │  Slytherin Hermione enthusiast. │
-│                 │  Exploring alternate timelines. │
-│  [Edit Profile] │                                 │
-│  [Share]        │  👥 234 · 89 | 📖 12 · 💬 45     │
-│                 │                                 │
-│                 │  ┌──┬──┬──┬──┐                  │
-│                 │  │Sc│Co│Li│Me│                  │
-│                 │  └──┴──┴──┴──┘                  │
-│                 │                                 │
-│                 │  ┌───┐ ┌───┐ ┌───┐              │
-│                 │  │ S │ │ S │ │ S │  2-col grid  │
-│                 │  └───┘ └───┘ └───┘              │
-│                 │  ┌───┐ ┌───┐ ┌───┐              │
-│                 │  │ S │ │ S │ │ S │              │
-│                 │  └───┘ └───┘ └───┘              │
+│ │ │
+│ ┌───────────┐ │ @hermione_fan │
+│ │ Avatar │ │ │
+│ └───────────┘ │ Slytherin Hermione enthusiast. │
+│ │ Exploring alternate timelines. │
+│ [Edit Profile] │ │
+│ [Share] │ 👥 234 · 89 | 📖 12 · 💬 45 │
+│ │ │
+│ │ ┌──┬──┬──┬──┐ │
+│ │ │Sc│Co│Li│Me│ │
+│ │ └──┴──┴──┴──┘ │
+│ │ │
+│ │ ┌───┐ ┌───┐ ┌───┐ │
+│ │ │ S │ │ S │ │ S │ 2-col grid │
+│ │ └───┘ └───┘ └───┘ │
+│ │ ┌───┐ ┌───┐ ┌───┐ │
+│ │ │ S │ │ S │ │ S │ │
+│ │ └───┘ └───┘ └───┘ │
 └─────────────────┴─────────────────────────────────┘
+
 ```
 
 **Components**:
@@ -1092,16 +1195,18 @@ shadows: {
 **Skeleton Screens**:
 
 ```
+
 ┌─────────────────────────────────┐
-│ ████████                        │ ← Title
-│ ████                            │ ← Meta
-│                                 │
-│ ████████████████                │ ← Description
-│ ████████                        │
-│                                 │
-│ [████] [████] [████]            │ ← Buttons
+│ ████████ │ ← Title
+│ ████ │ ← Meta
+│ │
+│ ████████████████ │ ← Description
+│ ████████ │
+│ │
+│ [████] [████] [████] │ ← Buttons
 └─────────────────────────────────┘
-```
+
+````
 
 **Spinners**:
 
@@ -1125,7 +1230,7 @@ transition: {
   base: '200ms cubic-bezier(0.4, 0, 0.2, 1)',
   slow: '300ms cubic-bezier(0.4, 0, 0.2, 1)',
 }
-```
+````
 
 **Micro-Interactions**:
 
@@ -1204,12 +1309,11 @@ Email: *
 
 ### Card Designs
 
-**Scenario Card** (Detailed):
+**Scenario Card** (Detailed - v1.1):
 
 ```
 ┌─────────────────────────────────┐
-│ 📘 Harry Potter                 │ ← Novel badge (top-left)
-│                          ⭐ 0.85 │ ← Quality score (top-right)
+│ 📘 Harry Potter                 │ ← Book badge (top-left)
 │                                 │
 │ Hermione Sorted into Slytherin  │ ← Title (bold, 18px)
 │                                 │
@@ -1218,19 +1322,21 @@ Email: *
 │                                 │
 │ 👤 @hermione_fan · 2 days ago   │ ← Creator + timestamp
 │                                 │
-│ 💬 12 convos | 🍴 5 forks        │ ← Stats row
+│ 💬 12 convos | 🍴 5 forks        │ ← Stats row (quality score removed)
 │                                 │
 │ [Read More]               [❤️]  │ ← Actions
 └─────────────────────────────────┘
 ```
 
+**Version 1.1 Changes**: Quality score removed - scenarios now ranked by engagement metrics (conversations, forks) only
+
 **Visual Hierarchy**:
 
-- Novel badge: Small, colored, top-left
-- Quality score: Large, prominent, top-right
+- Book badge: Small, colored, top-left
 - Title: Bold, 18px
 - Description: Regular, 14px, gray-700
 - Meta: Small, 12px, gray-500
+- Stats: Conversation/fork counts emphasized
 
 ---
 

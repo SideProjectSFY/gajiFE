@@ -112,17 +112,18 @@
 
 ### Month 1: Core Features (Epic 1-2)
 
-**Epic 1: Scenario Foundation** (40h)
+**Epic 1: Scenario Foundation** (26h - 3 stories)
 
-- Scenario data model & CRUD API
-- 3 scenario types UI (character/event/setting)
-- Validation system
+- Story 1.1: Scenario data model & CRUD API (8h)
+- Story 1.2: Unified scenario creation modal (12h)
+- Story 1.3: Scenario validation system (6h)
 
-**Epic 2: AI Character Adaptation** (40h)
+**Epic 2: AI Character Adaptation** (40h - 4 stories)
 
-- Scenario → prompt engine
-- Context window manager (6-message fork)
-- Character consistency across timelines
+- Story 2.1: Scenario → prompt engine (12h)
+- Story 2.2: Context window manager (10h)
+- Story 2.3: Multi-timeline character consistency (10h)
+- Story 2.4: Scenario context testing & refinement (8h)
 
 **Milestone**: Users can create scenarios and start AI conversations
 
@@ -130,11 +131,23 @@
 
 ## 📈 Long-term Goals (Next 3 Months)
 
-### Month 2: Social Features (Epic 3-4)
+### Month 2: Discovery & Conversation (Epic 3-4)
 
-- Scenario discovery & forking (meta-scenarios)
-- Conversation system with SSE streaming
-- Social features (likes, follows)
+**Epic 3: Scenario Discovery & Forking** (63h - 7 stories)
+
+- Story 3.1: Book browse page (8h)
+- Story 3.2: Book detail page (10h)
+- Story 3.3: Scenario browse UI & filtering (8h)
+- Story 3.4: Scenario forking backend (10h)
+- Story 3.5: Scenario forking UI (8h)
+- Story 3.6: Scenario search & advanced filtering (9h)
+- Story 3.7: Social sharing & dynamic og:image (10h)
+
+**Epic 4: Conversation System** (26h - 3 stories)
+
+- Story 4.1: Conversation data model & CRUD API (8h)
+- Story 4.2: Message streaming & AI integration (12h)
+- Story 4.3: Conversation forking UI (6h)
 
 ### Month 3: Polish & Launch (Epic 5-6)
 
@@ -191,21 +204,46 @@
 - [ ] Docker Compose update (4h)
 - [ ] Testing & validation (12h)
 
-### Epic 0: Infrastructure (39h)
+### Epic 0: Infrastructure (39h - 7 stories)
 
-- [ ] Backend setup (Spring Boot + FastAPI) (12h)
-- [ ] Database migrations (PostgreSQL 13 tables) (5h)
-- [ ] Frontend setup (Vue + PandaCSS) (6h)
-- [ ] Docker orchestration (6 services) (8h)
-- [ ] Health checks (Pattern B) (5h)
-- [ ] VectorDB data import (pre-processed dataset) (3h)
+- [ ] 0.1: Spring Boot backend setup (5h)
+- [ ] 0.2: FastAPI AI service setup (5h)
+- [ ] 0.3: PostgreSQL database + Flyway migrations (5h)
+- [ ] 0.4: Vue.js frontend project setup (6h)
+- [ ] 0.5: Docker configuration (8h)
+- [ ] 0.6: Inter-service health check (5h)
+- [ ] 0.7: VectorDB data import (5h)
 
-### Epic 1-2: Core Features (80h)
+### Epic 1: Scenario Foundation (26h - 3 stories)
 
-- [ ] Scenario system (40h)
-- [ ] AI adaptation layer (40h)
+- [ ] 1.1: Scenario data model & API (8h)
+- [ ] 1.2: Unified scenario creation modal (12h)
+- [ ] 1.3: Scenario validation system (6h)
 
-**Total**: ~159 hours (~6.5 weeks for 2 developers)
+### Epic 2: AI Character Adaptation (40h - 4 stories)
+
+- [ ] 2.1: Scenario to prompt engine (12h)
+- [ ] 2.2: Conversation context window manager (10h)
+- [ ] 2.3: Multi-timeline character consistency (10h)
+- [ ] 2.4: Scenario context testing & refinement (8h)
+
+### Epic 3: Scenario Discovery & Forking (63h - 7 stories)
+
+- [ ] 3.1: Book browse page (8h)
+- [ ] 3.2: Book detail page (10h)
+- [ ] 3.3: Scenario browse UI & filtering (8h)
+- [ ] 3.4: Scenario forking backend (10h)
+- [ ] 3.5: Scenario forking UI (8h)
+- [ ] 3.6: Scenario search & advanced filtering (9h)
+- [ ] 3.7: Social sharing & dynamic og:image (10h)
+
+### Epic 4: Conversation System (26h - 3 stories)
+
+- [ ] 4.1: Conversation data model & CRUD API (8h)
+- [ ] 4.2: Message streaming & AI integration (12h)
+- [ ] 4.3: Conversation forking UI (6h)
+
+**Total Epics 0-4**: ~194 hours (~8 weeks for 2 developers)
 
 ---
 

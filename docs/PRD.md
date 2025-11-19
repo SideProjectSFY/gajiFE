@@ -28,35 +28,66 @@ Market validation signals are overwhelming. Marvel's What If...? proved multiver
 
 ## Technical implementation leverages What If scenario templating
 
-**What If scenarios require structured scenario definition combined with dynamic character adaptation**. The system must support three core scenario types:
+**What If scenarios require structured scenario definition combined with dynamic character adaptation**. The system must support three core scenario types, with **validation requiring at least one type with minimum 10 characters**:
 
-1. **Character Property Changes**: "What if Hermione was sorted into Slytherin?" (personality traits, house affiliation, friend groups altered)
-2. **Event Alterations**: "What if Gatsby never met Daisy?" (timeline divergence at specific story moments)
-3. **Setting Modifications**: "What if Pride & Prejudice happened in 2024 Seoul?" (time period, location, cultural context shifted)
+1. **Character Property Changes** (최소 10자): "What if Hermione was sorted into Slytherin?" (personality traits, house affiliation, friend groups altered)
+2. **Event Alterations** (최소 10자): "What if Gatsby never met Daisy?" (timeline divergence at specific story moments)
+3. **Setting Modifications** (최소 10자): "What if Pride & Prejudice happened in 2024 Seoul?" (time period, location, cultural context shifted)
 
-**Scenario Template Architecture** enables users to define alternate realities through structured parameters:
+**Comprehensive Validation Rules (Version 1.1)**:
+
+**Frontend Validation**:
+
+- At least ONE of the three types must be filled with >= 10 characters
+- Each filled type must have minimum 10 characters (whitespace-only treated as empty)
+- Empty strings or null values allowed if other types are valid
+- Real-time character counter displays below each textarea (e.g., "15/10 chars")
+- Submit button disabled state when validation fails
+- Inline error message: "Please provide at least one scenario type with 10+ characters"
+
+**Backend Validation (Spring Boot)**:
+
+- Reject request if all three types are empty or < 10 characters
+- Return HTTP 400 with error: `{ "error": "VALIDATION_FAILED", "message": "At least one scenario type must have minimum 10 characters" }`
+- Trim whitespace before validation
+- Log validation failures for monitoring
+
+**Test Cases**:
+
+- ✅ Valid: characterChanges (15 chars), eventAlterations (empty), settingModifications (empty)
+- ✅ Valid: All three types >= 10 chars
+- ❌ Invalid: characterChanges (5 chars), eventAlterations (empty), settingModifications (empty)
+- ❌ Invalid: All three types empty
+- ❌ Invalid: characterChanges (10 spaces), eventAlterations (empty), settingModifications (empty)
+
+**Scenario Template Architecture (Version 1.1)** enables users to define alternate realities through structured parameters with book-centric organization:
 
 ```yaml
 scenario_template:
-  base_story: "Harry Potter"
+  book_id: "uuid-harry-potter-philosophers-stone" # REQUIRED: Book reference
   scenario_title: "Hermione in Slytherin"
   divergence_point: "Sorting Hat ceremony, Year 1"
   changes:
-    character_changes:
-      - character: "Hermione Granger"
-        property: "house"
-        original: "Gryffindor"
-        alternate: "Slytherin"
-        cascading_effects:
-          - "Befriends Draco Malfoy instead of Harry"
-          - "Becomes more ambitious and cunning"
-          - "Mentored by Professor Snape"
-    event_changes:
-      - event: "Troll incident"
-        original: "Saved by Harry and Ron"
-        alternate: "Saved by Draco and Pansy"
+    character_changes: "Hermione sorted into Slytherin instead of Gryffindor. Befriends Draco, mentored by Snape." # Min 10 chars
+    event_changes: "Troll incident: saved by Draco and Pansy instead of Harry and Ron." # Min 10 chars
+    setting_modifications: "" # Optional, can be empty
   character_knowledge: "complete_alternate_timeline"
+  validation:
+    book_id_required: true
+    at_least_one_filled: true
+    min_length_per_field: 10
+  # Removed: quality_score (deprecated in v1.1)
+  metadata:
+    conversation_count: 0 # Auto-incremented
+    fork_count: 0 # Auto-incremented
 ```
+
+**Key Changes from Version 1.0**:
+
+- ✅ Added `book_id` as required field (enables book-centric navigation)
+- ✅ Removed `quality_score` (replaced with conversationCount and forkCount metrics)
+- ✅ Added explicit metadata tracking for engagement metrics
+- ✅ Base story now references book entity in database
 
 **AI prompt engineering adapts characters to alternate realities**: "You are Hermione Granger who was sorted into Slytherin. You befriended Draco Malfoy in your first year, developed cunning ambition under Snape's mentorship, and experienced the complete Harry Potter series from Slytherin's perspective. You remember all events as they occurred in THIS timeline, can reflect on how different choices shaped you, and discuss your alternate journey with readers."
 
@@ -215,13 +246,13 @@ Character.AI and Gaji operate on fundamentally different paradigms with **What I
 
 **Gaji Model**:
 
-- Share **What If scenarios** (alternative timeline templates)
-- Multiple users explore **same scenario** from different angles
+- Share **What If scenarios** within book discussions (alternative exploration)
+- Multiple users explore **same book** with different scenario variations
 - Characters exist in **specific alternate realities** with complete timeline context
-- Focus: Multiverse exploration, creative "what if" questions, intellectual play
-- Value proposition: "What if the story went differently?"
+- Focus: Book-centric exploration, creative "what if" questions about stories
+- Value proposition: "Explore books through alternative scenarios"
 
-**The critical distinction**: Character.AI asks "Who do you want to talk to?" while Gaji asks "**What timeline do you want to explore?**" A user on Character.AI chats with "Hermione Granger" (canonical version). A user on Gaji explores "Hermione in Slytherin timeline," "Hermione as Muggle scientist timeline," or "Hermione who prevented Voldemort's rise timeline"—each a distinct scenario that others can gaji (branch) further.
+**The critical distinction**: Character.AI asks "Who do you want to talk to?" while Gaji asks "**Which book do you want to explore differently?**" A user on Character.AI chats with "Hermione Granger" (canonical version). A user on Gaji selects "Harry Potter" book, then explores scenarios like "Hermione in Slytherin timeline," "Hermione as Muggle scientist timeline"—each scenario within the book's context that others can fork and discuss further.
 
 **Complementarity opportunities**:
 
@@ -514,3 +545,100 @@ Phase 3 scale (Months 12-24) broadens appeal with simplified experience:
 **The opportunity exists to become "Marvel What If meets Character.AI"** or more accessibly **"the place where you gaji timelines"**, positioning Gaji as the definitive platform for exploring alternative story realities. The bilingual name advantage, What If cultural resonance, and clear differentiation from Character.AI (timelines vs. relationships) and ChatGPT (social vs. private) create defensible blue ocean positioning.
 
 **Gaji deserves a funded prototype with embedded validation**. If users organically create What If scenarios without prompting, share them on social media ("You HAVE to see this Gatsby timeline"), and adopt "gaji" as natural verb ("I'm gaji-ing from the sorting scene"), you've discovered product-market fit with viral potential. If they don't, you've gained invaluable learning guiding either pivot or graceful termination. The three-week MVP provides the minimum vehicle for this test—ship it with "Branch all of story" branding, seed 30 viral What If scenarios, deploy to three university courses + two fandom communities, observe behavior religiously (especially social sharing), and let data determine destiny. **The memorable name and tagline provide brand equity that survives even failed initial execution**, enabling pivots while maintaining multiverse identity.
+
+---
+
+## Appendix A: Version 1.1 Feature Updates
+
+### Fork Chat Enhancement (Scenario Modification During Fork)
+
+**Feature**: Users can now modify the scenario when forking conversations, enabling "what if within what if" exploration.
+
+**User Flow**:
+
+1. User views conversation in "Hermione in Slytherin" scenario
+2. Clicks "Fork" button in conversation header
+3. Fork Modal displays with 3 sections:
+   - **Fork Title** (required): "What if Slytherin-Hermione joined DA?"
+   - **Scenario Modification** (optional): Expandable section to adjust character/event/setting changes
+   - **Message Preview**: Shows the 6 most recent messages that will be copied
+4. If user provides scenario modifications, same validation applies (min 10 chars per filled field)
+5. Backend creates new conversation with:
+   - Modified scenario context
+   - Copied messages from parent conversation
+   - Link to parent conversation (tracking fork relationship)
+
+**Validation**:
+
+- Fork title is REQUIRED (cannot be empty)
+- Scenario modifications are OPTIONAL
+- If modifications provided, at least one type must have >= 10 characters
+- Frontend shows real-time character count for each modification field
+
+**API**:
+
+```
+POST /api/v1/conversations/{id}/fork
+Body: {
+  "forkTitle": "What if Slytherin-Hermione joined DA?",
+  "scenarioModifications": {  // Optional
+    "characterChanges": "Hermione secretly joins Dumbledore's Army",
+    "eventAlterations": "",
+    "settingModifications": ""
+  }
+}
+```
+
+### Book-Centric Architecture
+
+**Philosophy**: Users explore books first, then scenarios within those books, then conversations within scenarios.
+
+**Navigation Hierarchy**:
+
+1. **Browse Books** (`/books`) - List of all books with filters (genre, popularity)
+2. **Book Detail** (`/books/{id}`) - Book info + scenarios for that book
+3. **Scenario Detail** (`/books/{id}/scenarios/{scenarioId}`) - Scenario + conversations
+4. **Conversation** (`/conversations/{id}`) - Chat interface with scenario context
+
+**New API Endpoints**:
+
+- `GET /api/v1/books` - List books with pagination and filters
+- `GET /api/v1/books/{id}` - Get book detail with scenario/conversation counts
+- `GET /api/v1/books/{id}/scenarios` - Get scenarios for specific book
+
+**Database Changes**:
+
+- All scenarios MUST reference a `book_id` (foreign key to `novels` table)
+- Indexes added for book-centric queries: `idx_scenarios_book_id`, `idx_conversations_book_id`
+
+**Benefits**:
+
+- Clearer user mental model (books → scenarios → conversations)
+- Better scenario discovery (browse by book)
+- Improved performance (book-scoped queries faster than global search)
+
+### Quality Score Removal
+
+**Rationale**: Quality score was an internal metric that didn't provide user value and added unnecessary complexity.
+
+**Changes**:
+
+- Removed `quality_score` column from `root_user_scenarios` and `leaf_user_scenarios` tables
+- Removed quality score from all API responses
+- Removed quality score filtering/sorting from UI
+- Replaced with engagement metrics: `conversationCount` and `forkCount`
+
+**Migration**: See `architecture.md` Section 11 for SQL migration scripts
+
+### Scenario Context in Conversations
+
+**Feature**: Conversations now display an expandable panel showing the current scenario context.
+
+**UI Component**:
+
+- Collapsed by default (shows scenario title only)
+- Click to expand → shows full character changes, event alterations, setting modifications
+- Available in conversation detail page and fork modal
+- Helps users remember "which timeline am I in?"
+
+**Benefit**: Reduces confusion when switching between multiple scenario conversations

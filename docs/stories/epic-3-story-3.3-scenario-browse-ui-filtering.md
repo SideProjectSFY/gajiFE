@@ -1,6 +1,7 @@
-# Story 3.1: Scenario Browse UI & Filtering
+# Story 3.3: Scenario Browse UI & Filtering
 
-**Epic**: Epic 3 - Scenario Discovery & Social Sharing  
+**Epic**: Epic 3 - Scenario Discovery & Forking  
+**Story ID**: 3.3
 **Priority**: P1 - High  
 **Status**: Not Started  
 **Estimated Effort**: 8 hours

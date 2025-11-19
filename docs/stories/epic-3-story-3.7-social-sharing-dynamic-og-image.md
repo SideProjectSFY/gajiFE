@@ -1,6 +1,7 @@
-# Story 3.5: Social Sharing with Dynamic og:image Generation
+# Story 3.7: Social Sharing with Dynamic og:image Generation
 
-**Epic**: Epic 3 - Scenario Discovery & Social Sharing  
+**Epic**: Epic 3 - Scenario Discovery & Forking  
+**Story ID**: 3.7
 **Priority**: P2 - Medium  
 **Status**: Not Started  
 **Estimated Effort**: 10 hours

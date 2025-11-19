@@ -1,12 +1,14 @@
 # Entity Relationship Diagram (ERD)
 
 **Project**: Gaji - Interactive Fiction Platform  
-**Last Updated**: 2025-11-15
+**Last Updated**: 2025-11-19 (Version 1.1)
 **Database Architecture**: PostgreSQL 15.x (Metadata) + VectorDB (Content & Embeddings)  
 **Backend Architecture**: MSA (FastAPI AI Service + Spring Boot CRUD Service)  
 **Novel Source**: Project Gutenberg Dataset (Direct Import)  
 **Migration Tool**: Flyway  
 **VectorDB**: ChromaDB (Development) / Pinecone (Production)
+
+**Version 1.1 Changes**: Quality score removed, book-centric architecture, unified scenario creation
 
 ---
 

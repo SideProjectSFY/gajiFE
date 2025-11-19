@@ -12,9 +12,33 @@ Users don't just create scenarios—they discover incredible What If timelines c
 
 **Week 2-3 of MVP development**
 
-## Stories
+## Stories (7 total, 63 hours)
 
-### Story 3.1: Scenario Browse UI & Filtering
+### Story 3.1: Book Browse Page
+
+**Priority: P0 - Critical**
+
+**Description**: Create the primary book discovery page implementing book-first navigation with search, filters, and infinite scroll.
+
+**See**: `docs/stories/epic-3-story-3.1-book-browse-page.md`
+
+**Estimated Effort**: 8 hours
+
+---
+
+### Story 3.2: Book Detail Page
+
+**Priority: P0 - Critical**
+
+**Description**: Build the book detail hub displaying book information, statistics, and all scenarios for that book with a prominent Create Scenario CTA.
+
+**See**: `docs/stories/epic-3-story-3.2-book-detail-page.md`
+
+**Estimated Effort**: 10 hours
+
+---
+
+### Story 3.3: Scenario Browse UI & Filtering
 
 **Priority: P0 - Critical**
 
@@ -29,12 +53,11 @@ Users don't just create scenarios—they discover incredible What If timelines c
   - Scenario type badge (CHARACTER_CHANGE, EVENT_ALTERATION, SETTING_MODIFICATION)
   - Fork count + conversation count
   - Creator username + avatar
-  - Quality score visualization (1-5 stars)
   - "Gaji This →" CTA button
 - [ ] Filter sidebar with:
   - Book selector (dropdown, shows only books with scenarios)
   - Scenario type multi-select (checkboxes)
-  - Sort by: "Most Gaji'd" (fork_count DESC), "Most Discussed" (conversation_count DESC), "Newest" (created_at DESC), "Highest Rated" (quality_score DESC)
+  - Sort by: "Most Gaji'd" (fork_count DESC), "Most Discussed" (conversation_count DESC), "Newest" (created_at DESC), "Most Liked" (like_count DESC)
   - Date range: "Last 7 days", "Last 30 days", "All time"
 - [ ] Infinite scroll pagination (load 20 scenarios per batch)
 - [ ] API integration: GET /api/scenarios with query params (?book=&type=&sort=&page=)
@@ -55,11 +78,11 @@ Users don't just create scenarios—they discover incredible What If timelines c
 - URL params sync with filters (`/browse?book=harry-potter&type=character-change&sort=forks`)
 - Pinia store manages filter state
 
-**Estimated Effort**: 7 hours
+**Estimated Effort**: 8 hours
 
 ---
 
-### Story 3.2: Scenario Forking Backend & Meta-Timeline Logic
+### Story 3.4: Scenario Forking Backend & Meta-Timeline Logic
 
 **Priority: P0 - Critical**
 
@@ -76,7 +99,6 @@ Users don't just create scenarios—they discover incredible What If timelines c
   - `parent_scenario_id` set to forked scenario's ID
   - `scenario_parameters` merged from parent + additional changes
   - `fork_count` incremented on parent scenario
-  - `quality_score` inherited from parent (will evolve separately)
 - [ ] Circular reference prevention:
   - Recursive CTE query checks if new fork would create loop
   - Return 400 Bad Request if circular reference detected
@@ -116,11 +138,11 @@ Original scenario.fork_count → incremented from 0 to 1
 - Fork title auto-generation: "{parent_title} + {additional_change_summary}"
 - Atomic increment using `UPDATE scenarios SET fork_count = fork_count + 1 WHERE id = ?`
 
-**Estimated Effort**: 6 hours
+**Estimated Effort**: 10 hours
 
 ---
 
-### Story 3.3: Scenario Forking UI & Meta-Fork Creation Flow
+### Story 3.5: Scenario Forking UI & Meta-Fork Creation Flow
 
 **Priority: P0 - Critical**
 
@@ -198,7 +220,7 @@ Modal opens:
 
 ---
 
-### Story 3.4: Scenario Search & Advanced Filtering
+### Story 3.6: Scenario Search & Advanced Filtering
 
 **Priority: P1 - High**
 
@@ -219,8 +241,7 @@ Modal opens:
   - Boolean operators: AND, OR, NOT (advanced users)
 - [ ] Search results ranked by:
   - Text relevance score (PostgreSQL ts_rank)
-  - Quality score (scenarios with higher quality boost ranking)
-  - Popularity (fork_count + conversation_count as tie-breaker)
+  - Popularity (fork_count + conversation_count + like_count as tie-breaker)
 - [ ] Autocomplete suggests:
   - Popular character names
   - Book titles
@@ -253,7 +274,7 @@ SELECT *, ts_rank(to_tsvector('english', scenario_title), plainto_tsquery('engli
 FROM scenarios
 WHERE to_tsvector('english', scenario_title || ' ' || scenario_parameters::text)
       @@ plainto_tsquery('english', ?)
-ORDER BY rank DESC, quality_score DESC, fork_count DESC
+ORDER BY rank DESC, fork_count DESC, conversation_count DESC
 LIMIT 20;
 ```
 
@@ -264,11 +285,11 @@ LIMIT 20;
 - Autocomplete uses separate API: GET /api/scenarios/autocomplete?q=
 - Search analytics stored in separate `search_logs` table (async write)
 
-**Estimated Effort**: 7 hours
+**Estimated Effort**: 9 hours
 
 ---
 
-### Story 3.5: Social Sharing with og:image Generation
+### Story 3.7: Social Sharing with og:image Generation
 
 **Priority: P1 - High**
 
@@ -363,7 +384,7 @@ public ResponseEntity<byte[]> generateOgImage(@PathVariable UUID id) {
 - Update cache when scenario metadata changes (title, fork count)
 - Tree branch SVG illustration as overlay (pre-rendered asset)
 
-**Estimated Effort**: 6 hours
+**Estimated Effort**: 10 hours
 
 ---
 
@@ -439,7 +460,7 @@ public ResponseEntity<byte[]> generateOgImage(@PathVariable UUID id) {
 
 **Accepted Debt** (to be addressed post-MVP):
 
-- No ML-based recommendation engine (using popularity + quality score only)
+- No ML-based recommendation engine (using popularity metrics: likes, forks, conversations)
 - No collaborative filtering ("Users who forked X also forked Y")
 - No saved searches or followed books
 - No "Trending Timelines" real-time feed (using static sorting)
@@ -498,7 +519,7 @@ public ResponseEntity<byte[]> generateOgImage(@PathVariable UUID id) {
 
 ## Definition of Done
 
-- [ ] All 5 stories completed with acceptance criteria met
+- [ ] All 7 stories completed with acceptance criteria met
 - [ ] Browse UI functional with filtering, sorting, pagination
 - [ ] Forking creates valid meta-scenarios with parent-child tracking
 - [ ] Search returns relevant results < 200ms for 100,000 scenarios
@@ -519,4 +540,4 @@ public ResponseEntity<byte[]> generateOgImage(@PathVariable UUID id) {
 
 **Target Completion**: Week 3, Day 2 (6 working days)
 
-**Estimated Total Effort**: 34 hours (achievable within 1.5 weeks for 2 engineers)
+**Estimated Total Effort**: 63 hours (achievable within 2 weeks for 2 engineers)

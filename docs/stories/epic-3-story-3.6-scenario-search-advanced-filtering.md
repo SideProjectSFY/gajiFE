@@ -1,6 +1,7 @@
-# Story 3.4: Scenario Search & Advanced Filtering
+# Story 3.6: Scenario Search & Advanced Filtering
 
-**Epic**: Epic 3 - Scenario Discovery & Social Sharing  
+**Epic**: Epic 3 - Scenario Discovery & Forking  
+**Story ID**: 3.6
 **Priority**: P1 - High  
 **Status**: Not Started  
 **Estimated Effort**: 9 hours

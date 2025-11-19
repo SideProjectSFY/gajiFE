@@ -12,7 +12,7 @@ Users can begin exploring alternative timelines by creating structured "What If"
 
 **Week 1-2 of MVP development**
 
-## Stories
+## Stories (3 total, 26 hours)
 
 ### Story 1.1: Scenario Data Model & API Foundation
 
@@ -57,180 +57,79 @@ Users can begin exploring alternative timelines by creating structured "What If"
 - Structured columns enable type-safe queries, better indexing vs JSONB
 - XOR constraints ensure each scenario has exactly one type-specific parameter set
 - CASCADE DELETE on FKs ensures automatic cleanup when scenarios are deleted
-- fork_count, conversation_count, quality_score support future recommendation algorithms
+- fork_count, conversation_count support future recommendation algorithms
 - **Never access VectorDB directly from Spring Boot** - always call FastAPI endpoints
 
 **Estimated Effort**: 8 hours
 
 ---
 
-### Story 1.2: Character Property Change Scenario UI
-
-**Priority: P0 - Critical**
-
-**Description**: Build Vue.js interface for creating "Character Property Change" scenarios with dropdown selectors and cascading effect inputs.
-
-**Acceptance Criteria**:
-
-- [ ] CharacterPropertySelector component with character dropdown
-  - **Character list from FastAPI VectorDB search**: semantic search in `characters` collection
-  - Frontend calls Spring Boot → Spring Boot proxies to FastAPI `/api/ai/search/characters`
-- [ ] Property selector: house, personality_trait, friend_group, mentor, ambition_level
-- [ ] Original vs. Alternate value input fields
-- [ ] CascadingEffectsInput component for listing timeline consequences (min 2, max 5 effects)
-- [ ] Divergence point selector (timeline moment dropdown)
-- [ ] Form validation: required fields, character exists in VectorDB, property is valid
-- [ ] Integration with POST /api/scenarios endpoint from Story 1.1
-- [ ] Success state: redirect to scenario detail page showing created timeline
-- [ ] Mobile responsive (375px+ width)
-
-**Example Flow**:
-
-```
-User selects:
-- Base Scenario: "Hermione's Sorting"
-- Character: "Hermione Granger" (from VectorDB semantic search)
-- Attribute: "house"
-- Original: "Gryffindor"
-- Alternate: "Slytherin"
-- Reasoning: "What if the Sorting Hat prioritized her ambition over bravery?"
-
-Frontend → Spring Boot → FastAPI:
-1. FastAPI searches VectorDB characters collection
-2. Returns character metadata including vectordb_id
-3. Spring Boot creates root_user_scenarios record
-4. Spring Boot creates scenario_character_changes record with:
-   - root_scenario_id (from step 3)
-   - character_vectordb_id (from FastAPI response)
-   - attribute = "house"
-   - original_value = "Gryffindor"
-   - new_value = "Slytherin"
-   - reasoning = "What if the Sorting Hat prioritized..."
-
-Response returns structured scenario with character change details.
-```
-
-**Technical Notes**:
-
-- **Character search via API Gateway Pattern**: Frontend → Spring Boot (API Gateway) → FastAPI (VectorDB)
-- Spring Boot never accesses VectorDB directly, always proxies through FastAPI
-- Character list populated from VectorDB semantic search (not hardcoded)
-- Store **character_vectordb_id** in PostgreSQL scenario_character_changes table
-- panda CSS utility classes for consistent styling
-- Pinia store manages scenario creation state
-
-**Estimated Effort**: 6 hours
-
----
-
-### Story 1.3: Event Alteration Scenario UI
-
-**Priority: P0 - Critical**
-
-**Description**: Build interface for creating "Event Alteration" scenarios with timeline visualization and event modification options.
-
-**Acceptance Criteria**:
-
-- [ ] EventTimelineSelector component displaying key story events chronologically
-- [ ] Event selection from predefined timeline (5-15 major events per book)
-- [ ] Modification type selector: "prevented", "succeeded", "reversed_outcome", "never_occurred"
-- [ ] OutcomeModifier component for describing alternate outcome (200-500 character textarea)
-- [ ] Ripple effects input for consequences (min 2, max 5)
-- [ ] Divergence point auto-populated from selected event
-- [ ] JSONB parameter generation for EVENT_ALTERATION type
-- [ ] Integration with POST /api/scenarios endpoint
-- [ ] Preview mode showing "Original Event → Alternate Event" comparison
-- [ ] Mobile responsive timeline (horizontal scroll on mobile)
-
-**Example Flow**:
-
-```
-User selects:
-- Book: "The Great Gatsby"
-- Event: "Gatsby meets Daisy again"
-- Modification: "never_occurred"
-- Alternate Outcome: "Gatsby moves to California and starts a tech company"
-- Ripple Effects:
-  1. "No obsession with the green light"
-  2. "Nick never learns about Gatsby's past"
-  3. "Daisy remains in unhappy marriage"
-
-System generates JSONB:
-{
-  "event": "Gatsby meets Daisy again",
-  "original_outcome": "Gatsby pursues Daisy, leading to tragedy",
-  "alternate_outcome": "Gatsby moves to California...",
-  "modification_type": "never_occurred",
-  "ripple_effects": [...],
-  "divergence_point": "Summer 1922, before reunion"
-}
-```
-
-**Technical Notes**:
-
-- Event timelines hardcoded for MVP (10 popular books)
-- Future: RAG pipeline auto-extracts events from book text
-- Timeline component: horizontal scrollable cards on mobile, vertical list on desktop
-
-**Estimated Effort**: 7 hours
-
----
-
-### Story 1.4: Setting Modification Scenario UI
+### Story 1.2: Unified Scenario Creation Modal
 
 **Priority: P1 - High**
 
-**Description**: Build interface for creating "Setting Modification" scenarios with time period/location selectors and cultural context inputs.
+**Description**: Build a single unified modal component for creating all three scenario types (Character Changes, Event Alterations, Setting Modifications) with real-time validation and character counters.
 
 **Acceptance Criteria**:
 
-- [ ] SettingSelector component with dropdown for time period (historical eras + "Modern Day")
-- [ ] Location selector with country/city autocomplete (top 100 cities)
-- [ ] Cultural context input explaining how setting change affects story (300-600 character textarea)
-- [ ] Character adaptation notes: how characters change to fit new setting (optional, max 3 characters)
-- [ ] Technology level selector for modern settings (1900s, 1950s, 2000s, 2020s)
-- [ ] JSONB parameter generation for SETTING_MODIFICATION type
-- [ ] Integration with POST /api/scenarios endpoint
-- [ ] Visual preview: "Pride & Prejudice (1813 England) → Pride & Prejudice (2024 Seoul)"
-- [ ] Mobile responsive with collapsible sections
+- [ ] **ScenarioCreationModal.vue** component (PrimeVue Dialog)
+- [ ] **Scenario Title input** (required, max 100 characters)
+- [ ] **Three optional textareas**:
+  - Character Changes (optional, min 10 chars if filled)
+  - Event Alterations (optional, min 10 chars if filled)
+  - Setting Modifications (optional, min 10 chars if filled)
+- [ ] **Character counter component** with color coding:
+  - Green (valid): ≥10 characters
+  - Red (invalid): 1-9 characters
+  - Gray (empty): 0 characters
+- [ ] **Validation rules**:
+  - At least ONE scenario type must have ≥10 characters
+  - Scenario title required (max 100 chars)
+  - Empty fields are allowed
+- [ ] **Submit button state**: Disabled until validation passes
+- [ ] **API integration**: POST /api/v1/scenarios with bookId + all filled types
+- [ ] **Success behavior**: Navigate to new scenario detail page
+- [ ] **Mobile responsive**: Fullscreen modal on < 768px
+- [ ] **Keyboard shortcuts**: Escape to close, Cmd/Ctrl+Enter to submit
 
-**Example Flow**:
+**UI Structure**:
 
 ```
-User selects:
-- Book: "Pride and Prejudice"
-- Original Setting: "1813, Rural England"
-- Time Period: "Modern Day (2020s)"
-- Location: "Seoul, South Korea"
-- Cultural Context: "Elizabeth is a career-focused lawyer, Mr. Darcy is a chaebol heir. Social class conflicts map to Korean corporate hierarchy."
-- Character Adaptations:
-  - Elizabeth Bennet → Elizabeth Park (변호사)
-  - Mr. Darcy → Darcy Kang (재벌 2세)
-- Technology Level: "2020s (smartphones, social media)"
+[ + Create Scenario ]  (Modal Dialog)
 
-System generates JSONB:
-{
-  "original_time": "1813",
-  "original_location": "Rural England",
-  "alternate_time": "2020s",
-  "alternate_location": "Seoul, South Korea",
-  "cultural_context": "Elizabeth is a career-focused...",
-  "character_adaptations": [...],
-  "technology_level": "2020s"
-}
+Scenario Title: [___________________________] (max 100 chars)
+
+Character Changes (Optional):
+[________________________________________________]  ✓ 45 chars
+[________________________________________________]
+[________________________________________________]
+
+Event Alterations (Optional):
+[________________________________________________]  ✗ 5 chars (min 10)
+[________________________________________________]
+
+Setting Modifications (Optional):
+[________________________________________________]  - 0 chars
+[________________________________________________]
+
+ℹ️ At least one scenario type must have minimum 10 characters
+
+[Cancel]  [Create Scenario] (disabled until valid)
 ```
 
 **Technical Notes**:
 
-- Location autocomplete uses hardcoded list (MVP), future: Google Places API
-- Time period presets: "Ancient Times", "Medieval", "Renaissance", "Victorian Era", "1920s", "1950s", "1980s", "Modern Day"
-- Cultural context is critical for AI prompt generation in Epic 2
+- **Unified modal approach**: Replaces old 3-story tab wizard with single modal
+- **Reduced complexity**: Users fill only what they want, validation ensures at least 1 type filled
+- **CharCounter component**: Separate reusable component with computed statusClass (green/red/gray)
+- **Trigger from multiple pages**: Book Detail page, Scenario Browse page
+- Passes bookId and bookTitle as props for API integration
 
-**Estimated Effort**: 7 hours
+**Estimated Effort**: 12 hours
 
 ---
 
-### Story 1.5: Scenario Validation System with Gemini 2.5 Flash
+### Story 1.3: Scenario Validation System with Gemini 2.5 Flash
 
 **Priority: P1 - High**
 
@@ -253,7 +152,7 @@ System generates JSONB:
   - Specific issues found (if any)
   - Suggestions for improvement
 - [ ] Frontend displays validation results before scenario creation
-- [ ] User can force-publish despite warnings (quality_score penalized)
+- [ ] User can force-publish despite warnings
 - [ ] Validation results cached in Redis for 5 minutes (prevent duplicate calls)
 - [ ] Token budget: max **2,000 tokens per validation** (Gemini 2.5 Flash allows richer analysis)
 
@@ -346,8 +245,8 @@ Respond with JSON:
 
 **Risk 2: Poor quality scenarios pollute platform**
 
-- Mitigation: Local LLM validation (Story 1.5) filters obvious problems
-- Mitigation: Quality score algorithm (Story 1.1) enables filtering low-quality scenarios
+- Mitigation: Gemini 2.5 Flash validation (Story 1.5) filters obvious problems
+- Mitigation: Community engagement metrics (likes, conversations, forks) indicate quality
 - Mitigation: Community reporting in Phase 2 (deferred from MVP)
 
 **Risk 3: Database performance degrades with scenario trees**
@@ -368,7 +267,7 @@ Respond with JSON:
 
 - Hardcoded character lists for popular books (future: RAG extraction)
 - Hardcoded event timelines (future: RAG extraction)
-- No ML-based scenario quality prediction (using simple Local LLM validation)
+- No ML-based scenario quality prediction (using Gemini 2.5 Flash validation)
 - No scenario merge/combine mechanics (Phase 2 feature)
 - No collaborative scenario editing (Phase 2 feature)
 
@@ -420,11 +319,11 @@ Respond with JSON:
    **A**: Yes, add `visibility` field (public/unlisted/private) in Story 1.1—default to "public"
 
 4. **Q**: What happens if user creates contradictory meta-fork? (e.g., "Hermione in Slytherin" + "Hermione never went to Hogwarts")
-   **A**: Validation system (Story 1.5) catches this, suggests: "These scenarios contradict. Consider separate timelines."
+   **A**: Validation system (Story 1.3) catches this, suggests: "These scenarios contradict. Consider separate timelines."
 
 ## Definition of Done
 
-- [ ] All 5 stories completed with acceptance criteria met
+- [ ] All 3 stories completed with acceptance criteria met
 - [ ] Unit tests >80% coverage on backend services
 - [ ] Integration tests passing for all API endpoints
 - [ ] E2E tests passing for all three scenario creation flows
@@ -444,4 +343,4 @@ Respond with JSON:
 
 **Target Completion**: Week 2, Day 5 (10 working days)
 
-**Estimated Total Effort**: 34 hours (within 2-week sprint for 2 engineers)
+**Estimated Total Effort**: 26 hours (within 2-week sprint for 2 engineers)

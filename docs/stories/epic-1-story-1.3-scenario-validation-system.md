@@ -1,6 +1,7 @@
-# Story 1.5: Scenario Validation System
+# Story 1.3: Scenario Validation System
 
 **Epic**: Epic 1 - What If Scenario Foundation  
+**Story ID**: 1.3
 **Priority**: P2 - Medium  
 **Status**: Not Started  
 **Estimated Effort**: 8 hours
@@ -22,7 +23,24 @@ Implement backend validation system to ensure scenario quality, prevent nonsensi
 
 ## Acceptance Criteria
 
-- [ ] `ScenarioValidator` service class with validation methods for each scenario type
+### Client-Side Validation (Story 1.2 Integration)
+
+- [ ] **Scenario Title**: Required, max 100 characters
+- [ ] **Character Changes**: If filled, min 10 characters required
+- [ ] **Event Alterations**: If filled, min 10 characters required
+- [ ] **Setting Modifications**: If filled, min 10 characters required
+- [ ] **At Least One Type**: User must fill at least 1 of 3 scenario types
+- [ ] **Real-time validation**: Character counters with color coding
+  - Green (valid): ≥10 characters
+  - Red (invalid): 1-9 characters
+  - Gray (empty): 0 characters
+- [ ] **Submit button state**: Disabled until all validation passes
+
+### Backend Validation
+
+- [ ] `ScenarioValidator` service class with validation methods
+- [ ] **Server-side min length validation**: Each filled type must have ≥10 characters
+- [ ] **Server-side "at least one" validation**: At least 1 scenario type must be filled
 - [ ] **Gemini 2.5 Flash AI validation** via FastAPI:
   - Story authenticity check (character/event/setting exists in base story)
   - Logical consistency validation (scenario makes sense in story context)
@@ -30,15 +48,11 @@ Implement backend validation system to ensure scenario quality, prevent nonsensi
   - Token budget: 2,000 tokens per validation (1,500 input + 500 output)
   - Cost: ~$0.00015 per validation (Gemini API)
 - [ ] **Redis cache** for validation results (5-minute TTL):
-  - Cache key: `validation:{base_story}:{scenario_type}:{hash(parameters)}`
+  - Cache key: `validation:{base_story}:{hash(all_filled_types)}`
   - Reduces API costs for duplicate validation attempts
-- [ ] Base story validation: minimum 2 characters, exists in predefined list of popular stories (Harry Potter, Game of Thrones, LOTR, etc.)
-- [ ] CHARACTER_CHANGE validation: character name length > 1, properties non-empty and different
-- [ ] EVENT_ALTERATION validation: event_name length > 3, outcomes non-empty and different, outcome length < 500 chars
-- [ ] SETTING_MODIFICATION validation: setting_aspect in allowed values, settings non-empty and different
+- [ ] Base story validation: exists in predefined list of popular stories (Harry Potter, Game of Thrones, LOTR, etc.)
 - [ ] Profanity filter: reject scenarios containing inappropriate content
-- [ ] Duplicate detection: prevent identical scenarios (same base_story + parameters)
-- [ ] Quality score calculation: **AI-powered** (Gemini) + heuristic combination
+- [ ] Duplicate detection: prevent identical scenarios (same book + filled types content)
 - [ ] **API Gateway Pattern**: Spring Boot → FastAPI → Gemini 2.5 Flash
 - [ ] **Retry logic**: 3 attempts with exponential backoff (1s, 2s, 4s) for Gemini API failures
 - [ ] Validation errors return 400 Bad Request with specific error messages
@@ -54,13 +68,13 @@ Frontend → Spring Boot (8080) → FastAPI (8000) → Gemini 2.5 Flash API
                                    Redis Cache (5-min TTL)
 ```
 
-**Spring Boot ScenarioValidator Service**:
+**Spring Boot ScenarioValidator Service** (Updated for Unified Modal):
 
 ```java
 @Service
 public class ScenarioValidator {
 
-    private static final Set<String> SUPPORTED_STORIES = Set.of(
+    private static final Set<String> SUPPORTED_BOOKS = Set.of(
         "Harry Potter", "Game of Thrones", "Lord of the Rings",
         "Star Wars", "Marvel Universe", "Percy Jackson",
         "The Hunger Games", "Twilight", "Divergent"
@@ -69,6 +83,8 @@ public class ScenarioValidator {
     private static final Set<String> PROFANITY_LIST = Set.of(
         // Loaded from config file
     );
+
+    private static final int MIN_SCENARIO_LENGTH = 10;
 
     @Autowired
     private WebClient fastApiClient;  // Pattern B: Spring Boot → FastAPI
@@ -80,31 +96,51 @@ public class ScenarioValidator {
         List<String> errors = new ArrayList<>();
 
         // 1. Basic validation (fast, no AI needed)
-        if (!SUPPORTED_STORIES.contains(request.getBaseStory())) {
-            errors.add("Base story '" + request.getBaseStory() +
+        if (!SUPPORTED_BOOKS.contains(request.getBookTitle())) {
+            errors.add("Book '" + request.getBookTitle() +
                       "' is not currently supported. Supported: " +
-                      String.join(", ", SUPPORTED_STORIES));
+                      String.join(", ", SUPPORTED_BOOKS));
         }
 
-        // 2. Type-specific validation (fast)
-        switch (request.getScenarioType()) {
-            case CHARACTER_CHANGE:
-                errors.addAll(validateCharacterChange(request.getParameters()));
-                break;
-            case EVENT_ALTERATION:
-                errors.addAll(validateEventAlteration(request.getParameters()));
-                break;
-            case SETTING_MODIFICATION:
-                errors.addAll(validateSettingModification(request.getParameters()));
-                break;
+        // 2. Scenario title validation
+        if (request.getScenarioTitle() == null || request.getScenarioTitle().trim().isEmpty()) {
+            errors.add("Scenario title is required");
+        } else if (request.getScenarioTitle().length() > 100) {
+            errors.add("Scenario title must be 100 characters or less");
         }
 
-        // 3. Profanity check (fast)
+        // 3. "At least one type" validation (CRITICAL)
+        String charChanges = request.getCharacterChanges();
+        String eventAlters = request.getEventAlterations();
+        String settingMods = request.getSettingModifications();
+
+        boolean hasCharChanges = charChanges != null && charChanges.trim().length() >= MIN_SCENARIO_LENGTH;
+        boolean hasEventAlters = eventAlters != null && eventAlters.trim().length() >= MIN_SCENARIO_LENGTH;
+        boolean hasSettingMods = settingMods != null && settingMods.trim().length() >= MIN_SCENARIO_LENGTH;
+
+        if (!hasCharChanges && !hasEventAlters && !hasSettingMods) {
+            errors.add("At least one scenario type must have minimum " + MIN_SCENARIO_LENGTH + " characters");
+        }
+
+        // 4. Min length validation for FILLED fields
+        if (charChanges != null && !charChanges.trim().isEmpty() && charChanges.trim().length() < MIN_SCENARIO_LENGTH) {
+            errors.add("Character Changes must be at least " + MIN_SCENARIO_LENGTH + " characters if provided");
+        }
+
+        if (eventAlters != null && !eventAlters.trim().isEmpty() && eventAlters.trim().length() < MIN_SCENARIO_LENGTH) {
+            errors.add("Event Alterations must be at least " + MIN_SCENARIO_LENGTH + " characters if provided");
+        }
+
+        if (settingMods != null && !settingMods.trim().isEmpty() && settingMods.trim().length() < MIN_SCENARIO_LENGTH) {
+            errors.add("Setting Modifications must be at least " + MIN_SCENARIO_LENGTH + " characters if provided");
+        }
+
+        // 5. Profanity check (fast)
         if (containsProfanity(request)) {
             errors.add("Scenario contains inappropriate content");
         }
 
-        // 4. Duplicate check (fast)
+        // 6. Duplicate check (fast)
         if (isDuplicate(request)) {
             errors.add("A similar scenario already exists");
         }
@@ -114,7 +150,7 @@ public class ScenarioValidator {
             return ValidationResult.invalid(errors);
         }
 
-        // 5. AI validation via FastAPI (Gemini 2.5 Flash)
+        // 7. AI validation via FastAPI (Gemini 2.5 Flash)
         try {
             AIValidationResponse aiValidation = callFastApiValidation(request);
 
@@ -134,12 +170,26 @@ public class ScenarioValidator {
 
     private AIValidationResponse callFastApiValidation(CreateScenarioRequest request) {
         // Pattern B: Spring Boot proxies to FastAPI (internal network)
+        Map<String, String> filledTypes = new HashMap<>();
+
+        if (request.getCharacterChanges() != null && request.getCharacterChanges().length() >= MIN_SCENARIO_LENGTH) {
+            filledTypes.put("character_changes", request.getCharacterChanges());
+        }
+
+        if (request.getEventAlterations() != null && request.getEventAlterations().length() >= MIN_SCENARIO_LENGTH) {
+            filledTypes.put("event_alterations", request.getEventAlterations());
+        }
+
+        if (request.getSettingModifications() != null && request.getSettingModifications().length() >= MIN_SCENARIO_LENGTH) {
+            filledTypes.put("setting_modifications", request.getSettingModifications());
+        }
+
         return fastApiClient.post()
             .uri("/api/validate-scenario")
             .bodyValue(Map.of(
-                "base_story", request.getBaseStory(),
-                "scenario_type", request.getScenarioType().toString(),
-                "parameters", request.getParameters()
+                "book_title", request.getBookTitle(),
+                "scenario_title", request.getScenarioTitle(),
+                "filled_types", filledTypes
             ))
             .retrieve()
             .bodyToMono(AIValidationResponse.class)
@@ -148,75 +198,29 @@ public class ScenarioValidator {
             .block();
     }
 
-    private List<String> validateCharacterChange(Map<String, Object> params) {
-        List<String> errors = new ArrayList<>();
-
-        String character = (String) params.get("character");
-        String originalProp = (String) params.get("original_property");
-        String newProp = (String) params.get("new_property");
-
-        if (character == null || character.length() <= 1) {
-            errors.add("Character name must be at least 2 characters");
-        }
-
-        if (originalProp == null || originalProp.isEmpty()) {
-            errors.add("Original property is required");
-        }
-
-        if (newProp == null || newProp.isEmpty()) {
-            errors.add("New property is required");
-        }
-
-        if (originalProp != null && originalProp.equals(newProp)) {
-            errors.add("Original and new properties must be different");
-        }
-
-        return errors;
-    }
-
     private boolean containsProfanity(CreateScenarioRequest request) {
-        String allText = request.getBaseStory() + " " +
-                        request.getParameters().values().toString();
+        String allText = request.getScenarioTitle() + " " +
+                        request.getCharacterChanges() + " " +
+                        request.getEventAlterations() + " " +
+                        request.getSettingModifications();
         return PROFANITY_LIST.stream()
             .anyMatch(word -> allText.toLowerCase().contains(word));
     }
 
     private boolean isDuplicate(CreateScenarioRequest request) {
-        return scenarioRepository.existsByBaseStoryAndScenarioTypeAndParameters(
-            request.getBaseStory(),
-            request.getScenarioType(),
-            request.getParameters()
+        // Check for duplicate based on book + scenario content hash
+        return scenarioRepository.existsByBookIdAndContentHash(
+            request.getBookId(),
+            generateContentHash(request)
         );
     }
 
-    public double calculateQualityScore(Scenario scenario, AIValidationResponse aiValidation) {
-        // Combine heuristic score (0.5 weight) + AI creativity score (0.5 weight)
-        double heuristicScore = calculateHeuristicScore(scenario);
-        double aiScore = aiValidation != null ? aiValidation.getCreativityScore() : 0.5;
-
-        return (heuristicScore * 0.5) + (aiScore * 0.5);
-    }
-
-    private double calculateHeuristicScore(Scenario scenario) {
-        double score = 0.5; // Base score
-
-        // Bonus for popular base story
-        if (SUPPORTED_STORIES.contains(scenario.getBaseStory())) {
-            score += 0.2;
-        }
-
-        // Bonus for complete parameters
-        if (scenario.getParameters().size() >= 3) {
-            score += 0.1;
-        }
-
-        // Bonus for detailed descriptions (> 20 chars per field)
-        long detailedFields = scenario.getParameters().values().stream()
-            .filter(v -> v.toString().length() > 20)
-            .count();
-        score += detailedFields * 0.1;
-
-        return Math.min(score, 1.0); // Cap at 1.0
+    private String generateContentHash(CreateScenarioRequest request) {
+        String content = request.getScenarioTitle() + "|" +
+                        request.getCharacterChanges() + "|" +
+                        request.getEventAlterations() + "|" +
+                        request.getSettingModifications();
+        return DigestUtils.md5Hex(content);
     }
 }
 ```
@@ -291,63 +295,46 @@ async def validate_scenario(request: dict):
         logger.error(f"Gemini API validation error: {e}")
         raise HTTPException(status_code=500, detail="AI validation failed")
 
-def _build_validation_prompt(base_story: str, scenario_type: str, parameters: dict) -> str:
-    """Build Gemini validation prompt (optimized for 1,500 input tokens)"""
+def _build_validation_prompt(book_title: str, scenario_title: str, filled_types: dict) -> str:
+    """Build Gemini validation prompt for unified modal (optimized for 1,500 input tokens)"""
 
-    if scenario_type == "CHARACTER_CHANGE":
-        character = parameters.get('character')
-        original_prop = parameters.get('original_property')
-        new_prop = parameters.get('new_property')
+    filled_content = []
 
-        return f"""
-Validate this "What If" scenario for {base_story}:
+    if 'character_changes' in filled_types:
+        filled_content.append(f"Character Changes:\n{filled_types['character_changes']}")
 
-Scenario Type: Character Property Change
-Character: {character}
-Original Property: {original_prop}
-New Property: {new_prop}
+    if 'event_alterations' in filled_types:
+        filled_content.append(f"Event Alterations:\n{filled_types['event_alterations']}")
+
+    if 'setting_modifications' in filled_types:
+        filled_content.append(f"Setting Modifications:\n{filled_types['setting_modifications']}")
+
+    filled_text = "\n\n".join(filled_content)
+
+    return f"""
+Validate this "What If" scenario for {book_title}:
+
+Scenario Title: {scenario_title}
+
+{filled_text}
 
 Validation Tasks:
-1. Does this character exist in {base_story}? (Yes/No)
-2. Is the original property accurate for this character? (Yes/No)
-3. Is the scenario change logically consistent with the story world? (Yes/No)
-4. Creativity score (0.0-1.0): How interesting/novel is this change?
+1. Are the described changes plausible within the {book_title} universe? (Yes/No)
+2. If characters are mentioned, do they exist in {book_title}? (Yes/No)
+3. If events are mentioned, do they exist in {book_title}? (Yes/No)
+4. Are the proposed changes logically consistent with the story world? (Yes/No)
+5. Creativity score (0.0-1.0): How interesting/novel is this scenario?
 
 Respond in JSON:
 {{
   "is_valid": true/false,
   "errors": ["error message if invalid"],
-  "character_exists": true/false,
-  "property_accurate": true/false,
+  "plausible_in_universe": true/false,
   "logically_consistent": true/false,
   "creativity_score": 0.0-1.0,
   "reasoning": "Brief explanation"
 }}
 """
-
-    elif scenario_type == "EVENT_ALTERATION":
-        event_name = parameters.get('event_name')
-        original_outcome = parameters.get('original_outcome')
-        new_outcome = parameters.get('new_outcome')
-
-        return f"""
-Validate this "What If" scenario for {base_story}:
-
-Scenario Type: Event Alteration
-Event: {event_name}
-Original Outcome: {original_outcome}
-New Outcome: {new_outcome}
-
-Validation Tasks:
-1. Does this event exist in {base_story}? (Yes/No)
-2. Is the original outcome accurate? (Yes/No)
-3. Is the new outcome plausible in the story world? (Yes/No)
-4. Creativity score (0.0-1.0): How interesting is this alternate outcome?
-
-Respond in JSON format (same as above).
-"""
-
-    # Similar prompts for SETTING_MODIFICATION...
 
 def _parse_validation_response(response_text: str) -> dict:
     """Parse Gemini JSON response"""
@@ -382,11 +369,37 @@ def _hash_params(parameters: dict) -> str:
     return hashlib.md5(param_str.encode()).hexdigest()
 ````
 
-**Controller Integration**:
+**Controller Integration** (Updated Request Model):
 
 ```java
+// Request DTO
+@Data
+public class CreateScenarioRequest {
+    @NotNull
+    private String bookId;
+
+    @NotBlank
+    @Size(max = 100)
+    private String scenarioTitle;
+
+    // At least one of these must have ≥10 characters (validated in service layer)
+    private String characterChanges;
+    private String eventAlterations;
+    private String settingModifications;
+
+    // Derived from Book entity
+    private String bookTitle;  // Populated by controller from bookId lookup
+}
+
+// Controller
 @PostMapping("/scenarios")
-public ResponseEntity<?> createScenario(@RequestBody CreateScenarioRequest request) {
+public ResponseEntity<?> createScenario(@Valid @RequestBody CreateScenarioRequest request) {
+    // Lookup book title from bookId
+    Book book = bookRepository.findById(request.getBookId())
+        .orElseThrow(() -> new ResourceNotFoundException("Book not found"));
+    request.setBookTitle(book.getTitle());
+
+    // Validate scenario
     ValidationResult validation = scenarioValidator.validateScenario(request);
 
     if (!validation.isValid()) {
@@ -394,14 +407,8 @@ public ResponseEntity<?> createScenario(@RequestBody CreateScenarioRequest reque
             .body(Map.of("errors", validation.getErrors()));
     }
 
+    // Create scenario
     Scenario scenario = scenarioService.createScenario(request);
-
-    // Calculate quality score (heuristic + AI creativity)
-    double qualityScore = scenarioValidator.calculateQualityScore(
-        scenario,
-        validation.getAiValidation()  // Contains creativity_score from Gemini
-    );
-    scenario.setQualityScore(qualityScore);
 
     return ResponseEntity.ok(scenario);
 }
@@ -432,22 +439,22 @@ public ResponseEntity<?> createScenario(@RequestBody CreateScenarioRequest reque
 - [ ] **Retry logic** recovers from transient Gemini API failures (3 attempts)
 - [ ] **Graceful degradation**: If Gemini API fails after retries, basic validation still works
 
-### Validation Rule Testing
+### Validation Rule Testing (Updated for Unified Modal)
 
-- [ ] Character name < 2 chars rejected
-- [ ] Identical original and new properties rejected
-- [ ] Event outcome > 500 chars rejected
-- [ ] Invalid setting_aspect rejected
-- [ ] Empty required fields rejected
+- [ ] **Scenario title required** - Empty title rejected
+- [ ] **Scenario title max length** - Titles > 100 chars rejected
+- [ ] **Min 10 chars per type** - Filled types < 10 chars rejected
+- [ ] **At least one type** - Scenario with all types < 10 chars rejected
+- [ ] **Empty fields allowed** - Empty Character Changes accepted if other types filled
+- [ ] **Combination validation** - Scenario with only Event Alterations (≥10 chars) passes
+- [ ] Unsupported book rejected
 
-### Quality Score Testing
+### AI Creativity Score Testing
 
-- [ ] Popular base story gets higher score (0.7+)
-- [ ] Unpopular base story gets lower score (0.5)
-- [ ] Detailed parameters increase score
-- [ ] Score never exceeds 1.0
-- [ ] **AI creativity score** properly combined with heuristic score (50/50 weight)
+- [ ] **Gemini creativity score** is 0.0-1.0 range
 - [ ] **Gemini creativity score** reflects scenario novelty (tested on 10+ sample scenarios)
+- [ ] Multiple scenario types (e.g., char + event) get higher creativity scores
+- [ ] Simple single-type scenarios get lower creativity scores
 
 ### Edge Cases
 

@@ -1,6 +1,7 @@
-# Story 3.2: Scenario Forking Backend & Meta-Timeline Logic
+# Story 3.4: Scenario Forking Backend & Meta-Timeline Logic
 
-**Epic**: Epic 3 - Scenario Discovery & Social Sharing  
+**Epic**: Epic 3 - Scenario Discovery & Forking  
+**Story ID**: 3.4
 **Priority**: P1 - High  
 **Status**: Not Started  
 **Estimated Effort**: 10 hours

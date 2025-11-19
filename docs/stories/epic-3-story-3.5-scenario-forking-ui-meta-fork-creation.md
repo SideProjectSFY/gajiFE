@@ -1,6 +1,7 @@
-# Story 3.3: Scenario Forking UI & Meta-Fork Creation Flow
+# Story 3.5: Scenario Forking UI & Meta-Fork Creation Flow
 
-**Epic**: Epic 3 - Scenario Discovery & Social Sharing  
+**Epic**: Epic 3 - Scenario Discovery & Forking  
+**Story ID**: 3.5
 **Priority**: P1 - High  
 **Status**: Not Started  
 **Estimated Effort**: 8 hours
