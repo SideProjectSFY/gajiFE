@@ -44,7 +44,7 @@ Users can begin exploring alternative timelines by creating structured "What If"
 - [ ] B-tree indexes on all FK columns (base_scenario_id, parent_scenario_id, creator_id)
 - [ ] **GIN index on vectordb_passage_ids** for fast array queries
 - [ ] Soft delete pattern with deleted_at timestamp
-- [ ] Java entity classes with proper JPA relationships to normalized tables
+- [ ] Java domain models with proper MyBatis relationships to normalized tables
 - [ ] Response time < 100ms for single scenario retrieval (PostgreSQL metadata only)
 - [ ] Unit tests >80% coverage on repository and service layers
 

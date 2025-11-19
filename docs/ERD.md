@@ -1545,7 +1545,7 @@ client.restore_collection("novel_passages", snapshot="pre_migration_snapshot_202
 - **Version**: 3.x
 - **Port**: 8080
 - **Language**: Java 17+
-- **Framework**: Spring Data JPA, Spring Security, Spring Web
+- **Framework**: MyBatis, Spring Security, Spring Web
 - **Database**: PostgreSQL 15.x
 - **Responsibilities**: User management, CRUD operations, social features, metadata queries
 - **Communication**: REST API, Long Polling endpoints

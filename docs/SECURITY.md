@@ -214,15 +214,15 @@ public String toString() {
 
 **Mitigations**:
 
-1. **Parameterized Queries** (JPA/Hibernate):
+1. **Parameterized Queries** (MyBatis):
 
 ```java
 // ✅ SAFE - Parameterized query
-@Query("SELECT s FROM Scenario s WHERE s.title LIKE %:keyword%")
+@Select("SELECT * FROM scenarios WHERE title LIKE CONCAT('%', #{keyword}, '%')")
 List<Scenario> searchByTitle(@Param("keyword") String keyword);
 
 // ❌ UNSAFE - String concatenation
-@Query("SELECT s FROM Scenario s WHERE s.title LIKE '%" + keyword + "%'") // NEVER DO THIS
+@Select("SELECT * FROM scenarios WHERE title LIKE '%" + keyword + "%'") // NEVER DO THIS
 ```
 
 2. **JSONB Parameter Validation**:
@@ -1062,8 +1062,9 @@ function validateScenario(data: unknown) {
 
 2. **SQL Injection Prevention**:
 
-   - Use JPA parameterized queries ONLY
+   - Use MyBatis parameterized queries ONLY (#{param} syntax)
    - Never concatenate user input into SQL strings
+   - Avoid ${param} direct substitution except for table/column names with strict validation
 
 3. **JSONB Injection Prevention**:
    - Whitelist allowed parameter keys
@@ -1211,16 +1212,15 @@ spring:
 ✅ **SAFE**:
 
 ```java
-@Query("SELECT s FROM Scenario s WHERE s.title LIKE %:keyword%")
+@Select("SELECT * FROM scenarios WHERE title LIKE CONCAT('%', #{keyword}, '%')")
 List<Scenario> searchByTitle(@Param("keyword") String keyword);
 ```
 
 ❌ **UNSAFE**:
 
 ```java
-// NEVER DO THIS
-String sql = "SELECT * FROM scenarios WHERE title LIKE '%" + keyword + "%'";
-entityManager.createNativeQuery(sql).getResultList();
+// NEVER DO THIS - Direct string interpolation
+@Select("SELECT * FROM scenarios WHERE title LIKE '%${keyword}%'") // SQL injection risk!
 ```
 
 ### Database User Permissions

@@ -78,7 +78,7 @@ PostgreSQL          VectorDB
 | conversation_message_links | Message reuse for forking             | JOIN table                       |
 | follows, likes, memos      | Social features                       | Relational                       |
 
-**Access**: Spring Boot (JPA) only
+**Access**: Spring Boot (MyBatis) only
 
 ---
 

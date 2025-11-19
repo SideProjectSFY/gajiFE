@@ -141,7 +141,7 @@ gantt
 | 시간      | Frontend                                             | Spring Backend                                            | AI Service                                        |
 | --------- | ---------------------------------------------------- | --------------------------------------------------------- | ------------------------------------------------- |
 | **09-12** | Vue 3 + Vite 프로젝트<br>Pinia + Router<br>Panda CSS | Spring Boot 3.2<br>PostgreSQL 연결<br>Flyway 마이그레이션 | FastAPI 프로젝트<br>Gemini SDK 설정<br>Redis 연결 |
-| **13-15** | 기본 레이아웃<br>네비게이션 바<br>라우팅 구조        | REST API 구조<br>CORS 설정<br>JPA 엔티티 기본             | Circuit Breaker<br>에러 핸들링<br>로깅 설정       |
+| **13-15** | 기본 레이아웃<br>네비게이션 바<br>라우팅 구조        | REST API 구조<br>CORS 설정<br>MyBatis 매퍼 기본           | Circuit Breaker<br>에러 핸들링<br>로깅 설정       |
 | **16-18** | Epic 1 폼 시작                                       | docker-compose.yml<br>Spring Dockerfile                   | FastAPI Dockerfile<br>Health check API            |
 | **19-21** | 폼 컴포넌트 계속                                     | Health check<br>Inter-service 통신                        | ChromaDB 셋업<br>5개 collection 생성              |
 

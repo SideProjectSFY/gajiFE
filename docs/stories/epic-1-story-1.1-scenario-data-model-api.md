@@ -32,9 +32,9 @@ Create the PostgreSQL database schema and Spring Boot REST API for managing What
 - [ ] Circular reference prevention trigger implemented
 - [ ] GIN index on JSONB column, B-tree indexes on base_story, creator_id, quality_score
 - [ ] Soft delete pattern with deleted_at timestamp
-- [ ] Java entity classes with Hibernate JSONB support
+- [ ] Java domain models with MyBatis JSONB mapping support
 - [ ] Response time < 100ms for single scenario retrieval
-- [ ] Unit tests >80% coverage on repository and service layers
+- [ ] Unit tests >80% coverage on mapper and service layers
 
 ## Technical Notes
 

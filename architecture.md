@@ -647,7 +647,7 @@ graph TB
         API1[REST Controllers]
         PROXY[AI Proxy Controller]
         BIZ[Business Logic]
-        JPA[Spring Data JPA]
+        MYBATIS[MyBatis Mapper]
         PG[(PostgreSQL)]
     end
 
@@ -664,8 +664,8 @@ graph TB
     PROXY -->|WebClient Internal| API2
     API2 -.->|httpx Internal| API1
 
-    BIZ --> JPA
-    JPA --> PG
+    BIZ --> MYBATIS
+    MYBATIS --> PG
 
     RAG --> VDB
     RAG --> GEMINI
@@ -679,7 +679,7 @@ graph TB
 
 **Spring Boot (Port 8080) - API Gateway & Business Logic Server**:
 
-- **Database Access**: PostgreSQL ONLY (via Spring Data JPA)
+- **Database Access**: PostgreSQL ONLY (via MyBatis)
 - **Responsibilities**:
   - **API Gateway**: Single entry point for all Frontend requests
   - **AI Proxy**: Proxies FastAPI endpoints to prevent external exposure
@@ -865,7 +865,7 @@ sequenceDiagram
 
 ```
 ✅ ALLOWED:
-- Spring Boot → PostgreSQL (via Spring Data JPA)
+- Spring Boot → PostgreSQL (via MyBatis)
 - FastAPI → VectorDB (via ChromaDB client)
 
 ❌ FORBIDDEN:
@@ -1180,7 +1180,7 @@ async def search_by_theme(theme_query: str, novel_id: UUID):
 | :--------------- | :------------------- | :--------- | :-------------------------------- |
 | **Core Backend** | **Spring Boot**      | **3.x**    | **CRUD API, Metadata Management** |
 |                  | Java                 | 17+        | Business Logic                    |
-|                  | Spring Data JPA      | -          | PostgreSQL ORM                    |
+|                  | MyBatis              | 3.x        | PostgreSQL SQL Mapper             |
 |                  | WebClient            | -          | FastAPI communication             |
 | **AI Backend**   | **FastAPI**          | **0.110+** | **AI/RAG Service**                |
 |                  | Python               | 3.11+      | AI Integration                    |
@@ -2057,7 +2057,7 @@ graph TD
     A -- HTTPS / AI Calls --> D
 
     C -- Internal API Call --> D
-    C -- JPA ONLY --> E
+    C -- MyBatis ONLY --> E
 
     D -- Internal API Call --> C
     D -- ChromaDB Client ONLY --> V
@@ -2085,7 +2085,7 @@ graph TD
 
 | Service     | Allowed Database   | Database Client          | Forbidden Access                       |
 | ----------- | ------------------ | ------------------------ | -------------------------------------- |
-| Spring Boot | ✅ PostgreSQL ONLY | Spring Data JPA          | ❌ VectorDB (NO ChromaDB client)       |
+| Spring Boot | ✅ PostgreSQL ONLY | MyBatis Mapper           | ❌ VectorDB (NO ChromaDB client)       |
 | FastAPI     | ✅ VectorDB ONLY   | ChromaDB/Pinecone Client | ❌ PostgreSQL (NO psycopg2/SQLAlchemy) |
 | Frontend    | ❌ No direct DB    | -                        | Must call Spring Boot or FastAPI       |
 
@@ -2102,7 +2102,7 @@ graph TD
 
 4.  **Spring Boot → PostgreSQL (Metadata Only)**:
 
-    - The Core Backend uses **JPA ONLY** to access PostgreSQL
+    - The Core Backend uses **MyBatis ONLY** to access PostgreSQL
     - Stores user accounts, scenario metadata, conversation metadata
     - **NO VectorDB client libraries** in Spring Boot dependencies
     - Stores VectorDB foreign keys (e.g., `character_vectordb_id`) but never queries VectorDB directly

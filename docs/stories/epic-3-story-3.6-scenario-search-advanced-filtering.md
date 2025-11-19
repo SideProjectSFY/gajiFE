@@ -142,13 +142,13 @@ public class ScenarioController {
 }
 ```
 
-**Repository with Custom Query**:
+**Repository with Custom Query (MyBatis Mapper)**:
 
 ```java
-@Repository
-public interface ScenarioRepository extends JpaRepository<Scenario, UUID> {
+@Mapper
+public interface ScenarioMapper {
 
-    @Query(value = """
+    @Select("""
         SELECT s.*,
                ts_rank(s.search_vector, to_tsquery('english', :query)) AS rank
         FROM scenarios s
@@ -173,21 +173,22 @@ public interface ScenarioRepository extends JpaRepository<Scenario, UUID> {
           AND (:endDate IS NULL OR s.created_at <= :endDate)
           AND s.quality_score >= :minQualityScore
         """,
-        nativeQuery = true)
-    Page<Scenario> searchWithFilters(
+        """)
+    List<Scenario> searchWithFilters(
         @Param("query") String query,
         @Param("scenarioType") String scenarioType,
         @Param("creatorId") UUID creatorId,
         @Param("startDate") LocalDate startDate,
         @Param("endDate") LocalDate endDate,
         @Param("minQualityScore") Double minQualityScore,
-        Pageable pageable
+        @Param("offset") int offset,
+        @Param("limit") int limit
     );
 
-    @Query("""
-        SELECT s FROM Scenario s
-        WHERE (:scenarioType IS NULL OR s.scenarioType = :scenarioType)
-          AND (:creatorId IS NULL OR s.createdBy.id = :creatorId)
+    @Select("""
+        SELECT * FROM scenarios s
+        WHERE (:scenarioType IS NULL OR s.scenario_type = :scenarioType)
+          AND (:creatorId IS NULL OR s.created_by = :creatorId)
           AND (:startDate IS NULL OR s.createdAt >= :startDate)
           AND (:endDate IS NULL OR s.createdAt <= :endDate)
           AND s.qualityScore >= :minQualityScore

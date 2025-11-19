@@ -30,7 +30,7 @@ Initialize Spring Boot application as **API Gateway** with WebClient for proxyin
 - [ ] Dependencies configured:
   - Spring Web (REST API)
   - **Spring WebFlux WebClient** (FastAPI proxy client)
-  - Spring Data JPA (PostgreSQL ORM)
+  - MyBatis (PostgreSQL SQL Mapper)
   - Spring Security (JWT authentication)
   - PostgreSQL Driver
   - Lombok (reduce boilerplate)
@@ -39,11 +39,11 @@ Initialize Spring Boot application as **API Gateway** with WebClient for proxyin
 - [ ] Package structure created:
   ```
   com.gaji.corebackend/
-  ├── config/          # WebClient, Security, CORS
+  ├── config/          # WebClient, Security, CORS, MyBatis
   ├── controller/      # REST controllers + AI proxy
   ├── service/         # Business logic
-  ├── repository/      # JPA repositories (PostgreSQL only)
-  ├── entity/          # JPA entities (13 metadata tables)
+  ├── mapper/          # MyBatis Mapper interfaces (PostgreSQL only)
+  ├── domain/          # Domain models (13 metadata tables)
   ├── dto/             # Request/response DTOs
   ├── client/          # FastAPIClient (WebClient)
   ├── exception/       # Custom exceptions
@@ -94,7 +94,7 @@ Initialize Spring Boot application as **API Gateway** with WebClient for proxyin
 - **Performance**: +50ms proxy overhead is negligible (1%) on 5000ms AI operations
 
 **Database Access**:
-- Spring Boot accesses PostgreSQL ONLY (13 metadata tables via JPA)
+- Spring Boot accesses PostgreSQL ONLY (13 metadata tables via MyBatis)
 - ❌ NO VectorDB libraries (ChromaDB/Pinecone access through FastAPI)
 
 **WebClient Configuration Example**:

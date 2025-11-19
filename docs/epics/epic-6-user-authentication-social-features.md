@@ -22,8 +22,8 @@ Users can create accounts, build their identity through profiles, follow other c
 
 **Acceptance Criteria**:
 
-- [ ] User entity created (see Epic 0, Story 0.3 for schema)
-- [ ] UserRepository with Spring Data JPA methods:
+- [ ] User domain model created (see Epic 0, Story 0.3 for schema)
+- [ ] UserMapper with MyBatis methods:
   - `findByEmail(String email)`
   - `findByUsername(String username)`
   - `existsByEmail(String email)`

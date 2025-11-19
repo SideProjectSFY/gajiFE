@@ -100,16 +100,11 @@ EXECUTE FUNCTION update_conversation_like_count();
 ```java
 package com.gaji.domain.conversationlike;
 
-import jakarta.persistence.*;
 import lombok.*;
-import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
 
-@Entity
-@Table(name = "conversation_likes")
-@IdClass(ConversationLikeId.class)
 @Getter
 @Setter
 @NoArgsConstructor
@@ -117,16 +112,8 @@ import java.util.UUID;
 @Builder
 public class ConversationLike {
 
-    @Id
-    @Column(name = "user_id", nullable = false)
     private UUID userId;
-
-    @Id
-    @Column(name = "conversation_id", nullable = false)
     private UUID conversationId;
-
-    @CreationTimestamp
-    @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 }
 ```
@@ -152,39 +139,38 @@ public class ConversationLikeId implements Serializable {
 }
 ```
 
-**Repository - ConversationLikeRepository.java**:
+**Mapper - ConversationLikeMapper.java**:
 
 ```java
-package com.gaji.repository;
+package com.gaji.mapper;
 
 import com.gaji.domain.conversationlike.ConversationLike;
-import com.gaji.domain.conversationlike.ConversationLikeId;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.repository.query.Param;
-import org.springframework.stereotype.Repository;
+import org.apache.ibatis.annotations.*;
 
+import java.util.List;
 import java.util.UUID;
 
-@Repository
-public interface ConversationLikeRepository extends JpaRepository<ConversationLike, ConversationLikeId> {
+@Mapper
+public interface ConversationLikeMapper {
 
-    boolean existsByUserIdAndConversationId(UUID userId, UUID conversationId);
+    @Select("SELECT COUNT(*) > 0 FROM conversation_likes WHERE user_id = #{userId} AND conversation_id = #{conversationId}")
+    boolean existsByUserIdAndConversationId(@Param("userId") UUID userId, @Param("conversationId") UUID conversationId);
 
-    @Query("""
-        SELECT c FROM Conversation c
-        JOIN ConversationLike cl ON cl.conversationId = c.id
-        WHERE cl.userId = :userId
-        ORDER BY cl.createdAt DESC
+    @Select("""
+        SELECT c.* FROM conversations c
+        JOIN conversation_likes cl ON cl.conversation_id = c.id
+        WHERE cl.user_id = #{userId}
+        ORDER BY cl.created_at DESC
+        LIMIT #{limit} OFFSET #{offset}
     """)
-    Page<Conversation> findLikedConversationsByUserId(
+    List<Conversation> findLikedConversationsByUserId(
         @Param("userId") UUID userId,
-        Pageable pageable
+        @Param("offset") int offset,
+        @Param("limit") int limit
     );
 
-    long countByConversationId(UUID conversationId);
+    @Select("SELECT COUNT(*) FROM conversation_likes WHERE conversation_id = #{conversationId}")
+    long countByConversationId(@Param("conversationId") UUID conversationId);
 }
 ```
 
@@ -194,11 +180,10 @@ public interface ConversationLikeRepository extends JpaRepository<ConversationLi
 package com.gaji.service;
 
 import com.gaji.domain.conversationlike.ConversationLike;
-import com.gaji.domain.conversationlike.ConversationLikeId;
 import com.gaji.dto.ConversationResponse;
 import com.gaji.dto.LikeResponse;
-import com.gaji.repository.ConversationLikeRepository;
-import com.gaji.repository.ConversationRepository;
+import com.gaji.mapper.ConversationLikeMapper;
+import com.gaji.mapper.ConversationMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;

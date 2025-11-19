@@ -46,7 +46,7 @@ While users don't directly interact with infrastructure, this epic ensures:
 - [ ] Dependencies configured:
   - Spring Web (REST API)
   - Spring WebFlux WebClient (FastAPI proxy client)
-  - Spring Data JPA (PostgreSQL ORM)
+  - MyBatis (PostgreSQL SQL Mapper)
   - Spring Security (JWT authentication)
   - PostgreSQL Driver
   - Lombok (reduce boilerplate)
@@ -58,8 +58,8 @@ While users don't directly interact with infrastructure, this epic ensures:
   ├── config/          # WebClient, Security, CORS
   ├── controller/      # REST controllers + AI proxy
   ├── service/         # Business logic
-  ├── repository/      # JPA repositories (PostgreSQL only)
-  ├── entity/          # JPA entities (13 tables)
+  ├── mapper/          # MyBatis Mapper interfaces (PostgreSQL only)
+  ├── domain/          # Domain models (13 tables)
   ├── dto/             # Request/response DTOs
   ├── client/          # FastAPIClient (WebClient)
   ├── exception/       # Custom exceptions

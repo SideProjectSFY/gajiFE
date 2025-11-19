@@ -15,10 +15,10 @@ This project uses a **Microservice Architecture (MSA)** with strict database acc
 
 ### Base URLs
 
-| Service     | Base URL                    | Database Access     |
-| ----------- | --------------------------- | ------------------- |
-| Spring Boot | `http://localhost:8080/api` | PostgreSQL (JPA)    |
-| FastAPI     | `http://localhost:8000/api` | VectorDB (ChromaDB) |
+| Service     | Base URL                    | Database Access      |
+| ----------- | --------------------------- | -------------------- |
+| Spring Boot | `http://localhost:8080/api` | PostgreSQL (MyBatis) |
+| FastAPI     | `http://localhost:8000/api` | VectorDB (ChromaDB)  |
 
 ### Internal APIs
 
@@ -63,7 +63,7 @@ Both services expose **internal endpoints** for cross-service communication:
 
 ## Spring Boot APIs (PostgreSQL)
 
-> **Database Access**: PostgreSQL ONLY via JPA. For VectorDB queries, Spring Boot calls FastAPI `/api/ai/*`.
+> **Database Access**: PostgreSQL ONLY via MyBatis. For VectorDB queries, Spring Boot calls FastAPI `/api/ai/*`.
 
 ## Authentication
 

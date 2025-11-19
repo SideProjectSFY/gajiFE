@@ -54,35 +54,16 @@ CREATE INDEX idx_user_follows_following ON user_follows(following_id);
 CREATE INDEX idx_user_follows_follower ON user_follows(follower_id);
 ```
 
-**UserFollow Entity**:
+**UserFollow Domain Model**:
 
 ```java
-@Entity
-@Table(name = "user_follows")
-@IdClass(UserFollowId.class)
+@Data
 public class UserFollow {
-
-    @Id
-    @Column(name = "follower_id")
     private UUID followerId;
-
-    @Id
-    @Column(name = "following_id")
     private UUID followingId;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "follower_id", insertable = false, updatable = false)
     private User follower;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "following_id", insertable = false, updatable = false)
     private User following;
-
-    @Column(name = "created_at", nullable = false, updatable = false)
-    @CreationTimestamp
     private Instant createdAt;
-
-    // Getters and setters
 }
 
 @Data
@@ -163,35 +144,49 @@ public class UserFollowService {
 }
 ```
 
-**Repository with Custom Queries**:
+**Mapper with Custom Queries**:
 
 ```java
-@Repository
-public interface UserFollowRepository extends JpaRepository<UserFollow, UserFollowId> {
+@Mapper
+public interface UserFollowMapper {
 
-    boolean existsByFollowerIdAndFollowingId(UUID followerId, UUID followingId);
+    @Select("SELECT COUNT(*) > 0 FROM user_follows WHERE follower_id = #{followerId} AND following_id = #{followingId}")
+    boolean existsByFollowerIdAndFollowingId(@Param("followerId") UUID followerId, @Param("followingId") UUID followingId);
 
-    @Modifying
-    @Transactional
-    void deleteByFollowerIdAndFollowingId(UUID followerId, UUID followingId);
+    @Delete("DELETE FROM user_follows WHERE follower_id = #{followerId} AND following_id = #{followingId}")
+    void deleteByFollowerIdAndFollowingId(@Param("followerId") UUID followerId, @Param("followingId") UUID followingId);
 
-    long countByFollowingId(UUID followingId); // Follower count
+    @Select("SELECT COUNT(*) FROM user_follows WHERE following_id = #{followingId}")
+    long countByFollowingId(@Param("followingId") UUID followingId); // Follower count
 
-    long countByFollowerId(UUID followerId); // Following count
+    @Select("SELECT COUNT(*) FROM user_follows WHERE follower_id = #{followerId}")
+    long countByFollowerId(@Param("followerId") UUID followerId); // Following count
 
-    @Query("""
-        SELECT uf.follower FROM UserFollow uf
-        WHERE uf.followingId = :userId
-        ORDER BY uf.createdAt DESC
+    @Select("""
+        SELECT u.* FROM users u
+        JOIN user_follows uf ON u.id = uf.follower_id
+        WHERE uf.following_id = #{userId}
+        ORDER BY uf.created_at DESC
+        LIMIT #{limit} OFFSET #{offset}
         """)
-    Page<User> findFollowersByUserId(@Param("userId") UUID userId, Pageable pageable);
+    List<User> findFollowersByUserId(
+        @Param("userId") UUID userId,
+        @Param("offset") int offset,
+        @Param("limit") int limit
+    );
 
-    @Query("""
-        SELECT uf.following FROM UserFollow uf
-        WHERE uf.followerId = :userId
-        ORDER BY uf.createdAt DESC
+    @Select("""
+        SELECT u.* FROM users u
+        JOIN user_follows uf ON u.id = uf.following_id
+        WHERE uf.follower_id = #{userId}
+        ORDER BY uf.created_at DESC
+        LIMIT #{limit} OFFSET #{offset}
         """)
-    Page<User> findFollowingByUserId(@Param("userId") UUID userId, Pageable pageable);
+    List<User> findFollowingByUserId(
+        @Param("userId") UUID userId,
+        @Param("offset") int offset,
+        @Param("limit") int limit
+    );
 }
 ```
 

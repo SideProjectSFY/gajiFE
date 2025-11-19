@@ -34,7 +34,7 @@ Create the PostgreSQL database schema and Spring Boot REST API for managing conv
 - [ ] fork_message_count tracks actual copied message count in response
 - [ ] B-tree indexes on scenario_id, creator_id, parent_conversation_id
 - [ ] Soft delete pattern with deleted_at timestamp
-- [ ] Java entity classes with JPA relationships
+- [ ] Java domain models with MyBatis relationships
 - [ ] Response time < 150ms for conversation with 50 messages
 - [ ] Unit tests >80% coverage
 
