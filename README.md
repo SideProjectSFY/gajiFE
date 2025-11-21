@@ -60,7 +60,7 @@ Gaji uses a **microservices architecture (Pattern B: API Gateway)** with clear s
 graph TD
     A[Vue.js Frontend<br/>Single API Client] -->|HTTPS /api/*| B[Spring Boot API Gateway<br/>Port 8080]
     B -->|/api/ai/* Proxy| C[FastAPI AI Backend<br/>Port 8000 Internal]
-    B -->|JPA CRUD| D[PostgreSQL 15.x<br/>Metadata Only]
+    B -->|MyBatis CRUD| D[PostgreSQL 15.x<br/>Metadata Only]
     C -->|Semantic Search| E[VectorDB ChromaDB/Pinecone<br/>Content + Embeddings]
     C -->|AI Generation| F[Gemini 2.5 Flash<br/>Text + Embeddings]
 
