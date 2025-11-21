@@ -18,7 +18,9 @@ Users can begin exploring alternative timelines by creating structured "What If"
 
 **Priority: P0 - Critical**
 
-**Description**: Create the PostgreSQL database schema and Spring Boot REST API for managing What If scenarios with JSONB parameter flexibility.
+**Story File**: `docs/stories/epic-1-story-1.1-scenario-data-model-api.md`
+
+**Description**: Create the PostgreSQL database schema and Spring Boot REST API for managing What If scenarios with normalized database structure and VectorDB integration.
 
 **Acceptance Criteria**:
 
@@ -67,6 +69,8 @@ Users can begin exploring alternative timelines by creating structured "What If"
 ### Story 1.2: Unified Scenario Creation Modal
 
 **Priority: P1 - High**
+
+**Story File**: `docs/stories/epic-1-story-1.2-unified-scenario-creation-modal.md`
 
 **Description**: Build a single unified modal component for creating all three scenario types (Character Changes, Event Alterations, Setting Modifications) with real-time validation and character counters.
 
@@ -132,6 +136,8 @@ Setting Modifications (Optional):
 ### Story 1.3: Scenario Validation System with Gemini 2.5 Flash
 
 **Priority: P1 - High**
+
+**Story File**: `docs/stories/epic-1-story-1.3-scenario-validation-system.md`
 
 **Description**: Implement **Gemini 2.5 Flash via FastAPI** validation to ensure scenario coherence and prevent contradictions before publication.
 

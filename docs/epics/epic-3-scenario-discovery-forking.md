@@ -18,9 +18,9 @@ Users don't just create scenarios—they discover incredible What If timelines c
 
 **Priority: P0 - Critical**
 
-**Description**: Create the primary book discovery page implementing book-first navigation with search, filters, and infinite scroll.
+**Story File**: `docs/stories/epic-3-story-3.1-book-browse-page.md`
 
-**See**: `docs/stories/epic-3-story-3.1-book-browse-page.md`
+**Description**: Create the primary book discovery page implementing book-first navigation with search, filters, and infinite scroll.
 
 **Estimated Effort**: 8 hours
 
@@ -30,9 +30,9 @@ Users don't just create scenarios—they discover incredible What If timelines c
 
 **Priority: P0 - Critical**
 
-**Description**: Build the book detail hub displaying book information, statistics, and all scenarios for that book with a prominent Create Scenario CTA.
+**Story File**: `docs/stories/epic-3-story-3.2-book-detail-page.md`
 
-**See**: `docs/stories/epic-3-story-3.2-book-detail-page.md`
+**Description**: Build the book detail hub displaying book information, statistics, and all scenarios for that book with a prominent Create Scenario CTA.
 
 **Estimated Effort**: 10 hours
 
@@ -41,6 +41,8 @@ Users don't just create scenarios—they discover incredible What If timelines c
 ### Story 3.3: Scenario Browse UI & Filtering
 
 **Priority: P0 - Critical**
+
+**Story File**: `docs/stories/epic-3-story-3.3-scenario-browse-ui-filtering.md`
 
 **Description**: Build Vue.js interface for browsing What If scenarios with multi-dimensional filtering (by book, scenario type, popularity) and card-based discovery UX.
 
@@ -85,6 +87,8 @@ Users don't just create scenarios—they discover incredible What If timelines c
 ### Story 3.4: Scenario Forking Backend & Meta-Timeline Logic
 
 **Priority: P0 - Critical**
+
+**Story File**: `docs/stories/epic-3-story-3.4-scenario-forking-backend-meta-timeline.md`
 
 **Description**: Implement Spring Boot API endpoint for forking scenarios to create meta-timelines, with circular reference prevention and fork tracking.
 
@@ -145,6 +149,8 @@ Original scenario.fork_count → incremented from 0 to 1
 ### Story 3.5: Scenario Forking UI & Meta-Fork Creation Flow
 
 **Priority: P0 - Critical**
+
+**Story File**: `docs/stories/epic-3-story-3.5-scenario-forking-ui-meta-fork-creation.md`
 
 **Description**: Build Vue.js modal interface for forking scenarios with additional change input and visual parent-child relationship preview.
 
@@ -224,6 +230,8 @@ Modal opens:
 
 **Priority: P1 - High**
 
+**Story File**: `docs/stories/epic-3-story-3.6-scenario-search-advanced-filtering.md`
+
 **Description**: Implement full-text search for scenarios using PostgreSQL's text search capabilities, with smart filtering combining search + metadata filters.
 
 **Acceptance Criteria**:
@@ -292,6 +300,8 @@ LIMIT 20;
 ### Story 3.7: Social Sharing with og:image Generation
 
 **Priority: P1 - High**
+
+**Story File**: `docs/stories/epic-3-story-3.7-social-sharing-dynamic-og-image.md`
 
 **Description**: Generate beautiful Open Graph images for scenario sharing on Twitter, Reddit, Discord, enabling viral "Check out this timeline!" posts.
 

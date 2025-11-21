@@ -73,6 +73,7 @@ graph TD
 ```
 
 **Architecture Pattern**: **Pattern B (API Gateway)** ✅
+
 - Frontend → Spring Boot ONLY (single entry point)
 - Spring Boot → FastAPI (internal proxy, not externally exposed)
 - Enhanced Security: FastAPI/Gemini API keys protected from external access
@@ -81,45 +82,50 @@ graph TD
 
 ### Technology Stack
 
-| Layer            | Technology                           | Purpose                                        |
-| ---------------- | ------------------------------------ | ---------------------------------------------- |
-| **Frontend**     | Vue 3, PrimeVue, PandaCSS, Pinia     | Modern SPA with component-based UI             |
-| **API Gateway**  | Java 17+, Spring Boot 3.x (Port 8080) | **Single entry point**, AI proxy, business logic |
-| **AI Backend**   | Python 3.11+, FastAPI (Port 8000)    | **Internal only**, RAG, VectorDB, Gemini API   |
-| **Metadata DB**  | PostgreSQL 15.x (13 tables)          | Users, novels, scenarios, conversations        |
-| **Content DB**   | ChromaDB/Pinecone (5 collections)    | Passages, characters, locations, events, themes |
-| **AI/ML**        | Gemini 2.5 Flash, Gemini Embedding   | Text generation (768-dim embeddings)           |
+| Layer           | Technology                            | Purpose                                          |
+| --------------- | ------------------------------------- | ------------------------------------------------ |
+| **Frontend**    | Vue 3, PrimeVue, PandaCSS, Pinia      | Modern SPA with component-based UI               |
+| **API Gateway** | Java 17+, Spring Boot 3.x (Port 8080) | **Single entry point**, AI proxy, business logic |
+| **AI Backend**  | Python 3.11+, FastAPI (Port 8000)     | **Internal only**, RAG, VectorDB, Gemini API     |
+| **Metadata DB** | PostgreSQL 15.x (13 tables)           | Users, novels, scenarios, conversations          |
+| **Content DB**  | ChromaDB/Pinecone (5 collections)     | Passages, characters, locations, events, themes  |
+| **AI/ML**       | Gemini 2.5 Flash, Gemini Embedding    | Text generation (768-dim embeddings)             |
 
 **Key Architecture Decisions**:
+
 - ✅ **Pattern B (API Gateway)**: Security, simplicity, centralized logging
 - ✅ **Hybrid Database**: PostgreSQL (ACID) + VectorDB (semantic search 10x faster)
 - ✅ **SSE Streaming**: Real-time AI responses, 93% fewer network requests
 - ✅ **Multirepo Structure**: Independent repositories for each service
 
 **📚 Documentation**:
+
 - [**ARCHITECTURE.md**](./docs/ARCHITECTURE.md) - Complete architecture guide (6 ADRs)
 - [**IMPLEMENTATION_ROADMAP.md**](./docs/IMPLEMENTATION_ROADMAP.md) - Next steps & timeline
 - [**BACKEND_OPTIMIZATION.md**](./docs/BACKEND_OPTIMIZATION.md) - 7 performance strategies
 - [**DATABASE_STRATEGY.md**](./docs/DATABASE_STRATEGY.md) - Hybrid database design
-| **AI/ML**        | Gemini 2.5 Flash, Gemini Embedding   | Text generation (768-dim embeddings)           |
-| **Deployment**   | Railway (backend), Vercel (frontend) | Cloud infrastructure                           |
+  | **AI/ML** | Gemini 2.5 Flash, Gemini Embedding | Text generation (768-dim embeddings) |
+  | **Deployment** | Railway (backend), Vercel (frontend) | Cloud infrastructure |
 
 ## 📊 Database Schema
 
 Gaji uses a **Hybrid Database Architecture** (PostgreSQL + VectorDB):
 
 ### PostgreSQL (13 tables)
+
 - **Metadata**: Users, novels, scenarios, conversations, messages
 - **Social**: Follows, likes, memos, forks
 - **Features**: ACID transactions, complex JOINs, B-Tree indexing
 
 ### VectorDB (5 collections)
+
 - **Content**: Novel passages (chunked 200-500 words)
 - **AI Analysis**: Characters, locations, events, themes
 - **Search**: Semantic search via 768-dim embeddings (Gemini)
 - **Performance**: 10x faster than pgvector on semantic queries
 
 **Why Hybrid?**
+
 - PostgreSQL: Best for relational metadata queries
 - VectorDB: Best for semantic "find brave scenes" searches
 - **Combined**: Best of both worlds
@@ -222,16 +228,19 @@ We're a passionate team of developers building the future of interactive storyte
 ## 📞 Documentation & Resources
 
 ### 📂 Core Documentation
+
 - [**ARCHITECTURE.md**](./docs/ARCHITECTURE.md) - System architecture & ADRs
 - [**IMPLEMENTATION_ROADMAP.md**](./docs/IMPLEMENTATION_ROADMAP.md) - Next steps & timeline
 - [**CLAUDE.md**](./CLAUDE.md) - AI development guide
 
 ### 🛠️ Implementation Guides
+
 - [**DEVELOPMENT_SETUP.md**](./docs/DEVELOPMENT_SETUP.md) - Local environment setup
 - [**BACKEND_OPTIMIZATION.md**](./docs/BACKEND_OPTIMIZATION.md) - Performance strategies
 - [**DATABASE_STRATEGY.md**](./docs/DATABASE_STRATEGY.md) - Hybrid DB design
 
 ### 📋 Specifications
+
 - [**PRD.md**](./docs/PRD.md) - Product requirements
 - [**ERD.md**](./docs/ERD.md) - Database schema
 - [**API_DOCUMENTATION.md**](./docs/API_DOCUMENTATION.md) - API reference
@@ -240,8 +249,20 @@ We're a passionate team of developers building the future of interactive storyte
 - [**SECURITY.md**](./docs/SECURITY.md) - Security best practices
 
 ### 📖 Epic & Story Details
-- [**Epics**](./docs/epics/) - 7 epic specifications
-- [**Stories**](./docs/stories/) - 37 user story implementations
+
+- [**Epics**](./docs/epics/) - 7 epic specifications (high-level features & business value)
+- [**Stories**](./docs/stories/) - 41 user story implementations (detailed acceptance criteria)
+- [**Epic-Story Alignment**](./docs/EPIC_STORY_ALIGNMENT_SUMMARY.md) - Cross-reference mapping & status tracking
+
+**Epic Summary** (318 total hours):
+
+- Epic 0: Project Setup & Infrastructure (39h, 7 stories)
+- Epic 1: What If Scenario Foundation (26h, 3 stories)
+- Epic 2: AI Character Adaptation (32h, 4 stories)
+- Epic 3: Scenario Discovery & Forking (63h, 7 stories)
+- Epic 4: Conversation System (54h, 5 stories)
+- Epic 5: Scenario Tree Visualization (45h, 6 stories)
+- Epic 6: User Authentication & Social Features (59h, 9 stories)
 
 ---
 

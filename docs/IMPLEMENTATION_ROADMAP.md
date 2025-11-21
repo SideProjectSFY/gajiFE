@@ -94,15 +94,24 @@
 
 **Goal**: Complete project foundation with pre-processed dataset
 
-**Stories**:
+**Epic File**: `docs/epics/epic-0-project-setup-infrastructure.md`
 
-- [ ] 0.1: Spring Boot project setup (API Gateway)
-- [ ] 0.2: FastAPI service setup (internal-only)
-- [ ] 0.3: PostgreSQL + Flyway migrations (13 metadata tables)
-- [ ] 0.4: Vue.js frontend setup (PandaCSS + PrimeVue)
-- [ ] 0.5: Docker configuration (6 services)
-- [ ] 0.6: Health check endpoints (Pattern B validation)
-- [ ] 0.7: VectorDB data import from pre-processed dataset
+**Stories** (39 hours total):
+
+- [ ] 0.1: Spring Boot project setup (API Gateway) - 6h
+  - Story: `docs/stories/epic-0-story-0.1-spring-boot-backend-setup.md`
+- [ ] 0.2: FastAPI service setup (internal-only) - 6h
+  - Story: `docs/stories/epic-0-story-0.2-fastapi-ai-service-setup.md`
+- [ ] 0.3: PostgreSQL + Flyway migrations (13 metadata tables) - 5h
+  - Story: `docs/stories/epic-0-story-0.3-postgresql-database-flyway-migrations.md`
+- [ ] 0.4: Vue.js frontend setup (PandaCSS + PrimeVue) - 6h
+  - Story: `docs/stories/epic-0-story-0.4-vue-js-frontend-project-setup.md`
+- [ ] 0.5: Docker configuration (6 services) - 5h
+  - Story: `docs/stories/epic-0-story-0.5-docker-configuration.md`
+- [ ] 0.6: Health check endpoints (Pattern B validation) - 8h
+  - Story: `docs/stories/epic-0-story-0.6-inter-service-health-check.md`
+- [ ] 0.7: VectorDB data import from pre-processed dataset - 3h
+  - Story: `docs/stories/epic-0-story-0.7-vectordb-data-import.md`
 
 **Success**: All services running + 10+ novels imported + 100+ characters in VectorDB
 
@@ -114,18 +123,27 @@
 
 **Epic 1: Scenario Foundation** (26h - 3 stories)
 
+- **Epic File**: `docs/epics/epic-1-what-if-scenario-foundation.md`
 - Story 1.1: Scenario data model & CRUD API (8h)
+  - Story: `docs/stories/epic-1-story-1.1-scenario-data-model-api.md`
 - Story 1.2: Unified scenario creation modal (12h)
+  - Story: `docs/stories/epic-1-story-1.2-unified-scenario-creation-modal.md`
 - Story 1.3: Scenario validation system (6h)
+  - Story: `docs/stories/epic-1-story-1.3-scenario-validation-system.md`
 
-**Epic 2: AI Character Adaptation** (40h - 4 stories)
+**Epic 2: AI Character Adaptation** (32h - 4 stories)
 
-- Story 2.1: Scenario → prompt engine (12h)
-- Story 2.2: Context window manager (10h)
-- Story 2.3: Multi-timeline character consistency (10h)
+- **Epic File**: `docs/epics/epic-2-ai-character-adaptation.md`
+- Story 2.1: Scenario → prompt engine (10h)
+  - Story: `docs/stories/epic-2-story-2.1-scenario-to-prompt-engine.md`
+- Story 2.2: Context window manager (8h)
+  - Story: `docs/stories/epic-2-story-2.2-conversation-context-window-manager.md`
+- Story 2.3: Multi-timeline character consistency (6h)
+  - Story: `docs/stories/epic-2-story-2.3-multi-timeline-character-consistency.md`
 - Story 2.4: Scenario context testing & refinement (8h)
+  - Story: `docs/stories/epic-2-story-2.4-scenario-context-testing-refinement.md`
 
-**Milestone**: Users can create scenarios and start AI conversations
+**Milestone**: Users can create scenarios and start AI conversations with Gemini 2.5 Flash
 
 ---
 
@@ -135,13 +153,21 @@
 
 **Epic 3: Scenario Discovery & Forking** (63h - 7 stories)
 
+- **Epic File**: `docs/epics/epic-3-scenario-discovery-forking.md`
 - Story 3.1: Book browse page (8h)
+  - Story: `docs/stories/epic-3-story-3.1-book-browse-page.md`
 - Story 3.2: Book detail page (10h)
+  - Story: `docs/stories/epic-3-story-3.2-book-detail-page.md`
 - Story 3.3: Scenario browse UI & filtering (8h)
+  - Story: `docs/stories/epic-3-story-3.3-scenario-browse-ui-filtering.md`
 - Story 3.4: Scenario forking backend (10h)
+  - Story: `docs/stories/epic-3-story-3.4-scenario-forking-backend-meta-timeline.md`
 - Story 3.5: Scenario forking UI (8h)
+  - Story: `docs/stories/epic-3-story-3.5-scenario-forking-ui-meta-fork-creation.md`
 - Story 3.6: Scenario search & advanced filtering (9h)
+  - Story: `docs/stories/epic-3-story-3.6-scenario-search-advanced-filtering.md`
 - Story 3.7: Social sharing & dynamic og:image (10h)
+  - Story: `docs/stories/epic-3-story-3.7-social-sharing-dynamic-og-image.md`
 
 **Epic 4: Conversation System** (26h - 3 stories)
 

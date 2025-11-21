@@ -123,9 +123,15 @@ gaji-ai-backend/           # Repository 2: FastAPI
 ├── requirements.txt
 └── Dockerfile
 
-gaji-frontend/             # Repository 3: Vue.js
+gaji-frontend/             # Repository 3: Vue.js (Current: gajiFE)
 ├── src/
 ├── package.json
+├── docs/                  # Project documentation
+│   ├── epics/            # Epic-level documentation
+│   ├── stories/          # Story-level implementation details
+│   ├── PRD.md            # Product Requirements Document
+│   ├── ARCHITECTURE.md   # This file
+│   └── ...
 └── Dockerfile
 
 gaji-api-contracts/        # Repository 4: OpenAPI specs (shared)
@@ -138,12 +144,19 @@ gaji-api-contracts/        # Repository 4: OpenAPI specs (shared)
 - Clear ownership boundaries
 - Easier CI/CD pipelines per service
 - Better suited for team growth (3+ developers)
+- Documentation co-located with frontend code for easier access
 
 **Trade-offs**:
 
 - Type sharing via npm/Maven packages from api-contracts repo
 - Cross-service changes require multiple PRs
 - No monorepo build caching
+
+**Documentation Strategy**:
+
+- Epic files (`docs/epics/`) provide high-level feature descriptions and business value
+- Story files (`docs/stories/`) contain detailed acceptance criteria and implementation guides
+- See `docs/EPIC_STORY_ALIGNMENT_SUMMARY.md` for cross-reference mapping
 
 ### ADR-006: SSE Streaming
 
