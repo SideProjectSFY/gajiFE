@@ -60,8 +60,9 @@ export default defineConfig({
           info: { value: '#3b82f6' },
         },
         fonts: {
-          body: { value: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' },
-          heading: { value: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' },
+          base: { value: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' },
+          body: { value: '{fonts.base}' },
+          heading: { value: '{fonts.base}' },
           mono: { value: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace' },
         },
         spacing: {
