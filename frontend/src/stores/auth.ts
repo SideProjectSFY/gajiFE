@@ -1,11 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 
-interface AuthState {
-  accessToken: string | null
-  refreshToken: string | null
-}
-
 export const useAuthStore = defineStore('auth', () => {
   // State
   const accessToken = ref<string | null>(localStorage.getItem('accessToken'))
