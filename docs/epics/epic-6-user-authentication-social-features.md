@@ -579,55 +579,16 @@ Not Authenticated:
 
 ---
 
-### Story 6.8: Personal Memo System for Conversations
+## Epic-Level Acceptance Criteria
 
-**Priority: P2 - Medium**
-
-**Description**: Allow users to add private notes (memos) to conversations for personal reference, visible only to the memo creator.
-
-**Acceptance Criteria**:
-
-- [ ] Memo entity created (see Epic 0, Story 0.3 for schema)
-- [ ] MemoRepository with methods:
-  - `findByUserIdAndConversationId(UUID, UUID)`
-  - `existsByUserIdAndConversationId(UUID, UUID)`
-- [ ] MemoService with methods:
-  - `createOrUpdateMemo(UUID userId, UUID conversationId, String content)`
-  - `getMemo(UUID userId, UUID conversationId) → MemoResponse`
-  - `deleteMemo(UUID userId, UUID conversationId)`
-- [ ] REST API endpoints:
-  - POST /api/v1/conversations/{id}/memo (requires authentication)
-  - GET /api/v1/conversations/{id}/memo (requires authentication)
-  - DELETE /api/v1/conversations/{id}/memo (requires authentication)
-- [ ] Business rules:
-  - One memo per user per conversation (UPSERT logic)
-  - Memo content max 2000 characters
-  - Only memo creator can read/edit/delete their memo
-  - Memos are completely private (not visible to other users)
-- [ ] Unit tests for MemoService
-- [ ] Integration tests for memo endpoints
-
-**API Examples**:
-
-**POST /api/v1/conversations/{id}/memo**
-
-```json
-Request:
-{
-  "content": "Interesting take on Slytherin values. Need to explore ambition vs. cunning distinction more."
-}
-
-Response (200 OK):
-{
-  "id": "uuid",
-  "conversation_id": "uuid",
-  "content": "Interesting take...",
-  "created_at": "2025-11-12T10:00:00Z",
-  "updated_at": "2025-11-12T10:00:00Z"
-}
-```
-
-**Technical Notes**:
+- [ ] Users can register and login securely (JWT authentication)
+- [ ] Users have profiles with avatars and bios
+- [ ] Users can follow/unfollow other users
+- [ ] Follow counts display correctly on profiles
+- [ ] Users can like conversations
+- [ ] Like counts update in real-time
+- [ ] Mobile responsive design for all user features
+- [ ] Password security follows best practices (bcrypt)
 
 - Use UPSERT (ON CONFLICT DO UPDATE) for create/update in single query
 - Unique constraint (user_id, conversation_id) enforces one memo per user
@@ -857,8 +818,8 @@ Conversation: "Exploring Slytherin Hermione"
 
 **Start Date**: Week 1, Day 4 of MVP development
 
-**Target Completion**: Week 2, Day 2 (4 working days)
+**Target Completion**: Week 2, Day 1 (3.5 working days)
 
-**Estimated Total Effort**: 59 hours (achievable in 4 days for 2 engineers working in parallel)
+**Estimated Total Effort**: 50 hours
 
 **Priority**: HIGH - Social features essential for viral growth and retention

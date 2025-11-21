@@ -451,53 +451,15 @@ INVALID (prevented by system):
 
 ---
 
-### Story 5.4: Scenario Breadcrumb Navigation
+## Epic-Level Acceptance Criteria
 
-**Priority: P1 - High**
-
-**Description**: Implement breadcrumb navigation showing scenario ancestry path, enabling users to traverse up the fork hierarchy.
-
-**Acceptance Criteria**:
-
-- [ ] ScenarioBreadcrumb component
-  - Display ancestor chain: Root → Parent → Current Scenario
-  - Each breadcrumb item clickable (navigates to that scenario)
-  - Current scenario in bold (non-clickable)
-  - Truncate long titles (max 20 chars, ellipsis)
-  - Separator: "/" or "→" between items
-  - Max depth display: 5 levels (show "..." if deeper)
-- [ ] Integration in ScenarioDetailView:
-  - Show breadcrumb below page header
-  - Sticky position on scroll (stays visible)
-  - Mobile: horizontal scroll if too long
-- [ ] Backend API integration:
-  - Use GET /api/v1/scenarios/{id}/ancestors from Story 5.1
-  - Cache ancestor path (rarely changes)
-- [ ] Breadcrumb metadata:
-  - Hover on breadcrumb → show tooltip with full title
-  - Show scenario type icon next to each breadcrumb item
-- [ ] SEO optimization:
-  - Use semantic HTML: `<nav>` with `<ol>` for breadcrumb list
-  - Add schema.org BreadcrumbList structured data
-  - Helps search engines understand scenario hierarchy
-- [ ] Edge cases:
-  - Root scenario (no parent): show only current scenario
-  - Orphaned scenario (parent deleted): show "Unknown Parent → Current"
-  - Deep tree (>5 levels): show "Root → ... → Parent → Current"
-
-**Breadcrumb Example**:
-
-```
-Home / Explore Scenarios / Harry Potter / Hermione in Slytherin / Befriends Draco / Meets Lucius
-                                          [Root Scenario]     [Parent]        [Current]
-```
-
-**Responsive Breadcrumb (Mobile)**:
-
-```
-← HP / Hermione... / Befriends... / Meets Lucius
-  [swipe left to see more]
-```
+- [ ] Tree data structure correctly represents parent-child relationships
+- [ ] Interactive tree visualization renders scenario hierarchy
+- [ ] Conversation fork trees show ROOT → child relationship (max depth 1)
+- [ ] Users can navigate tree by clicking nodes
+- [ ] Performance optimized for large trees (virtual scrolling)
+- [ ] Mobile responsive design
+- [ ] Accessibility support (keyboard navigation)
 
 **Technical Notes**:
 
@@ -890,21 +852,16 @@ Featured Scenarios:
 
 **Start Date**: Week 3, Day 1 of MVP development
 
-**Target Completion**: Week 3, Day 3 (3 working days)
+**Target Completion**: Week 3, Day 2 (1.5 working days)
 
-**Estimated Total Effort**: **45 hours** (reduced from 47 hours due to Story 5.3 simplification: 8h → 6h)
+**Estimated Total Effort**: **26 hours**
 
 **Breakdown**:
 
 - Story 5.1: 8 hours (scenario tree API + simplified conversation fork relationship API)
 - Story 5.2: 14 hours (scenario tree UI with D3.js/Reingold-Tilford)
-- Story 5.3: **6 hours** (conversation fork relationship UI - simplified for max depth 1, reduced from 8h)
-- Story 5.4: 6 hours (scenario breadcrumb navigation)
-- Story 5.5: 4 hours (zoom/pan controls + minimap)
-- Story 5.6: 7 hours (tree export to PNG/SVG)
+- Story 5.3: **6 hours** (conversation fork relationship UI - simplified for max depth 1)
 
 **Priority**: HIGH - Visual navigation critical for understanding branching timelines
 
 **Note**: Conversation fork visualization is **significantly simpler** than scenario tree due to max depth 1 constraint (ROOT → fork only). No complex tree algorithms or recursive queries needed for conversations.
-
-**Priority**: MEDIUM - Enhances UX significantly but not critical for core functionality

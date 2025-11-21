@@ -583,14 +583,27 @@ data: {"done": true, "token_count": 85, "message_id": "uuid"}
 
 ---
 
-### Story 4.4: Conversation Forking UI & Backend with ROOT-only Constraint
+## Epic-Level Acceptance Criteria
 
-**Priority: P1 - High**
+- [ ] Users can create conversations with AI characters based on scenarios
+- [ ] **Long Polling works smoothly** (2-second polling interval, progress indicator 0-100%)
+- [ ] Messages persist correctly in database with token counts
+- [ ] Mobile responsive design (375px+ width)
+- [ ] No message loss (all messages saved even if client disconnects during polling)
+- [ ] **Long Polling reconnection works seamlessly** (exponential backoff on errors: 2s → 4s → 8s → max 30s)
+- [ ] Token usage tracked accurately for cost monitoring (Gemini 2.5 Flash API via FastAPI)
+- [ ] **Browser notifications work** when task COMPLETED and user not on page (WebSocket/SSE integration)
 
-**Description**: Enable users to fork conversations to explore alternative dialogue paths, **enforcing ROOT-only forking (max depth 1)** and **min(6, total) message copy rule**.
+## Dependencies
 
-**Acceptance Criteria**:
+**Blocks**:
 
+- Epic 5: Scenario Tree Visualization (needs conversation data to visualize)
+- Post-MVP analytics (needs conversation metrics)
+
+**Requires**:
+
+- **Epic 0**: Project Setup & Infrastructure (PostgreSQL, VectorDB, Spring Boot, FastAPI, Redis)
 - [ ] **Backend: Fork Conversation Endpoint**
   - **POST /api/v1/conversations/{id}/fork** (requires authentication, owner only)
   - Request body: `{target_scenario_id: "uuid"}` (optional, defaults to same scenario)
@@ -745,13 +758,7 @@ Attempt to fork conv-456 (forked conversation):
 
 ---
 
-### Story 4.4: Conversation Forking & Branching UI
-
-**Priority: P1 - High**
-
-**Description**: Enable users to fork conversations at any message to explore alternative dialogue paths, creating a tree of conversation branches.
-
-**Acceptance Criteria**:
+## Story Summary
 
 - [ ] Fork conversation backend logic
   - POST /api/v1/conversations/{id}/fork endpoint (requires authentication)
@@ -892,103 +899,11 @@ Error Response (409 Conflict - root already forked):
 
 ---
 
-### Story 4.5: Conversation Discovery & Browse UI
-
-**Priority: P1 - High**
-
-**Description**: Build conversation discovery page where users can browse public conversations, filter by scenario/character, and discover interesting dialogue examples.
-
-**Acceptance Criteria**:
-
-- [ ] ConversationBrowseView component (`/conversations` route)
-  - Page header: "Explore Conversations"
-  - Filter sidebar:
-    - Search input (search by conversation content, character name)
-    - Scenario filter (dropdown, multi-select)
-    - Character filter (autocomplete, popular characters via VectorDB)
-    - Sort options: Recent, Most Liked, Most Forked, Longest
-    - Date range filter
-  - Conversation card grid (3 cols desktop, 2 tablet, 1 mobile)
-  - Infinite scroll pagination (20 conversations per batch)
-- [ ] ConversationCard component
-  - Scenario title (clickable → scenario detail)
-  - Character name badge (fetched from VectorDB via FastAPI)
-  - Conversation preview (first user message + first assistant reply)
-  - Metadata:
-    - Message count (e.g., "15 messages")
-    - Like count with like button
-    - Fork count
-    - Creator username (clickable → user profile)
-    - Created date (relative)
-    - "🔀 Forked" badge if is_root = FALSE
-  - Hover state: show "View Conversation" button
-  - Click card → navigate to conversation detail
-- [ ] Backend search endpoint (Spring Boot):
-  - GET /api/v1/conversations/search?q=ambition&scenario_id=uuid&character=Hermione&sort=likes&page=0
-  - Full-text search on message content using PostgreSQL `to_tsvector` with GIN index
-  - Filter by scenario_id, character_name (validate character exists in VectorDB via FastAPI call)
-  - Sort options: recent (updated_at DESC), likes (like_count DESC), forks (fork_count DESC), longest (message_count DESC)
-  - Pagination support (20 per page)
-  - VectorDB integration: GET /api/ai/vectordb/characters/{id} to fetch character details
-- [ ] ConversationStore actions (Pinia):
-  - `searchConversations(query, filters, sort, page)`
-  - `getPopularConversations(page)`
-  - `getRecentConversations(page)`
-  - `enrichConversationsWithCharacters(conversations)` - parallel VectorDB calls
-- [ ] Empty states:
-  - "No conversations found" with suggestions
-  - "Be the first to start a conversation with this character!"
-- [ ] SEO optimization:
-  - Meta tags for conversation pages (og:title, og:description, og:image)
-  - Include conversation preview in description (first 160 chars)
-  - Canonical URLs
-- [ ] Performance optimization:
-  - Server-side pagination (don't load all conversations)
-  - Image lazy loading for avatars
-  - Debounce search input (300ms)
-  - Redis cache for popular conversations (5-minute TTL)
-  - Prefetch next page on scroll (better UX)
-
-**Conversation Browse Layout**:
-
-```
-┌──────────────────────────────────────────────┐
-│  Explore Conversations                       │
-├──────────────┬───────────────────────────────┤
-│ Filters      │  [Card 1]      [Card 2]       │
-│              │                                │
-│ [Search]     │  [Card 3]      [Card 4]       │
-│              │                                │
-│ Scenario:    │  [Card 5]      [Card 6]       │
-│ [All ▼]      │                                │
-│              │  [Loading more...]             │
-│ Character:   │                                │
-│ [Hermione]   │                                │
-│              │                                │
-│ Sort:        │                                │
-│ [Recent ▼]   │                                │
-└──────────────┴───────────────────────────────┘
-```
-
-**Technical Notes**:
-
-- Use PostgreSQL GIN index on message.content for fast full-text search: `CREATE INDEX idx_message_content_fts ON messages USING GIN(to_tsvector('english', content));`
-- Cache popular conversations (Redis, 5-minute TTL) to reduce database load
-- Prefetch next page on scroll (better UX) using IntersectionObserver API
-- URL params sync with filters (bookmarkable searches) via Vue Router query params
-- VectorDB character autocomplete: GET /api/ai/vectordb/characters/autocomplete?q=Herm → returns character names for filter dropdown
-
-**Estimated Effort**: 10 hours
-
----
-
 ## Epic-Level Acceptance Criteria
 
 - [ ] Users can create conversations with AI characters based on scenarios
 - [ ] **Long Polling works smoothly** (2-second polling interval, progress indicator 0-100%)
 - [ ] Messages persist correctly in database with token counts
-- [ ] **Conversation forking creates independent branches** (ROOT-only, max depth 1, min(6, total) message copy)
-- [ ] Browse page displays public conversations with search/filter (VectorDB character search via FastAPI)
 - [ ] Mobile responsive design (375px+ width)
 - [ ] No message loss (all messages saved even if client disconnects during polling)
 - [ ] **Long Polling reconnection works seamlessly** (exponential backoff on errors: 2s → 4s → 8s → max 30s)
@@ -1261,16 +1176,14 @@ Error Response (409 Conflict - root already forked):
 
 **Start Date**: Week 2, Day 3 of MVP development
 
-**Target Completion**: Week 3, Day 2 (3 working days - increased from 2.5 days for Long Polling complexity)
+**Target Completion**: Week 2, Day 5 (2 working days)
 
-**Estimated Total Effort**: **54 hours** (increased from 48 hours due to Long Polling + VectorDB integration complexity)
+**Estimated Total Effort**: **34 hours**
 
 **Breakdown**:
 
 - Story 4.1: 10 hours (data model + fork constraints)
 - Story 4.2: 12 hours (Long Polling + Gemini integration + browser notifications)
 - Story 4.3: 12 hours (Long Polling UI + progress indicators + notifications)
-- Story 4.4: 10 hours (fork UI/backend + ROOT-only validation + min(6, total) rule)
-- Story 4.5: 10 hours (browse page + VectorDB character search)
 
 **Priority**: CRITICAL - Core user value, enables meaningful exploration of What If scenarios with Gemini 2.5 Flash
