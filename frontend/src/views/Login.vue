@@ -138,8 +138,9 @@ async function handleLogin(): Promise<void> {
 
       <form @submit.prevent="handleLogin" :class="styles.form">
         <div :class="styles.formGroup">
-          <label :class="styles.label">이메일</label>
+          <label for="email" :class="styles.label">이메일</label>
           <input
+            id="email"
             v-model="email"
             type="email"
             required
@@ -149,8 +150,9 @@ async function handleLogin(): Promise<void> {
         </div>
 
         <div :class="styles.formGroup">
-          <label :class="styles.label">비밀번호</label>
+          <label for="password" :class="styles.label">비밀번호</label>
           <input
+            id="password"
             v-model="password"
             type="password"
             required
