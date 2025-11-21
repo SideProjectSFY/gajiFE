@@ -8,6 +8,8 @@ import './styles/main.css'
 const app = createApp(App)
 const pinia = createPinia()
 
+// IMPORTANT: Pinia must be installed before the router
+// The router's navigation guards use useAuthStore(), which requires Pinia to be initialized first
 app.use(pinia)
 app.use(router)
 app.use(PrimeVue, { unstyled: true }) // Use unstyled mode to apply PandaCSS
