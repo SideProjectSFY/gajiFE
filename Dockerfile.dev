@@ -1,0 +1,23 @@
+FROM node:20-alpine
+WORKDIR /app
+
+# Install pnpm
+RUN npm install -g pnpm
+
+# Copy package.json from frontend directory
+COPY frontend/package.json ./
+
+# Copy lock file if exists
+COPY frontend/pnpm-lock.yaml* ./
+
+# Install dependencies (without prepare script to avoid panda.config.ts error)
+RUN pnpm install --ignore-scripts
+
+# Copy application code from frontend directory (includes panda.config.ts)
+COPY frontend/ .
+
+# Generate Panda CSS after all files are copied
+RUN pnpm prepare
+
+# Run development server with HMR
+CMD ["pnpm", "dev", "--host", "0.0.0.0"]
