@@ -9,6 +9,7 @@ import ScenarioList from '@/views/ScenarioList.vue'
 import ScenarioCreate from '@/views/ScenarioCreate.vue'
 import ConversationChat from '@/views/ConversationChat.vue'
 import Profile from '@/views/Profile.vue'
+import Health from '@/views/Health.vue'
 import NotFound from '@/views/NotFound.vue'
 
 const routes: RouteRecordRaw[] = [
@@ -53,6 +54,12 @@ const routes: RouteRecordRaw[] = [
     name: 'Profile',
     component: Profile,
     meta: { requiresAuth: true },
+  },
+  {
+    path: '/health',
+    name: 'Health',
+    component: Health,
+    meta: { requiresAuth: false },
   },
   {
     path: '/404',
