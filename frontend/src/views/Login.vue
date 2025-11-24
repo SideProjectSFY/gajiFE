@@ -134,11 +134,19 @@ async function handleLogin(): Promise<void> {
 <template>
   <div :class="styles.container">
     <div :class="styles.card">
-      <h1 :class="styles.heading">로그인</h1>
+      <h1 :class="styles.heading">
+        로그인
+      </h1>
 
-      <form @submit.prevent="handleLogin" :class="styles.form">
+      <form
+        :class="styles.form"
+        @submit.prevent="handleLogin"
+      >
         <div :class="styles.formGroup">
-          <label for="email" :class="styles.label">이메일</label>
+          <label
+            for="email"
+            :class="styles.label"
+          >이메일</label>
           <input
             id="email"
             v-model="email"
@@ -146,11 +154,14 @@ async function handleLogin(): Promise<void> {
             required
             :class="styles.input"
             placeholder="your@email.com"
-          />
+          >
         </div>
 
         <div :class="styles.formGroup">
-          <label for="password" :class="styles.label">비밀번호</label>
+          <label
+            for="password"
+            :class="styles.label"
+          >비밀번호</label>
           <input
             id="password"
             v-model="password"
@@ -158,21 +169,33 @@ async function handleLogin(): Promise<void> {
             required
             :class="styles.input"
             placeholder="••••••••"
-          />
+          >
         </div>
 
-        <div v-if="error" :class="styles.errorMessage">
+        <div
+          v-if="error"
+          :class="styles.errorMessage"
+        >
           {{ error }}
         </div>
 
-        <button type="submit" :disabled="loading" :class="styles.submitButton">
+        <button
+          type="submit"
+          :disabled="loading"
+          :class="styles.submitButton"
+        >
           {{ buttonText }}
         </button>
       </form>
 
       <p :class="styles.linkText">
         계정이 없으신가요?
-        <router-link to="/register" :class="styles.link">회원가입</router-link>
+        <router-link
+          to="/register"
+          :class="styles.link"
+        >
+          회원가입
+        </router-link>
       </p>
     </div>
   </div>
