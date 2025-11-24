@@ -43,9 +43,18 @@ const styles = {
 <template>
   <div :class="styles.container">
     <div :class="styles.card">
-      <h1 :class="styles.heading">회원가입</h1>
-      <p :class="styles.description">준비 중입니다.</p>
-      <router-link to="/login" :class="styles.link">로그인으로 돌아가기</router-link>
+      <h1 :class="styles.heading">
+        회원가입
+      </h1>
+      <p :class="styles.description">
+        준비 중입니다.
+      </p>
+      <router-link
+        to="/login"
+        :class="styles.link"
+      >
+        로그인으로 돌아가기
+      </router-link>
     </div>
   </div>
 </template>
