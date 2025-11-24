@@ -10,7 +10,7 @@
  * - Environment
  */
 import { ref, onMounted } from 'vue'
-import { css } from '@/styled-system/css'
+import { css } from 'styled-system/css'
 import api from '@/services/api'
 
 interface HealthStatus {
@@ -103,11 +103,17 @@ onMounted(() => {
       Frontend Health Check
     </h1>
 
-    <div v-if="isLoading" :class="css({ textAlign: 'center', py: '8' })">
+    <div
+      v-if="isLoading"
+      :class="css({ textAlign: 'center', py: '8' })"
+    >
       Loading...
     </div>
 
-    <div v-else-if="healthStatus" :class="cardStyles">
+    <div
+      v-else-if="healthStatus"
+      :class="cardStyles"
+    >
       <div :class="css({ mb: '4' })">
         <span :class="css({ fontWeight: 'bold', mr: '2' })">Status:</span>
         <span :class="statusBadge(healthStatus.status)">
@@ -115,16 +121,20 @@ onMounted(() => {
         </span>
       </div>
 
-      <hr :class="css({ my: '4', borderColor: 'gray.200' })" />
+      <hr :class="css({ my: '4', borderColor: 'gray.200' })">
 
-      <h2 :class="css({ fontWeight: 'bold', mb: '2' })">Frontend</h2>
+      <h2 :class="css({ fontWeight: 'bold', mb: '2' })">
+        Frontend
+      </h2>
       <ul :class="css({ mb: '4', ml: '4' })">
         <li>Version: {{ healthStatus.frontend.version }}</li>
         <li>Environment: {{ healthStatus.frontend.environment }}</li>
         <li>Timestamp: {{ healthStatus.frontend.timestamp }}</li>
       </ul>
 
-      <h2 :class="css({ fontWeight: 'bold', mb: '2' })">Backend Connectivity</h2>
+      <h2 :class="css({ fontWeight: 'bold', mb: '2' })">
+        Backend Connectivity
+      </h2>
       <ul :class="css({ ml: '4' })">
         <li>
           Status:
