@@ -73,8 +73,12 @@ const styles = {
 <template>
   <div :class="styles.container">
     <header :class="styles.header">
-      <h1 :class="styles.title">Gaji</h1>
-      <p :class="styles.subtitle">AI 시나리오 대화 플랫폼</p>
+      <h1 :class="styles.title">
+        Gaji
+      </h1>
+      <p :class="styles.subtitle">
+        AI 시나리오 대화 플랫폼
+      </p>
     </header>
 
     <main :class="styles.main">
@@ -82,10 +86,18 @@ const styles = {
         <h2>당신만의 이야기를 만들어보세요</h2>
         <p>AI와 함께 다양한 시나리오를 탐험하고, 새로운 대화를 경험하세요.</p>
         <div :class="styles.buttonGroup">
-          <router-link to="/scenarios" :class="styles.primaryButton">
+          <router-link
+            to="/scenarios"
+            :class="styles.primaryButton"
+          >
             시나리오 둘러보기
           </router-link>
-          <router-link to="/login" :class="styles.secondaryButton"> 시작하기 </router-link>
+          <router-link
+            to="/login"
+            :class="styles.secondaryButton"
+          >
+            시작하기
+          </router-link>
         </div>
       </div>
     </main>
