@@ -11,6 +11,7 @@ import ConversationChat from '@/views/ConversationChat.vue'
 import Profile from '@/views/Profile.vue'
 import Health from '@/views/Health.vue'
 import NotFound from '@/views/NotFound.vue'
+import BookDetail from '@/views/BookDetail.vue'
 
 const routes: RouteRecordRaw[] = [
   {
@@ -29,6 +30,18 @@ const routes: RouteRecordRaw[] = [
     path: '/register',
     name: 'Register',
     component: Register,
+    meta: { requiresAuth: false },
+  },
+  {
+    path: '/books/:id',
+    name: 'BookDetail',
+    component: BookDetail,
+    meta: { requiresAuth: false },
+  },
+  {
+    path: '/books/:bookId/scenarios/:scenarioId',
+    name: 'ScenarioDetail',
+    component: ScenarioCreate, // Placeholder - will be replaced with ScenarioDetail view
     meta: { requiresAuth: false },
   },
   {
