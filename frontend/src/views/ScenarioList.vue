@@ -21,7 +21,11 @@ const styles = {
 
 <template>
   <div :class="styles.container">
-    <h1 :class="styles.heading">시나리오 목록</h1>
-    <p :class="styles.description">준비 중입니다.</p>
+    <h1 :class="styles.heading">
+      시나리오 목록
+    </h1>
+    <p :class="styles.description">
+      준비 중입니다.
+    </p>
   </div>
 </template>
