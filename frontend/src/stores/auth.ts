@@ -1,55 +1,114 @@
 import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
+import api from '@/services/api'
 
-export const useAuthStore = defineStore('auth', () => {
-  // State
-  const accessToken = ref<string | null>(localStorage.getItem('accessToken'))
-  const refreshToken = ref<string | null>(localStorage.getItem('refreshToken'))
+interface User {
+  id: string
+  username: string
+  email: string
+}
 
-  // Getters
-  const isAuthenticated = computed(() => !!accessToken.value)
+interface AuthState {
+  user: User | null
+  accessToken: string | null
+  refreshToken: string | null
+}
 
-  // Actions
-  function setTokens(access: string, refresh: string): void {
-    accessToken.value = access
-    refreshToken.value = refresh
-    localStorage.setItem('accessToken', access)
-    localStorage.setItem('refreshToken', refresh)
-  }
+interface AuthResponse {
+  user: User
+  accessToken: string
+  refreshToken: string
+}
 
-  function clearTokens(): void {
-    accessToken.value = null
-    refreshToken.value = null
-    localStorage.removeItem('accessToken')
-    localStorage.removeItem('refreshToken')
-  }
+interface AuthResult {
+  success: boolean
+  message?: string
+}
 
-  async function refreshAccessToken(): Promise<boolean> {
-    if (!refreshToken.value) {
-      return false
-    }
+export const useAuthStore = defineStore('auth', {
+  state: (): AuthState => ({
+    user: null,
+    accessToken: null,
+    refreshToken: null,
+  }),
 
-    try {
-      // This will be implemented when we integrate with the backend
-      // For now, just return false
-      return false
-    } catch (error) {
-      clearTokens()
-      return false
-    }
-  }
+  getters: {
+    isAuthenticated: (state): boolean => !!state.accessToken,
+    currentUser: (state): User | null => state.user,
+  },
 
-  function logout(): void {
-    clearTokens()
-  }
+  actions: {
+    async register(username: string, email: string, password: string): Promise<AuthResult> {
+      try {
+        const response = await api.post<AuthResponse>('/auth/register', {
+          username,
+          email,
+          password,
+        })
 
-  return {
-    accessToken,
-    refreshToken,
-    isAuthenticated,
-    setTokens,
-    clearTokens,
-    refreshAccessToken,
-    logout,
-  }
+        this.user = response.data.user
+        this.accessToken = response.data.accessToken
+        this.refreshToken = response.data.refreshToken
+
+        return { success: true }
+      } catch (error: any) {
+        return {
+          success: false,
+          message: error.response?.data?.message || 'Registration failed',
+        }
+      }
+    },
+
+    async login(email: string, password: string, rememberMe: boolean = false): Promise<AuthResult> {
+      try {
+        const response = await api.post<AuthResponse>('/auth/login', {
+          email,
+          password,
+          rememberMe,
+        })
+
+        this.user = response.data.user
+        this.accessToken = response.data.accessToken
+        this.refreshToken = response.data.refreshToken
+
+        return { success: true }
+      } catch (error: any) {
+        return {
+          success: false,
+          message: error.response?.data?.message || 'Login failed',
+        }
+      }
+    },
+
+    async refreshAccessToken(): Promise<boolean> {
+      if (!this.refreshToken) {
+        return false
+      }
+
+      try {
+        const response = await api.post<{ accessToken: string }>('/auth/refresh', {
+          refreshToken: this.refreshToken,
+        })
+
+        this.accessToken = response.data.accessToken
+        return true
+      } catch (error) {
+        this.logout()
+        return false
+      }
+    },
+
+    async logout(): Promise<void> {
+      try {
+        await api.post('/auth/logout', {
+          refreshToken: this.refreshToken,
+        })
+      } catch (error) {
+        console.error('Logout failed:', error)
+      } finally {
+        this.user = null
+        this.accessToken = null
+        this.refreshToken = null
+      }
+    },
+  },
 })
