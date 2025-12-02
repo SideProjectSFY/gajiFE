@@ -19,6 +19,7 @@
     "@vueuse/core": "^10.7.0",
     "axios": "^1.6.2",
     "date-fns": "^3.0.6",
+    "html2canvas": "^1.4.1",
     "pinia": "^2.1.7",
     "primeicons": "^7.0.0",
     "primevue": "^4.0.0",
@@ -27,6 +28,7 @@
   },
   "devDependencies": {
     "@pandacss/dev": "^0.39.0",
+    "@pinia/testing": "^1.0.3",
     "@playwright/test": "^1.56.1",
     "@typescript-eslint/eslint-plugin": "^6.15.0",
     "@typescript-eslint/parser": "^6.15.0",
