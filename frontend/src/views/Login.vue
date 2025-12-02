@@ -1,50 +1,59 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
-import { useRouter } from 'vue-router'
+import { reactive, ref, computed } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { css } from '../../styled-system/css'
 
 const router = useRouter()
+const route = useRoute()
 const authStore = useAuthStore()
 
-// Reactive state
-const email = ref('')
-const password = ref('')
-const loading = ref(false)
-const error = ref('')
+const form = reactive({
+  email: '',
+  password: '',
+  rememberMe: false,
+})
 
-// Computed properties (truly reactive - depends on loading.value)
-const buttonText = computed(() => (loading.value ? '로그인 중...' : '로그인'))
-const isFormValid = computed(() => email.value && password.value)
+const errors = reactive({
+  email: '',
+  password: '',
+})
 
-// Static style definitions (no computed needed)
+const isLoading = ref(false)
+
+const isFormValid = computed(() => form.email && form.password)
+
 const styles = {
   container: css({
     minHeight: '100vh',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'neutral.100',
+    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
     padding: '2rem',
   }),
   card: css({
     backgroundColor: 'white',
-    borderRadius: 'lg',
-    padding: '2rem',
+    borderRadius: 'xl',
+    padding: '3rem',
     width: '100%',
     maxWidth: '400px',
-    boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)',
+    boxShadow: '0 10px 30px rgba(0, 0, 0, 0.2)',
   }),
   heading: css({
-    fontSize: '2rem',
+    fontSize: '1.75rem',
     fontWeight: 'bold',
-    marginBottom: '1.5rem',
-    textAlign: 'center',
+    marginBottom: '0.5rem',
+  }),
+  subtitle: css({
+    color: 'neutral.600',
+    marginBottom: '2rem',
+    fontSize: '0.875rem',
   }),
   form: css({
     display: 'flex',
     flexDirection: 'column',
-    gap: '1rem',
+    gap: '1.5rem',
   }),
   formGroup: css({
     display: 'flex',
@@ -53,7 +62,7 @@ const styles = {
   }),
   label: css({
     fontSize: '0.875rem',
-    fontWeight: '600',
+    fontWeight: '500',
     color: 'neutral.700',
   }),
   input: css({
@@ -61,22 +70,26 @@ const styles = {
     border: '1px solid',
     borderColor: 'neutral.300',
     borderRadius: 'md',
-    fontSize: '1rem',
+    fontSize: '0.875rem',
     '&:focus': {
       outline: 'none',
       borderColor: 'primary.500',
-      boxShadow: '0 0 0 3px rgba(14, 165, 233, 0.1)',
     },
   }),
-  errorMessage: css({
-    padding: '0.75rem',
-    backgroundColor: 'error',
-    color: 'white',
-    borderRadius: 'md',
-    fontSize: '0.875rem',
-    opacity: 0.9,
+  inputError: css({
+    borderColor: 'red.500 !important',
   }),
-  submitButton: css({
+  errorMessage: css({
+    color: 'red.500',
+    fontSize: '0.75rem',
+    marginTop: '0.25rem',
+  }),
+  checkbox: css({
+    display: 'flex',
+    alignItems: 'center',
+    gap: '0.5rem',
+  }),
+  button: css({
     padding: '0.75rem',
     backgroundColor: 'primary.600',
     color: 'white',
@@ -85,8 +98,8 @@ const styles = {
     fontSize: '1rem',
     fontWeight: '600',
     cursor: 'pointer',
-    transition: 'all 0.2s',
-    '&:hover': {
+    transition: 'background 0.2s',
+    '&:hover:not(:disabled)': {
       backgroundColor: 'primary.700',
     },
     '&:disabled': {
@@ -94,9 +107,9 @@ const styles = {
       cursor: 'not-allowed',
     },
   }),
-  linkText: css({
-    marginTop: '1.5rem',
+  footer: css({
     textAlign: 'center',
+    marginTop: '1.5rem',
     fontSize: '0.875rem',
     color: 'neutral.600',
   }),
@@ -110,23 +123,38 @@ const styles = {
   }),
 }
 
-async function handleLogin(): Promise<void> {
-  loading.value = true
-  error.value = ''
+const validateForm = (): boolean => {
+  errors.email = ''
+  errors.password = ''
 
-  try {
-    // This will be implemented when we integrate with the backend
-    // For now, just simulate a successful login
-    await new Promise((resolve) => setTimeout(resolve, 1000))
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  if (!emailRegex.test(form.email)) {
+    errors.email = 'Invalid email format'
+    return false
+  }
 
-    // Mock tokens
-    authStore.setTokens('mock-access-token', 'mock-refresh-token')
+  if (form.password.length < 8) {
+    errors.password = 'Password must be at least 8 characters'
+    return false
+  }
 
-    router.push('/')
-  } catch (err) {
-    error.value = err instanceof Error ? err.message : 'Login failed'
-  } finally {
-    loading.value = false
+  return true
+}
+
+const handleLogin = async () => {
+  if (!validateForm()) return
+
+  isLoading.value = true
+
+  const result = await authStore.login(form.email, form.password, form.rememberMe)
+
+  isLoading.value = false
+
+  if (result.success) {
+    const redirect = (route.query.redirect as string) || '/'
+    router.push(redirect)
+  } else {
+    errors.password = result.message || 'Login failed'
   }
 }
 </script>
@@ -135,8 +163,11 @@ async function handleLogin(): Promise<void> {
   <div :class="styles.container">
     <div :class="styles.card">
       <h1 :class="styles.heading">
-        로그인
+        Welcome Back
       </h1>
+      <p :class="styles.subtitle">
+        Log in to continue your "What If" adventures
+      </p>
 
       <form
         :class="styles.form"
@@ -146,55 +177,72 @@ async function handleLogin(): Promise<void> {
           <label
             for="email"
             :class="styles.label"
-          >이메일</label>
+          >Email</label>
           <input
             id="email"
-            v-model="email"
+            v-model="form.email"
             type="email"
-            required
-            :class="styles.input"
             placeholder="your@email.com"
+            required
+            :class="[styles.input, errors.email && styles.inputError]"
           >
+          <span
+            v-if="errors.email"
+            :class="styles.errorMessage"
+          >
+            {{ errors.email }}
+          </span>
         </div>
 
         <div :class="styles.formGroup">
           <label
             for="password"
             :class="styles.label"
-          >비밀번호</label>
+          >Password</label>
           <input
             id="password"
-            v-model="password"
+            v-model="form.password"
             type="password"
-            required
-            :class="styles.input"
             placeholder="••••••••"
+            required
+            :class="[styles.input, errors.password && styles.inputError]"
           >
+          <span
+            v-if="errors.password"
+            :class="styles.errorMessage"
+          >
+            {{ errors.password }}
+          </span>
         </div>
 
-        <div
-          v-if="error"
-          :class="styles.errorMessage"
-        >
-          {{ error }}
+        <div :class="styles.checkbox">
+          <input
+            id="remember"
+            v-model="form.rememberMe"
+            type="checkbox"
+          >
+          <label
+            for="remember"
+            :class="styles.label"
+          > Remember me </label>
         </div>
 
         <button
           type="submit"
-          :disabled="loading"
-          :class="styles.submitButton"
+          :disabled="isLoading || !isFormValid"
+          :class="styles.button"
         >
-          {{ buttonText }}
+          {{ isLoading ? 'Logging in...' : 'Log In' }}
         </button>
       </form>
 
-      <p :class="styles.linkText">
-        계정이 없으신가요?
+      <p :class="styles.footer">
+        Don't have an account?
         <router-link
           to="/register"
           :class="styles.link"
         >
-          회원가입
+          Sign up
         </router-link>
       </p>
     </div>
