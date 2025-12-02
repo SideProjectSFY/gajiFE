@@ -14,7 +14,7 @@ export interface Scenario {
   settingModifications?: string | null
   characters: string[]
   tags: string[]
-  isPublic: boolean
+  isPrivate: boolean
   createdAt: string
   updatedAt: string
 }
@@ -88,7 +88,7 @@ export const useScenarioStore = defineStore('scenario', () => {
       settingModifications: response.setting_modifications,
       characters: [],
       tags: [],
-      isPublic: false,
+      isPrivate: false,
       createdAt: response.created_at,
       updatedAt: response.updated_at,
     }
