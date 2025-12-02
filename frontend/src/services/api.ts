@@ -8,7 +8,7 @@ import { useAuthStore } from '@/stores/auth'
 
 // Create axios instance
 const api: AxiosInstance = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api/v1',
+  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api',
   timeout: 60000, // 60s for AI operations
   headers: {
     'Content-Type': 'application/json',
@@ -29,7 +29,7 @@ api.interceptors.request.use(
   }
 )
 
-// Response interceptor - Handle errors and token refresh
+// Response interceptor - Handle 401 and token refresh
 api.interceptors.response.use(
   (response: AxiosResponse) => {
     return response
@@ -48,9 +48,13 @@ api.interceptors.response.use(
         originalRequest.headers.Authorization = `Bearer ${authStore.accessToken}`
         return api(originalRequest)
       } else {
-        // Refresh failed, logout user
+        // Refresh failed, logout and redirect
         authStore.logout()
-        window.location.href = '/login'
+
+        // Only redirect if not already on login page
+        if (window.location.pathname !== '/login') {
+          window.location.href = '/login'
+        }
       }
     }
 

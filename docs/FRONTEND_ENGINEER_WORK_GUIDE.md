@@ -691,33 +691,18 @@ import Message from "primevue/message";
 
 interface Props {
   validationResult: {
-    quality_score: number;
     issues: string[];
     suggestions: string[];
   };
 }
 
 const props = defineProps<Props>();
-
-const scoreColor = computed(() => {
-  if (props.validationResult.quality_score >= 80) return "success";
-  if (props.validationResult.quality_score >= 60) return "warning";
-  return "danger";
-});
 </script>
 
 <template>
   <Card>
     <template #title>Validation Result</template>
     <template #content>
-      <div>
-        <label>Quality Score</label>
-        <ProgressBar
-          :value="validationResult.quality_score"
-          :severity="scoreColor"
-        />
-      </div>
-
       <div v-if="validationResult.issues.length > 0">
         <h3>Issues</h3>
         <Message

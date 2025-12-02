@@ -1,5 +1,11 @@
 import api from './api'
-import type { CreateScenarioRequest, CreateScenarioResponse } from '@/types'
+import type {
+  CreateScenarioRequest,
+  CreateScenarioResponse,
+  ScenarioSearchFilters,
+  ScenarioSearchResponse,
+  ScenarioTreeResponse,
+} from '@/types'
 
 /**
  * Scenario API service for handling scenario-related API calls
@@ -38,6 +44,42 @@ export const scenarioApi = {
    */
   async deleteScenario(scenarioId: string): Promise<void> {
     await api.delete(`/scenarios/${scenarioId}`)
+  },
+
+  /**
+   * Advanced search with filters
+   * GET /api/v1/scenarios/search
+   * Story 3.6: Scenario Search & Advanced Filtering
+   */
+  async searchScenarios(filters: ScenarioSearchFilters): Promise<ScenarioSearchResponse> {
+    const params = new URLSearchParams()
+
+    if (filters.query) params.append('query', filters.query)
+    if (filters.category) params.append('category', filters.category)
+    if (filters.creatorId) params.append('creatorId', filters.creatorId)
+    if (filters.minQualityScore !== undefined)
+      params.append('minQualityScore', filters.minQualityScore.toString())
+    if (filters.page !== undefined) params.append('page', filters.page.toString())
+    if (filters.size !== undefined) params.append('size', filters.size.toString())
+    if (filters.sort) params.append('sort', filters.sort)
+
+    const response = await api.get<ScenarioSearchResponse>(`/scenarios/search?${params}`)
+    return response.data
+  },
+
+  /**
+   * Get scenario tree (fork structure)
+   * GET /api/v1/scenarios/:id/tree
+   * Story 5.2: Scenario Tree Visualization
+   */
+  async getScenarioTree(scenarioId: string): Promise<ScenarioTreeResponse> {
+    // Check for mock API in test/development mode
+    if (typeof window !== 'undefined' && (window as any).mockScenarioTreeAPI) {
+      return (window as any).mockScenarioTreeAPI(scenarioId)
+    }
+
+    const response = await api.get<ScenarioTreeResponse>(`/scenarios/${scenarioId}/tree`)
+    return response.data
   },
 }
 
