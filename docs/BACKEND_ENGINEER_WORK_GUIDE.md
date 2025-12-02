@@ -232,8 +232,7 @@ CREATE TABLE scenarios (
     scenario_data JSONB NOT NULL,
 
     -- Meta
-    quality_score INT DEFAULT 0,
-    is_public BOOLEAN DEFAULT false,
+    is_private BOOLEAN DEFAULT false,
     view_count INT DEFAULT 0,
     fork_count INT DEFAULT 0,
 
@@ -284,7 +283,6 @@ CREATE TABLE scenario_validations (
     id BIGSERIAL PRIMARY KEY,
     scenario_id BIGINT NOT NULL REFERENCES scenarios(id),
 
-    quality_score INT NOT NULL,
     issues JSONB,
     suggestions JSONB,
 
@@ -709,8 +707,7 @@ public class Scenario {
     @JsonRawValue
     private String scenarioData; // JSONB
 
-    private Integer qualityScore;
-    private Boolean isPublic;
+    private Boolean isPrivate;
     private Integer viewCount;
     private Integer forkCount;
 
@@ -765,10 +762,6 @@ public interface ScenarioMapper {
             "VALUES (#{novelId}, #{title}, #{description}, #{scenarioType}, #{scenarioData}::jsonb)")
     @Options(useGeneratedKeys = true, keyProperty = "id")
     void insert(Scenario scenario);
-
-    @Update("UPDATE scenarios SET quality_score = #{qualityScore}, " +
-            "updated_at = CURRENT_TIMESTAMP WHERE id = #{id}")
-    void updateQualityScore(Long id, Integer qualityScore);
 }
 
 // config/JsonTypeHandler.java
