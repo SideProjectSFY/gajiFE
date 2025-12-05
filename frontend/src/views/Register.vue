@@ -2,9 +2,11 @@
 import { reactive, ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { useAnalytics } from '@/composables/useAnalytics'
 
 const router = useRouter()
 const authStore = useAuthStore()
+const { trackSignUp } = useAnalytics()
 
 const form = reactive({
   username: '',
@@ -59,6 +61,7 @@ const handleRegister = async () => {
   isLoading.value = false
 
   if (result.success) {
+    trackSignUp('email')
     router.push('/')
   } else {
     errors.email = result.message || 'Registration failed'

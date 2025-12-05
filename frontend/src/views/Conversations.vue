@@ -489,10 +489,12 @@ const filteredCharacters = computed(() => {
           inset: 0,
           bg: 'rgba(0, 0, 0, 0.5)',
           display: 'flex',
-          alignItems: 'center',
+          alignItems: 'flex-start',
           justifyContent: 'center',
           zIndex: 50,
           px: '4',
+          pt: '24',
+          overflowY: 'auto',
         })
       "
       @click="closeForkModal"
@@ -502,21 +504,20 @@ const filteredCharacters = computed(() => {
           css({
             bg: 'white',
             borderRadius: '1rem',
-            p: '6',
-            maxW: '2xl',
+            p: '5',
+            maxW: 'xl',
             w: 'full',
-            maxH: '90vh',
-            overflowY: 'auto',
+            overflowY: 'hidden',
           })
         "
         @click.stop
       >
         <!-- Modal Header -->
-        <div :class="css({ mb: '6' })">
+        <div :class="css({ mb: '5' })">
           <h2
             :class="
               css({
-                fontSize: '1.5rem',
+                fontSize: '1.375rem',
                 fontWeight: 'bold',
                 color: 'gray.900',
                 mb: '2',
@@ -537,8 +538,8 @@ const filteredCharacters = computed(() => {
             css({
               bg: 'gray.50',
               borderRadius: '0.5rem',
-              p: '4',
-              mb: '6',
+              p: '3',
+              mb: '4',
             })
           "
         >
@@ -574,14 +575,14 @@ const filteredCharacters = computed(() => {
         </div>
 
         <!-- Fork Changes -->
-        <div :class="css({ mb: '6' })">
+        <div :class="css({ mb: '5' })">
           <h3
             :class="
               css({
-                fontSize: '1.125rem',
+                fontSize: '1rem',
                 fontWeight: '600',
                 color: 'gray.900',
-                mb: '4',
+                mb: '3',
               })
             "
           >
@@ -596,12 +597,14 @@ const filteredCharacters = computed(() => {
                 border: '1px solid',
                 borderColor: 'gray.200',
                 borderRadius: '0.5rem',
-                p: '4',
+                p: '3',
                 mb: '3',
               })
             "
           >
-            <h4 :class="css({ fontSize: '1rem', fontWeight: '600', color: 'gray.900', mb: '3' })">
+            <h4
+              :class="css({ fontSize: '0.9375rem', fontWeight: '600', color: 'gray.900', mb: '2' })"
+            >
               Character Property
             </h4>
             <textarea
@@ -614,7 +617,7 @@ const filteredCharacters = computed(() => {
                   borderColor: 'gray.300',
                   borderRadius: '0.5rem',
                   fontSize: '0.875rem',
-                  minH: '20',
+                  minH: '16',
                   outline: 'none',
                   _focus: {
                     borderColor: 'green.500',
@@ -703,13 +706,13 @@ const filteredCharacters = computed(() => {
         </div>
 
         <!-- Description -->
-        <div :class="css({ mb: '6' })">
+        <div :class="css({ mb: '5' })">
           <label
             for="fork-description"
             :class="
               css({
                 display: 'block',
-                fontSize: '0.875rem',
+                fontSize: '0.8125rem',
                 fontWeight: '500',
                 color: 'gray.700',
                 mb: '2',
@@ -729,7 +732,7 @@ const filteredCharacters = computed(() => {
                 borderColor: 'gray.300',
                 borderRadius: '0.5rem',
                 fontSize: '0.875rem',
-                minH: '24',
+                minH: '20',
                 outline: 'none',
                 _focus: {
                   borderColor: 'green.500',

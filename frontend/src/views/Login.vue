@@ -2,10 +2,12 @@
 import { reactive, ref, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { useAnalytics } from '@/composables/useAnalytics'
 
 const router = useRouter()
 const route = useRoute()
 const authStore = useAuthStore()
+const { trackLogin } = useAnalytics()
 
 const form = reactive({
   email: '',
@@ -47,6 +49,7 @@ const handleLogin = async () => {
   isLoading.value = false
 
   if (result.success) {
+    trackLogin('email')
     const redirect = (route.query.redirect as string) || '/'
     router.push(redirect)
   } else {

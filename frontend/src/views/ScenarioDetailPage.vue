@@ -1,27 +1,16 @@
 <template>
   <div :class="css(pageContainer)">
     <!-- Loading State -->
-    <div
-      v-if="isLoading"
-      :class="css({ textAlign: 'center', py: '12' })"
-    >
-      <div :class="css({ fontSize: '1.5rem', color: 'gray.400' })">
-        Loading...
-      </div>
+    <div v-if="isLoading" :class="css({ textAlign: 'center', py: '12' })">
+      <div :class="css({ fontSize: '1.5rem', color: 'gray.400' })">Loading...</div>
     </div>
 
     <!-- Error State -->
-    <div
-      v-else-if="error"
-      :class="css({ textAlign: 'center', py: '12' })"
-    >
+    <div v-else-if="error" :class="css({ textAlign: 'center', py: '12' })">
       <div :class="css({ fontSize: '1.25rem', color: 'red.600', mb: '4' })">
         {{ error }}
       </div>
-      <button
-        :class="css(backButton)"
-        @click="router.push('/scenarios/browse')"
-      >
+      <button :class="css(backButton)" @click="router.push('/scenarios/browse')">
         ← Back to Browse
       </button>
     </div>
@@ -30,10 +19,7 @@
     <div v-else-if="scenario">
       <!-- Header -->
       <div :class="css(headerSection)">
-        <button
-          :class="css(backButton)"
-          @click="router.push('/scenarios/browse')"
-        >
+        <button :class="css(backButton)" @click="router.push('/scenarios/browse')">
           ← Back to Browse
         </button>
 
@@ -44,10 +30,7 @@
           <span :class="css(scenarioTypeBadge)">
             {{ scenarioTypeLabel }}
           </span>
-          <span
-            v-if="scenario.parent_scenario_id"
-            :class="css(forkedBadge)"
-          > 🍴 Forked </span>
+          <span v-if="scenario.parent_scenario_id" :class="css(forkedBadge)"> 🍴 Forked </span>
         </div>
 
         <h1
@@ -97,10 +80,7 @@
           >
             🍴 Fork This Scenario
           </button>
-          <button
-            :class="css(secondaryButton)"
-            @click="handleStartConversation"
-          >
+          <button :class="css(secondaryButton)" @click="handleStartConversation">
             💬 Start Conversation
           </button>
         </div>
@@ -112,9 +92,7 @@
         <TabPanel header="Details">
           <!-- Parameters Section -->
           <div :class="css(parametersSection)">
-            <h2 :class="css(sectionTitle)">
-              Scenario Parameters
-            </h2>
+            <h2 :class="css(sectionTitle)">Scenario Parameters</h2>
             <div :class="css(parameterGrid)">
               <div
                 v-for="(value, key) in scenario.parameters"
@@ -130,13 +108,8 @@
           </div>
 
           <!-- Fork Lineage (if forked) -->
-          <div
-            v-if="scenario.parent_scenario_id"
-            :class="css(lineageSection)"
-          >
-            <h2 :class="css(sectionTitle)">
-              Fork Lineage
-            </h2>
+          <div v-if="scenario.parent_scenario_id" :class="css(lineageSection)">
+            <h2 :class="css(sectionTitle)">Fork Lineage</h2>
             <div
               :class="
                 css({
@@ -164,9 +137,7 @@
 
           <!-- Creator Info -->
           <div :class="css(creatorSection)">
-            <h2 :class="css(sectionTitle)">
-              Created By
-            </h2>
+            <h2 :class="css(sectionTitle)">Created By</h2>
             <div :class="css({ display: 'flex', alignItems: 'center', gap: '3' })">
               <div :class="css(avatar)">
                 {{ scenario.user_id.charAt(0).toUpperCase() }}
@@ -184,14 +155,8 @@
         </TabPanel>
 
         <!-- Fork History Tab (only for root scenarios) -->
-        <TabPanel
-          v-if="!scenario.parent_scenario_id"
-          header="Fork History"
-        >
-          <ScenarioTreeView
-            :scenario-id="scenarioId"
-            :current-scenario-id="scenarioId"
-          />
+        <TabPanel v-if="!scenario.parent_scenario_id" header="Fork History">
+          <ScenarioTreeView :scenario-id="scenarioId" :current-scenario-id="scenarioId" />
         </TabPanel>
       </TabView>
     </div>
@@ -212,6 +177,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { css } from 'styled-system/css'
 import { useToast } from '@/composables/useToast'
+import { useAnalytics } from '@/composables/useAnalytics'
 import TabView from 'primevue/tabview'
 import TabPanel from 'primevue/tabpanel'
 import ForkScenarioModal from '@/components/scenario/ForkScenarioModal.vue'
@@ -222,6 +188,7 @@ import api from '@/services/api'
 const route = useRoute()
 const router = useRouter()
 const { success } = useToast()
+const { trackScenarioViewed, trackScenarioForked } = useAnalytics()
 const scenarioId = route.params.id as string
 
 const scenario = ref<BrowseScenario | null>(null)
@@ -259,6 +226,9 @@ const fetchScenario = async () => {
   try {
     const response = await api.get(`/scenarios/${scenarioId}`)
     scenario.value = response.data
+
+    // GA4: 시나리오 조회 추적
+    trackScenarioViewed(scenarioId, response.data.book_id)
   } catch (err: any) {
     console.error('Failed to fetch scenario:', err)
     error.value = err.response?.data?.message || 'Failed to load scenario'
@@ -278,6 +248,12 @@ const handleFork = () => {
 
 const handleForked = async (forkedScenario: any) => {
   console.log('Scenario forked successfully!', forkedScenario)
+
+  // GA4: 시나리오 포크 추적
+  trackScenarioForked({
+    originalId: scenarioId,
+    bookId: scenario.value?.book_id,
+  })
 
   // Update the parent scenario's fork count
   if (scenario.value) {

@@ -1,10 +1,14 @@
 <script setup lang="ts">
 import { ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { css } from 'styled-system/css'
 import AppHeader from '../components/common/AppHeader.vue'
 import AppFooter from '../components/common/AppFooter.vue'
 
+const router = useRouter()
+
 const showHotTopics = ref(false)
+const searchQuery = ref('')
 
 const hotTopics = [
   '좋아하는 작가의 새로운 단편 작품 공개',
@@ -17,6 +21,12 @@ const hotTopics = [
 
 const toggleHotTopics = () => {
   showHotTopics.value = !showHotTopics.value
+}
+
+const handleSearch = () => {
+  if (searchQuery.value.trim()) {
+    router.push({ path: '/search', query: { q: searchQuery.value.trim() } })
+  }
 }
 </script>
 
@@ -82,6 +92,7 @@ const toggleHotTopics = () => {
               >🔍</span
             >
             <input
+              v-model="searchQuery"
               :class="
                 css({
                   w: 'full',
@@ -102,6 +113,7 @@ const toggleHotTopics = () => {
               "
               type="text"
               placeholder="Search All of Books"
+              @keyup.enter="handleSearch"
             />
           </div>
         </div>
