@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { useAnalytics } from '@/composables/useAnalytics'
 
 // Views
 import Home from '@/views/Home.vue'
@@ -9,8 +10,6 @@ import BookDetailPage from '@/views/BookDetailPage.vue'
 import Conversations from '@/views/Conversations.vue'
 import Login from '@/views/Login.vue'
 import Register from '@/views/Register.vue'
-import ScenarioList from '@/views/ScenarioList.vue'
-import ScenarioCreate from '@/views/ScenarioCreate.vue'
 import ConversationChat from '@/views/ConversationChat.vue'
 import Profile from '@/views/Profile.vue'
 import ProfileEdit from '@/views/ProfileEdit.vue'
@@ -18,12 +17,11 @@ import Health from '@/views/Health.vue'
 import NotFound from '@/views/NotFound.vue'
 import ScenarioBrowsePage from '@/views/ScenarioBrowsePage.vue'
 import ScenarioDetailPage from '@/views/ScenarioDetailPage.vue'
-import ScenarioSearchPage from '@/views/ScenarioSearchPage.vue'
 import ScenarioTreeTestPage from '@/views/ScenarioTreeTestPage.vue'
 import FollowerList from '@/views/FollowerList.vue'
 import FollowingList from '@/views/FollowingList.vue'
 import LikedConversations from '@/views/LikedConversations.vue'
-import IntegratedSearchPage from '@/views/IntegratedSearchPage.vue'
+import SearchPage from '@/views/SearchPage.vue'
 
 const routes: RouteRecordRaw[] = [
   {
@@ -69,15 +67,9 @@ const routes: RouteRecordRaw[] = [
     meta: { requiresAuth: false },
   },
   {
-    path: '/books/:bookId/scenarios/:scenarioId',
-    name: 'ScenarioDetail',
-    component: ScenarioCreate, // Placeholder - will be replaced with ScenarioDetail view
-    meta: { requiresAuth: false },
-  },
-  {
-    path: '/scenarios',
-    name: 'ScenarioList',
-    component: ScenarioList,
+    path: '/search',
+    name: 'Search',
+    component: SearchPage,
     meta: { requiresAuth: false },
   },
   {
@@ -87,22 +79,10 @@ const routes: RouteRecordRaw[] = [
     meta: { requiresAuth: false },
   },
   {
-    path: '/scenarios/search',
-    name: 'ScenarioSearch',
-    component: ScenarioSearchPage,
-    meta: { requiresAuth: false },
-  },
-  {
     path: '/scenarios/:id',
     name: 'ScenarioDetail',
     component: ScenarioDetailPage,
     meta: { requiresAuth: false },
-  },
-  {
-    path: '/scenarios/create',
-    name: 'ScenarioCreate',
-    component: ScenarioCreate,
-    meta: { requiresAuth: true },
   },
   {
     path: '/conversations/:id',
@@ -179,6 +159,14 @@ router.beforeEach((to, _from, next) => {
   } else {
     next()
   }
+})
+
+// GA4 페이지뷰 추적
+router.afterEach((to) => {
+  const { trackPageView } = useAnalytics()
+  const pageTitle =
+    typeof to.meta.title === 'string' ? to.meta.title : String(to.name || 'Unknown Page')
+  trackPageView(to.fullPath, pageTitle)
 })
 
 export default router
