@@ -8,10 +8,11 @@ import { css } from 'styled-system/css'
       <div
         :class="
           css({
-            display: 'grid',
-            gridTemplateColumns: { base: '1fr', md: 'repeat(4, 1fr)' },
+            display: 'flex',
+            justifyContent: 'center',
             gap: { base: '8', md: '12' },
             mb: '8',
+            flexWrap: 'wrap',
           })
         "
       >
@@ -31,7 +32,7 @@ import { css } from 'styled-system/css'
             "
             >About Gaji</a
           >
-          <a
+          <!--<a
             href="/team"
             :class="
               css({
@@ -44,10 +45,10 @@ import { css } from 'styled-system/css'
               })
             "
             >Our Team</a
-          >
+          >-->
         </div>
 
-        <div :class="css({ display: 'flex', flexDirection: 'column', gap: '4' })">
+        <!--<div :class="css({ display: 'flex', flexDirection: 'column', gap: '4' })">
           <h3 :class="css({ fontSize: '1.125rem', fontWeight: '600', mb: '2' })">Support</h3>
           <a
             href="/help"
@@ -137,7 +138,7 @@ import { css } from 'styled-system/css'
             "
             >Cookie Policy</a
           >
-        </div>
+        </div>-->
 
         <div :class="css({ display: 'flex', flexDirection: 'column', gap: '4' })">
           <h3 :class="css({ fontSize: '1.125rem', fontWeight: '600', mb: '2' })">Connect</h3>
@@ -165,7 +166,7 @@ import { css } from 'styled-system/css'
               </svg>
             </a>
             <a
-              href="https://meeting.ssafy.com/landing#/s14p01a17/messages/@whereismysejong"
+              href="https://discord.com"
               target="_blank"
               rel="noopener noreferrer"
               :class="
