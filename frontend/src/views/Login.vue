@@ -2,7 +2,6 @@
 import { reactive, ref, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
-import { css } from '../../styled-system/css'
 
 const router = useRouter()
 const route = useRoute()
@@ -20,108 +19,7 @@ const errors = reactive({
 })
 
 const isLoading = ref(false)
-
 const isFormValid = computed(() => form.email && form.password)
-
-const styles = {
-  container: css({
-    minHeight: '100vh',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-    padding: '2rem',
-  }),
-  card: css({
-    backgroundColor: 'white',
-    borderRadius: 'xl',
-    padding: '3rem',
-    width: '100%',
-    maxWidth: '400px',
-    boxShadow: '0 10px 30px rgba(0, 0, 0, 0.2)',
-  }),
-  heading: css({
-    fontSize: '1.75rem',
-    fontWeight: 'bold',
-    marginBottom: '0.5rem',
-  }),
-  subtitle: css({
-    color: 'neutral.600',
-    marginBottom: '2rem',
-    fontSize: '0.875rem',
-  }),
-  form: css({
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '1.5rem',
-  }),
-  formGroup: css({
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '0.5rem',
-  }),
-  label: css({
-    fontSize: '0.875rem',
-    fontWeight: '500',
-    color: 'neutral.700',
-  }),
-  input: css({
-    padding: '0.75rem',
-    border: '1px solid',
-    borderColor: 'neutral.300',
-    borderRadius: 'md',
-    fontSize: '0.875rem',
-    '&:focus': {
-      outline: 'none',
-      borderColor: 'primary.500',
-    },
-  }),
-  inputError: css({
-    borderColor: 'red.500 !important',
-  }),
-  errorMessage: css({
-    color: 'red.500',
-    fontSize: '0.75rem',
-    marginTop: '0.25rem',
-  }),
-  checkbox: css({
-    display: 'flex',
-    alignItems: 'center',
-    gap: '0.5rem',
-  }),
-  button: css({
-    padding: '0.75rem',
-    backgroundColor: 'primary.600',
-    color: 'white',
-    border: 'none',
-    borderRadius: 'md',
-    fontSize: '1rem',
-    fontWeight: '600',
-    cursor: 'pointer',
-    transition: 'background 0.2s',
-    '&:hover:not(:disabled)': {
-      backgroundColor: 'primary.700',
-    },
-    '&:disabled': {
-      opacity: 0.6,
-      cursor: 'not-allowed',
-    },
-  }),
-  footer: css({
-    textAlign: 'center',
-    marginTop: '1.5rem',
-    fontSize: '0.875rem',
-    color: 'neutral.600',
-  }),
-  link: css({
-    color: 'primary.600',
-    textDecoration: 'none',
-    fontWeight: '600',
-    '&:hover': {
-      textDecoration: 'underline',
-    },
-  }),
-}
 
 const validateForm = (): boolean => {
   errors.email = ''
@@ -145,9 +43,7 @@ const handleLogin = async () => {
   if (!validateForm()) return
 
   isLoading.value = true
-
   const result = await authStore.login(form.email, form.password, form.rememberMe)
-
   isLoading.value = false
 
   if (result.success) {
@@ -160,91 +56,195 @@ const handleLogin = async () => {
 </script>
 
 <template>
-  <div :class="styles.container">
-    <div :class="styles.card">
-      <h1 :class="styles.heading">
-        Welcome Back
-      </h1>
-      <p :class="styles.subtitle">
-        Log in to continue your "What If" adventures
-      </p>
+  <div style="min-height: 100vh; display: flex; background-color: white">
+    <!-- Left Section: Brand Area -->
+    <div
+      style="
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg, #4a5568 0%, #2d3748 100%);
+        padding: 3rem;
+      "
+    >
+      <div style="text-align: center; color: white">
+        <div style="font-size: 2rem; font-weight: bold; margin-bottom: 1rem">
+          Every story has infinite branches to explore
+        </div>
+        <div style="font-size: 1rem; opacity: 0.9; font-style: italic">
+          Discover endless possibilities
+        </div>
+      </div>
+    </div>
 
-      <form
-        :class="styles.form"
-        @submit.prevent="handleLogin"
-      >
-        <div :class="styles.formGroup">
-          <label
-            for="email"
-            :class="styles.label"
-          >Email</label>
-          <input
-            id="email"
-            v-model="form.email"
-            type="email"
-            placeholder="your@email.com"
-            required
-            :class="[styles.input, errors.email && styles.inputError]"
+    <!-- Right Section: Login Form -->
+    <div
+      style="
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 3rem;
+        background-color: #f9fafb;
+      "
+    >
+      <div style="width: 100%; max-width: 420px">
+        <!-- Logo -->
+        <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 2rem">
+          <span style="font-size: 1.5rem">🌿</span>
+          <span style="font-size: 1.25rem; font-weight: bold; color: #1f2937">Gaji</span>
+        </div>
+
+        <h1 style="font-size: 1.75rem; font-weight: bold; margin-bottom: 0.5rem; color: #111827">
+          Continue exploring story branches
+        </h1>
+        <p style="color: #6b7280; margin-bottom: 2rem; font-size: 0.875rem">Email or Username</p>
+
+        <form
+          @submit.prevent="handleLogin"
+          style="display: flex; flex-direction: column; gap: 1.25rem"
+        >
+          <!-- Email Input -->
+          <div>
+            <label
+              for="email"
+              style="
+                font-size: 0.875rem;
+                font-weight: 500;
+                color: #374151;
+                display: block;
+                margin-bottom: 0.5rem;
+              "
+            >
+              Email or Username
+            </label>
+            <input
+              id="email"
+              v-model="form.email"
+              type="text"
+              placeholder="Enter your email or username"
+              required
+              data-testid="email-input"
+              :style="{
+                width: '100%',
+                padding: '0.75rem',
+                border: errors.email ? '2px solid #ef4444' : '1px solid #d1d5db',
+                borderRadius: '0.375rem',
+                fontSize: '0.875rem',
+                outline: 'none',
+              }"
+            />
+            <span
+              v-if="errors.email"
+              style="color: #ef4444; font-size: 0.75rem; display: block; margin-top: 0.25rem"
+            >
+              {{ errors.email }}
+            </span>
+          </div>
+
+          <!-- Password Input -->
+          <div>
+            <label
+              for="password"
+              style="
+                font-size: 0.875rem;
+                font-weight: 500;
+                color: #374151;
+                display: block;
+                margin-bottom: 0.5rem;
+              "
+            >
+              Password
+            </label>
+            <input
+              id="password"
+              v-model="form.password"
+              type="password"
+              placeholder="Enter your password"
+              required
+              data-testid="password-input"
+              :style="{
+                width: '100%',
+                padding: '0.75rem',
+                border: errors.password ? '2px solid #ef4444' : '1px solid #d1d5db',
+                borderRadius: '0.375rem',
+                fontSize: '0.875rem',
+                outline: 'none',
+              }"
+            />
+            <span
+              v-if="errors.password"
+              style="color: #ef4444; font-size: 0.75rem; display: block; margin-top: 0.25rem"
+            >
+              {{ errors.password }}
+            </span>
+          </div>
+
+          <!-- Remember Me -->
+          <div style="display: flex; align-items: center; gap: 0.5rem">
+            <input id="remember" v-model="form.rememberMe" type="checkbox" />
+            <label for="remember" style="font-size: 0.875rem; color: #374151">Remember me</label>
+          </div>
+
+          <!-- Submit Button -->
+          <button
+            type="submit"
+            :disabled="isLoading || !isFormValid"
+            data-testid="login-button"
+            :style="{
+              width: '100%',
+              padding: '0.875rem',
+              backgroundColor: isLoading || !isFormValid ? '#9ca3af' : '#16a34a',
+              color: 'white',
+              border: 'none',
+              borderRadius: '0.375rem',
+              fontSize: '1rem',
+              fontWeight: '600',
+              cursor: isLoading || !isFormValid ? 'not-allowed' : 'pointer',
+              opacity: isLoading || !isFormValid ? 0.6 : 1,
+            }"
           >
+            {{ isLoading ? 'Logging in...' : 'Login' }}
+          </button>
+        </form>
+
+        <!-- Divider -->
+        <div style="text-align: center; margin: 1.5rem 0; position: relative">
+          <div
+            style="
+              position: absolute;
+              top: 50%;
+              left: 0;
+              right: 0;
+              height: 1px;
+              background-color: #d1d5db;
+            "
+          ></div>
           <span
-            v-if="errors.email"
-            :class="styles.errorMessage"
+            style="
+              position: relative;
+              background-color: #f9fafb;
+              padding: 0 1rem;
+              font-size: 0.875rem;
+              color: #6b7280;
+            "
           >
-            {{ errors.email }}
+            or
           </span>
         </div>
 
-        <div :class="styles.formGroup">
-          <label
-            for="password"
-            :class="styles.label"
-          >Password</label>
-          <input
-            id="password"
-            v-model="form.password"
-            type="password"
-            placeholder="••••••••"
-            required
-            :class="[styles.input, errors.password && styles.inputError]"
+        <!-- Footer -->
+        <p style="text-align: center; margin-top: 1.5rem; font-size: 0.875rem; color: #6b7280">
+          New to Gaji?
+          <router-link
+            to="/register"
+            style="color: #16a34a; text-decoration: none; font-weight: 600"
           >
-          <span
-            v-if="errors.password"
-            :class="styles.errorMessage"
-          >
-            {{ errors.password }}
-          </span>
-        </div>
-
-        <div :class="styles.checkbox">
-          <input
-            id="remember"
-            v-model="form.rememberMe"
-            type="checkbox"
-          >
-          <label
-            for="remember"
-            :class="styles.label"
-          > Remember me </label>
-        </div>
-
-        <button
-          type="submit"
-          :disabled="isLoading || !isFormValid"
-          :class="styles.button"
-        >
-          {{ isLoading ? 'Logging in...' : 'Log In' }}
-        </button>
-      </form>
-
-      <p :class="styles.footer">
-        Don't have an account?
-        <router-link
-          to="/register"
-          :class="styles.link"
-        >
-          Sign up
-        </router-link>
-      </p>
+            Create account
+          </router-link>
+        </p>
+      </div>
     </div>
   </div>
 </template>
