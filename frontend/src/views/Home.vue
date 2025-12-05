@@ -1,105 +1,188 @@
 <script setup lang="ts">
-import { css } from '../../styled-system/css'
+import { ref } from 'vue'
+import { css } from 'styled-system/css'
+import AppHeader from '../components/common/AppHeader.vue'
+import AppFooter from '../components/common/AppFooter.vue'
 
-// Static style definitions (no computed needed - PandaCSS generates static classes)
-const styles = {
-  container: css({
-    minHeight: '100vh',
-    display: 'flex',
-    flexDirection: 'column',
-  }),
-  header: css({
-    padding: '2rem',
-    backgroundColor: 'primary.600',
-    color: 'white',
-    textAlign: 'center',
-  }),
-  title: css({
-    fontSize: '3rem',
-    fontWeight: 'bold',
-    margin: '0',
-  }),
-  subtitle: css({
-    fontSize: '1.25rem',
-    margin: '0.5rem 0 0 0',
-    opacity: 0.9,
-  }),
-  main: css({
-    flex: 1,
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: '2rem',
-  }),
-  hero: css({
-    textAlign: 'center',
-    maxWidth: '800px',
-  }),
-  buttonGroup: css({
-    display: 'flex',
-    gap: '1rem',
-    justifyContent: 'center',
-    marginTop: '2rem',
-  }),
-  primaryButton: css({
-    padding: '0.75rem 2rem',
-    backgroundColor: 'primary.600',
-    color: 'white',
-    borderRadius: 'md',
-    textDecoration: 'none',
-    fontWeight: '600',
-    transition: 'all 0.2s',
-    '&:hover': {
-      backgroundColor: 'primary.700',
-    },
-  }),
-  secondaryButton: css({
-    padding: '0.75rem 2rem',
-    backgroundColor: 'transparent',
-    color: 'primary.600',
-    border: '2px solid',
-    borderColor: 'primary.600',
-    borderRadius: 'md',
-    textDecoration: 'none',
-    fontWeight: '600',
-    transition: 'all 0.2s',
-    '&:hover': {
-      backgroundColor: 'primary.50',
-    },
-  }),
+const showHotTopics = ref(false)
+
+const hotTopics = [
+  '좋아하는 작가의 새로운 단편 작품 공개',
+  '#겨울과 너의 시작들 독서 챌린지',
+  '작품이 선실에게 말하며 읽힌다 경험 서비스 시작',
+  '실재와 어이사를 오가는 이야기들',
+  '저작권도 무슨 포리스 노벨 버전',
+  '가상과 현실 오가 이야기',
+]
+
+const toggleHotTopics = () => {
+  showHotTopics.value = !showHotTopics.value
 }
 </script>
 
 <template>
-  <div :class="styles.container">
-    <header :class="styles.header">
-      <h1 :class="styles.title">
-        Gaji
-      </h1>
-      <p :class="styles.subtitle">
-        AI 시나리오 대화 플랫폼
-      </p>
-    </header>
+  <div :class="css({ minH: '100vh', display: 'flex', flexDirection: 'column' })">
+    <AppHeader />
+    <div :class="css({ h: '20' })" />
 
-    <main :class="styles.main">
-      <div :class="styles.hero">
-        <h2>당신만의 이야기를 만들어보세요</h2>
-        <p>AI와 함께 다양한 시나리오를 탐험하고, 새로운 대화를 경험하세요.</p>
-        <div :class="styles.buttonGroup">
-          <router-link
-            to="/scenarios"
-            :class="styles.primaryButton"
+    <main
+      :class="
+        css({
+          flex: 1,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          py: '16',
+        })
+      "
+    >
+      <div :class="css({ textAlign: 'center', maxW: '800px', w: 'full', mb: '12' })">
+        <h1
+          :class="
+            css({
+              fontSize: { base: '3rem', md: '4rem' },
+              fontWeight: 'bold',
+              color: 'green.500',
+              mb: '2',
+            })
+          "
+        >
+          Gaji
+        </h1>
+        <router-link
+          to="/about"
+          :class="
+            css({
+              fontSize: '1rem',
+              color: 'gray.500',
+              mb: '12',
+              display: 'inline-block',
+              textDecoration: 'none',
+              cursor: 'pointer',
+              transition: 'color 0.2s',
+              _hover: { color: 'green.500', textDecoration: 'underline' },
+            })
+          "
+          >What is "Gaji" mean?</router-link
+        >
+
+        <div :class="css({ w: 'full', mb: '8' })">
+          <div :class="css({ position: 'relative', w: 'full' })">
+            <span
+              :class="
+                css({
+                  position: 'absolute',
+                  left: '6',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  fontSize: '1.25rem',
+                  color: 'gray.400',
+                })
+              "
+              >🔍</span
+            >
+            <input
+              :class="
+                css({
+                  w: 'full',
+                  p: '4',
+                  pl: '14',
+                  fontSize: '1rem',
+                  border: '2px solid',
+                  borderColor: 'gray.200',
+                  borderRadius: '9999px',
+                  outline: 'none',
+                  transition: 'all 0.2s',
+                  _focus: {
+                    borderColor: 'green.500',
+                    boxShadow: '0 0 0 3px rgba(72, 187, 120, 0.1)',
+                  },
+                  _placeholder: { color: 'green.500' },
+                })
+              "
+              type="text"
+              placeholder="Search All of Books"
+            />
+          </div>
+        </div>
+
+        <div :class="css({ w: 'full' })">
+          <div
+            :class="
+              css({
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                p: '4',
+                px: '6',
+                bg: 'white',
+                border: '1px solid',
+                borderColor: 'gray.200',
+                borderRadius: '0.5rem',
+                cursor: 'pointer',
+                transition: 'all 0.2s',
+                _hover: { bg: 'gray.50' },
+              })
+            "
+            @click="toggleHotTopics"
           >
-            시나리오 둘러보기
-          </router-link>
-          <router-link
-            to="/login"
-            :class="styles.secondaryButton"
+            <span :class="css({ fontSize: '1.125rem', fontWeight: '600', color: 'gray.800' })"
+              >Hot Topics</span
+            >
+            <span
+              :class="
+                css({
+                  fontSize: '1rem',
+                  color: 'gray.500',
+                  transition: 'transform 0.2s',
+                  transform: showHotTopics ? 'rotate(180deg)' : 'rotate(0deg)',
+                })
+              "
+              >▼</span
+            >
+          </div>
+
+          <div
+            v-if="showHotTopics"
+            :class="
+              css({
+                mt: '2',
+                bg: 'white',
+                borderRadius: '0.5rem',
+                p: '6',
+                border: '1px solid',
+                borderColor: 'gray.200',
+                boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
+              })
+            "
           >
-            시작하기
-          </router-link>
+            <div
+              v-for="(topic, index) in hotTopics"
+              :key="index"
+              :class="
+                css({
+                  display: 'flex',
+                  alignItems: 'baseline',
+                  py: '3',
+                  color: 'gray.800',
+                  fontSize: '0.875rem',
+                  lineHeight: '1.5',
+                  borderBottom:
+                    index < hotTopics.length - 1 ? '1px solid rgba(0, 0, 0, 0.1)' : 'none',
+                })
+              "
+            >
+              <span
+                :class="css({ color: 'green.500', fontWeight: 'bold', mr: '3', minW: '1.5rem' })"
+                >{{ index + 1 }}.</span
+              >
+              <span :class="css({ flex: 1 })">{{ topic }}</span>
+            </div>
+          </div>
         </div>
       </div>
     </main>
+
+    <AppFooter />
   </div>
 </template>
