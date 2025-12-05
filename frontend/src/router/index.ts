@@ -3,6 +3,10 @@ import { useAuthStore } from '@/stores/auth'
 
 // Views
 import Home from '@/views/Home.vue'
+import About from '@/views/About.vue'
+import Books from '@/views/Books.vue'
+import BookDetailPage from '@/views/BookDetailPage.vue'
+import Conversations from '@/views/Conversations.vue'
 import Login from '@/views/Login.vue'
 import Register from '@/views/Register.vue'
 import ScenarioList from '@/views/ScenarioList.vue'
@@ -12,8 +16,6 @@ import Profile from '@/views/Profile.vue'
 import ProfileEdit from '@/views/ProfileEdit.vue'
 import Health from '@/views/Health.vue'
 import NotFound from '@/views/NotFound.vue'
-import BookBrowsePage from '@/views/BookBrowsePage.vue'
-import BookDetail from '@/views/BookDetail.vue'
 import ScenarioBrowsePage from '@/views/ScenarioBrowsePage.vue'
 import ScenarioDetailPage from '@/views/ScenarioDetailPage.vue'
 import ScenarioSearchPage from '@/views/ScenarioSearchPage.vue'
@@ -21,12 +23,37 @@ import ScenarioTreeTestPage from '@/views/ScenarioTreeTestPage.vue'
 import FollowerList from '@/views/FollowerList.vue'
 import FollowingList from '@/views/FollowingList.vue'
 import LikedConversations from '@/views/LikedConversations.vue'
+import IntegratedSearchPage from '@/views/IntegratedSearchPage.vue'
 
 const routes: RouteRecordRaw[] = [
   {
     path: '/',
     name: 'Home',
     component: Home,
+    meta: { requiresAuth: false },
+  },
+  {
+    path: '/about',
+    name: 'About',
+    component: About,
+    meta: { requiresAuth: false },
+  },
+  {
+    path: '/books',
+    name: 'Books',
+    component: Books,
+    meta: { requiresAuth: false },
+  },
+  {
+    path: '/books/:id',
+    name: 'BookDetail',
+    component: BookDetailPage,
+    meta: { requiresAuth: false },
+  },
+  {
+    path: '/conversations',
+    name: 'Conversations',
+    component: Conversations,
     meta: { requiresAuth: false },
   },
   {
@@ -39,18 +66,6 @@ const routes: RouteRecordRaw[] = [
     path: '/register',
     name: 'Register',
     component: Register,
-    meta: { requiresAuth: false },
-  },
-  {
-    path: '/books',
-    name: 'BookBrowse',
-    component: BookBrowsePage,
-    meta: { requiresAuth: false },
-  },
-  {
-    path: '/books/:id',
-    name: 'BookDetail',
-    component: BookDetail,
     meta: { requiresAuth: false },
   },
   {
@@ -93,7 +108,7 @@ const routes: RouteRecordRaw[] = [
     path: '/conversations/:id',
     name: 'ConversationChat',
     component: ConversationChat,
-    meta: { requiresAuth: true },
+    meta: { requiresAuth: false }, // TODO: 테스트 후 true로 변경
   },
   {
     path: '/liked',
