@@ -377,21 +377,15 @@ const styles = {
 
 <template>
   <Teleport to="body">
-    <div
-      v-if="showModal"
-      :class="styles.overlay"
-      @click="handleBackdropClick"
-    >
+    <div v-if="showModal" :class="styles.overlay" @click="handleBackdropClick">
       <div
+        data-testid="scenario-creation-modal"
         :class="[styles.modal, styles.modalFullscreen]"
         @click.stop
       >
         <!-- Header -->
         <div :class="styles.header">
-          <h2
-            :id="'modal-title-' + props.bookId"
-            :class="styles.headerTitle"
-          >
+          <h2 :id="'modal-title-' + props.bookId" :class="styles.headerTitle">
             {{ modalTitle }}
           </h2>
           <button
@@ -420,20 +414,15 @@ const styles = {
 
         <!-- Content -->
         <div :class="styles.content">
-          <form
-            :class="styles.form"
-            @submit.prevent="handleSubmit"
-          >
+          <form :class="styles.form" @submit.prevent="handleSubmit">
             <!-- Scenario Title (Required) -->
             <div :class="styles.formGroup">
-              <label
-                for="scenario-title"
-                :class="[styles.label, styles.required]"
-              >
+              <label for="scenario-title" :class="[styles.label, styles.required]">
                 Scenario Title
               </label>
               <input
                 id="scenario-title"
+                data-testid="scenario-title-input"
                 v-model="form.title"
                 type="text"
                 :class="[
@@ -444,7 +433,7 @@ const styles = {
                 :maxlength="MAX_TITLE_CHARS"
                 aria-required="true"
                 aria-describedby="title-counter"
-              >
+              />
               <CharCounter
                 id="title-counter"
                 :text="form.title"
@@ -455,15 +444,13 @@ const styles = {
 
             <!-- Character Changes (Optional) -->
             <div :class="styles.formGroup">
-              <label
-                for="character-changes"
-                :class="styles.label"
-              >
+              <label for="character-changes" :class="styles.label">
                 Character Changes
                 <span :class="styles.optional">(Optional)</span>
               </label>
               <textarea
                 id="character-changes"
+                data-testid="character-changes-textarea"
                 v-model="form.character_changes"
                 :class="[
                   styles.textarea,
@@ -486,10 +473,7 @@ const styles = {
 
             <!-- Event Alterations (Optional) -->
             <div :class="styles.formGroup">
-              <label
-                for="event-alterations"
-                :class="styles.label"
-              >
+              <label for="event-alterations" :class="styles.label">
                 Event Alterations
                 <span :class="styles.optional">(Optional)</span>
               </label>
@@ -517,10 +501,7 @@ const styles = {
 
             <!-- Setting Modifications (Optional) -->
             <div :class="styles.formGroup">
-              <label
-                for="setting-modifications"
-                :class="styles.label"
-              >
+              <label for="setting-modifications" :class="styles.label">
                 Setting Modifications
                 <span :class="styles.optional">(Optional)</span>
               </label>
@@ -549,16 +530,8 @@ const styles = {
             </div>
 
             <!-- Validation Error Message -->
-            <div
-              v-if="showValidationError"
-              :class="styles.errorMessage"
-            >
-              <svg
-                width="16"
-                height="16"
-                viewBox="0 0 16 16"
-                fill="currentColor"
-              >
+            <div v-if="showValidationError" :class="styles.errorMessage">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
                 <path
                   d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0-1A6 6 0 1 0 8 2a6 6 0 0 0 0 12zM7 4h2v5H7V4zm0 6h2v2H7v-2z"
                 />
@@ -567,16 +540,8 @@ const styles = {
             </div>
 
             <!-- API Error Message -->
-            <div
-              v-if="errorMessage"
-              :class="styles.errorMessage"
-            >
-              <svg
-                width="16"
-                height="16"
-                viewBox="0 0 16 16"
-                fill="currentColor"
-              >
+            <div v-if="errorMessage" :class="styles.errorMessage">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
                 <path
                   d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0-1A6 6 0 1 0 8 2a6 6 0 0 0 0 12zM7 4h2v5H7V4zm0 6h2v2H7v-2z"
                 />
@@ -588,6 +553,7 @@ const styles = {
             <div :class="styles.actions">
               <button
                 type="button"
+                data-testid="cancel-button"
                 :class="[styles.button, styles.buttonSecondary]"
                 :disabled="isSubmitting"
                 @click="handleCancel"
@@ -596,13 +562,11 @@ const styles = {
               </button>
               <button
                 type="submit"
+                data-testid="submit-button"
                 :class="[styles.button, styles.buttonPrimary]"
                 :disabled="!isFormValid || isSubmitting"
               >
-                <span
-                  v-if="isSubmitting"
-                  :class="styles.spinner"
-                />
+                <span v-if="isSubmitting" :class="styles.spinner" />
                 <span v-else>Create Scenario</span>
               </button>
             </div>
