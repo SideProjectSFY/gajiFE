@@ -4,9 +4,11 @@ import { useRouter, useRoute } from 'vue-router'
 import { css } from 'styled-system/css'
 import AppHeader from '../components/common/AppHeader.vue'
 import AppFooter from '../components/common/AppFooter.vue'
+import { useAnalytics } from '@/composables/useAnalytics'
 
 const router = useRouter()
 const route = useRoute()
+const { trackBookViewed } = useAnalytics()
 
 // Mock database - 실제로는 API에서 가져올 데이터
 const booksDatabase = {
@@ -216,6 +218,11 @@ const edges = ref<Array<{ from: string; to: string; type: string; label: string 
 // Initialize graph layout
 onMounted(() => {
   initializeGraph()
+
+  // GA4: 책 조회 추적
+  if (book.value) {
+    trackBookViewed(String(book.value.id), book.value.title)
+  }
 })
 
 const initializeGraph = () => {
@@ -779,10 +786,12 @@ const createScenario = () => {
           inset: 0,
           bg: 'rgba(0, 0, 0, 0.5)',
           display: 'flex',
-          alignItems: 'center',
+          alignItems: 'flex-start',
           justifyContent: 'center',
           zIndex: 50,
           px: '4',
+          pt: '24',
+          overflowY: 'auto',
         })
       "
       @click="closeScenarioModal"
@@ -792,21 +801,20 @@ const createScenario = () => {
           css({
             bg: 'white',
             borderRadius: '1rem',
-            p: '6',
-            maxW: '2xl',
+            p: '5',
+            maxW: 'xl',
             w: 'full',
-            maxH: '90vh',
-            overflowY: 'auto',
+            overflowY: 'hidden',
           })
         "
         @click.stop
       >
         <!-- Modal Header -->
-        <div :class="css({ mb: '6' })">
+        <div :class="css({ mb: '5' })">
           <h2
             :class="
               css({
-                fontSize: '1.5rem',
+                fontSize: '1.375rem',
                 fontWeight: 'bold',
                 color: 'gray.900',
                 mb: '2',
@@ -827,8 +835,8 @@ const createScenario = () => {
             css({
               bg: 'gray.50',
               borderRadius: '0.5rem',
-              p: '4',
-              mb: '6',
+              p: '3',
+              mb: '4',
             })
           "
         >
@@ -864,14 +872,14 @@ const createScenario = () => {
         </div>
 
         <!-- Scenario Settings -->
-        <div :class="css({ mb: '6' })">
+        <div :class="css({ mb: '5' })">
           <h3
             :class="
               css({
-                fontSize: '1.125rem',
+                fontSize: '1rem',
                 fontWeight: '600',
                 color: 'gray.900',
-                mb: '4',
+                mb: '3',
               })
             "
           >
@@ -891,7 +899,9 @@ const createScenario = () => {
               })
             "
           >
-            <h4 :class="css({ fontSize: '1rem', fontWeight: '600', color: 'gray.900', mb: '3' })">
+            <h4
+              :class="css({ fontSize: '0.9375rem', fontWeight: '600', color: 'gray.900', mb: '2' })"
+            >
               Character Property
             </h4>
             <textarea
@@ -905,7 +915,7 @@ const createScenario = () => {
                   borderColor: 'gray.300',
                   borderRadius: '0.5rem',
                   fontSize: '0.875rem',
-                  minH: '20',
+                  minH: '16',
                   outline: 'none',
                   resize: 'vertical',
                   _focus: {
@@ -996,13 +1006,13 @@ const createScenario = () => {
         </div>
 
         <!-- Description -->
-        <div :class="css({ mb: '6' })">
+        <div :class="css({ mb: '5' })">
           <label
             for="scenario-description"
             :class="
               css({
                 display: 'block',
-                fontSize: '0.875rem',
+                fontSize: '0.8125rem',
                 fontWeight: '500',
                 color: 'gray.700',
                 mb: '2',
@@ -1022,7 +1032,7 @@ const createScenario = () => {
                 borderColor: 'gray.300',
                 borderRadius: '0.5rem',
                 fontSize: '0.875rem',
-                minH: '24',
+                minH: '20',
                 outline: 'none',
                 _focus: {
                   borderColor: 'green.500',
