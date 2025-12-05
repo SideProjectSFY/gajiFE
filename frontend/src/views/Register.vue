@@ -2,7 +2,6 @@
 import { reactive, ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
-import { css } from '../../styled-system/css'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -11,127 +10,25 @@ const form = reactive({
   username: '',
   email: '',
   password: '',
-  confirmPassword: '',
+  agreeToTerms: false,
 })
 
 const errors = reactive({
   username: '',
   email: '',
   password: '',
-  confirmPassword: '',
 })
 
 const isLoading = ref(false)
 
 const isFormValid = computed(
-  () =>
-    form.username &&
-    form.email &&
-    form.password &&
-    form.confirmPassword &&
-    form.password === form.confirmPassword
+  () => form.username && form.email && form.password && form.agreeToTerms
 )
-
-const styles = {
-  container: css({
-    minHeight: '100vh',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-    padding: '2rem',
-  }),
-  card: css({
-    backgroundColor: 'white',
-    borderRadius: 'xl',
-    padding: '3rem',
-    width: '100%',
-    maxWidth: '400px',
-    boxShadow: '0 10px 30px rgba(0, 0, 0, 0.2)',
-  }),
-  heading: css({
-    fontSize: '1.75rem',
-    fontWeight: 'bold',
-    marginBottom: '0.5rem',
-  }),
-  subtitle: css({
-    color: 'neutral.600',
-    marginBottom: '2rem',
-    fontSize: '0.875rem',
-  }),
-  form: css({
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '1.5rem',
-  }),
-  formGroup: css({
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '0.5rem',
-  }),
-  label: css({
-    fontSize: '0.875rem',
-    fontWeight: '500',
-    color: 'neutral.700',
-  }),
-  input: css({
-    padding: '0.75rem',
-    border: '1px solid',
-    borderColor: 'neutral.300',
-    borderRadius: 'md',
-    fontSize: '0.875rem',
-    '&:focus': {
-      outline: 'none',
-      borderColor: 'primary.500',
-    },
-  }),
-  inputError: css({
-    borderColor: 'red.500 !important',
-  }),
-  errorMessage: css({
-    color: 'red.500',
-    fontSize: '0.75rem',
-    marginTop: '0.25rem',
-  }),
-  button: css({
-    padding: '0.75rem',
-    backgroundColor: 'primary.600',
-    color: 'white',
-    border: 'none',
-    borderRadius: 'md',
-    fontSize: '1rem',
-    fontWeight: '600',
-    cursor: 'pointer',
-    transition: 'background 0.2s',
-    '&:hover:not(:disabled)': {
-      backgroundColor: 'primary.700',
-    },
-    '&:disabled': {
-      opacity: 0.6,
-      cursor: 'not-allowed',
-    },
-  }),
-  footer: css({
-    textAlign: 'center',
-    marginTop: '1.5rem',
-    fontSize: '0.875rem',
-    color: 'neutral.600',
-  }),
-  link: css({
-    color: 'primary.600',
-    textDecoration: 'none',
-    fontWeight: '600',
-    '&:hover': {
-      textDecoration: 'underline',
-    },
-  }),
-}
 
 const validateForm = (): boolean => {
   errors.username = ''
   errors.email = ''
   errors.password = ''
-  errors.confirmPassword = ''
 
   if (form.username.length < 3) {
     errors.username = 'Username must be at least 3 characters'
@@ -144,14 +41,8 @@ const validateForm = (): boolean => {
     return false
   }
 
-  const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/
-  if (!passwordRegex.test(form.password)) {
-    errors.password = 'Password must be at least 8 characters with uppercase, lowercase, and number'
-    return false
-  }
-
-  if (form.password !== form.confirmPassword) {
-    errors.confirmPassword = 'Passwords do not match'
+  if (form.password.length < 8) {
+    errors.password = 'Password must be at least 8 characters'
     return false
   }
 
@@ -176,121 +67,241 @@ const handleRegister = async () => {
 </script>
 
 <template>
-  <div :class="styles.container">
-    <div :class="styles.card">
-      <h1 :class="styles.heading">
-        Create Account
-      </h1>
-      <p :class="styles.subtitle">
-        Start exploring "What If" scenarios
-      </p>
+  <div style="min-height: 100vh; display: flex; background-color: white">
+    <!-- Left Section: Brand Area -->
+    <div
+      style="
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg, #4a5568 0%, #2d3748 100%);
+        padding: 3rem;
+      "
+    >
+      <div style="text-align: center; color: white">
+        <div style="font-size: 2rem; font-weight: bold; margin-bottom: 1rem">
+          Every story has infinite branches to explore
+        </div>
+        <div style="font-size: 1rem; opacity: 0.9; font-style: italic">
+          Discover endless possibilities
+        </div>
+      </div>
+    </div>
 
-      <form
-        :class="styles.form"
-        @submit.prevent="handleRegister"
-      >
-        <div :class="styles.formGroup">
-          <label
-            for="username"
-            :class="styles.label"
-          >Username</label>
-          <input
-            id="username"
-            v-model="form.username"
-            type="text"
-            placeholder="johndoe"
-            required
-            :class="[styles.input, errors.username && styles.inputError]"
-          >
-          <span
-            v-if="errors.username"
-            :class="styles.errorMessage"
-          >
-            {{ errors.username }}
-          </span>
+    <!-- Right Section: Register Form -->
+    <div
+      style="
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 3rem;
+        background-color: #f9fafb;
+      "
+    >
+      <div style="width: 100%; max-width: 420px">
+        <!-- Logo -->
+        <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 2rem">
+          <span style="font-size: 1.5rem">🌿</span>
+          <span style="font-size: 1.25rem; font-weight: bold; color: #1f2937">Gaji</span>
         </div>
 
-        <div :class="styles.formGroup">
-          <label
-            for="email"
-            :class="styles.label"
-          >Email</label>
-          <input
-            id="email"
-            v-model="form.email"
-            type="email"
-            placeholder="your@email.com"
-            required
-            :class="[styles.input, errors.email && styles.inputError]"
-          >
-          <span
-            v-if="errors.email"
-            :class="styles.errorMessage"
-          >
-            {{ errors.email }}
-          </span>
-        </div>
+        <h1 style="font-size: 1.75rem; font-weight: bold; margin-bottom: 0.5rem; color: #111827">
+          Start exploring infinite story branches
+        </h1>
+        <p style="color: #6b7280; margin-bottom: 2rem; font-size: 0.875rem">Email</p>
 
-        <div :class="styles.formGroup">
-          <label
-            for="password"
-            :class="styles.label"
-          >Password</label>
-          <input
-            id="password"
-            v-model="form.password"
-            type="password"
-            placeholder="••••••••"
-            required
-            :class="[styles.input, errors.password && styles.inputError]"
-          >
-          <span
-            v-if="errors.password"
-            :class="styles.errorMessage"
-          >
-            {{ errors.password }}
-          </span>
-        </div>
-
-        <div :class="styles.formGroup">
-          <label
-            for="confirmPassword"
-            :class="styles.label"
-          >Confirm Password</label>
-          <input
-            id="confirmPassword"
-            v-model="form.confirmPassword"
-            type="password"
-            placeholder="••••••••"
-            required
-            :class="[styles.input, errors.confirmPassword && styles.inputError]"
-          >
-          <span
-            v-if="errors.confirmPassword"
-            :class="styles.errorMessage"
-          >
-            {{ errors.confirmPassword }}
-          </span>
-        </div>
-
-        <button
-          type="submit"
-          :disabled="isLoading || !isFormValid"
-          :class="styles.button"
+        <form
+          @submit.prevent="handleRegister"
+          style="display: flex; flex-direction: column; gap: 1.25rem"
         >
-          {{ isLoading ? 'Creating Account...' : 'Sign Up' }}
-        </button>
-      </form>
+          <!-- Email Input -->
+          <div>
+            <label
+              for="email"
+              style="
+                font-size: 0.875rem;
+                font-weight: 500;
+                color: #374151;
+                display: block;
+                margin-bottom: 0.5rem;
+              "
+            >
+              Email
+            </label>
+            <input
+              id="email"
+              v-model="form.email"
+              type="email"
+              placeholder="your.email@example.com"
+              required
+              data-testid="email-input"
+              :style="{
+                width: '100%',
+                padding: '0.75rem',
+                border: errors.email ? '2px solid #ef4444' : '1px solid #d1d5db',
+                borderRadius: '0.375rem',
+                fontSize: '0.875rem',
+                outline: 'none',
+              }"
+            />
+            <span
+              v-if="errors.email"
+              data-testid="email-error"
+              style="color: #ef4444; font-size: 0.75rem; display: block; margin-top: 0.25rem"
+            >
+              {{ errors.email }}
+            </span>
+          </div>
 
-      <p :class="styles.footer">
-        Already have an account?
-        <router-link
-          to="/login"
-          :class="styles.link"
-        >
-          Log in
-        </router-link>
-      </p>
+          <!-- Username Input -->
+          <div>
+            <label
+              for="username"
+              style="
+                font-size: 0.875rem;
+                font-weight: 500;
+                color: #374151;
+                display: block;
+                margin-bottom: 0.5rem;
+              "
+            >
+              Username
+            </label>
+            <input
+              id="username"
+              v-model="form.username"
+              type="text"
+              placeholder="Choose a unique username"
+              required
+              data-testid="username-input"
+              :style="{
+                width: '100%',
+                padding: '0.75rem',
+                border: errors.username ? '2px solid #ef4444' : '1px solid #d1d5db',
+                borderRadius: '0.375rem',
+                fontSize: '0.875rem',
+                outline: 'none',
+              }"
+            />
+            <span
+              v-if="errors.username"
+              data-testid="username-error"
+              style="color: #ef4444; font-size: 0.75rem; display: block; margin-top: 0.25rem"
+            >
+              {{ errors.username }}
+            </span>
+          </div>
+
+          <!-- Password Input -->
+          <div>
+            <label
+              for="password"
+              style="
+                font-size: 0.875rem;
+                font-weight: 500;
+                color: #374151;
+                display: block;
+                margin-bottom: 0.5rem;
+              "
+            >
+              Password
+            </label>
+            <input
+              id="password"
+              v-model="form.password"
+              type="password"
+              placeholder="Create a strong password"
+              required
+              data-testid="password-input"
+              :style="{
+                width: '100%',
+                padding: '0.75rem',
+                border: errors.password ? '2px solid #ef4444' : '1px solid #d1d5db',
+                borderRadius: '0.375rem',
+                fontSize: '0.875rem',
+                outline: 'none',
+              }"
+            />
+            <span
+              v-if="errors.password"
+              data-testid="password-error"
+              style="color: #ef4444; font-size: 0.75rem; display: block; margin-top: 0.25rem"
+            >
+              {{ errors.password }}
+            </span>
+          </div>
+
+          <!-- Terms Checkbox -->
+          <div style="display: flex; align-items: flex-start; gap: 0.5rem">
+            <input
+              id="agreeToTerms"
+              v-model="form.agreeToTerms"
+              type="checkbox"
+              required
+              data-testid="agree-to-terms-checkbox"
+            />
+            <label for="agreeToTerms" style="font-size: 0.75rem; color: #6b7280; line-height: 1.4">
+              I agree to the Terms of Service and Privacy Policy
+            </label>
+          </div>
+
+          <!-- Submit Button -->
+          <button
+            type="submit"
+            :disabled="isLoading || !isFormValid"
+            data-testid="register-button"
+            :style="{
+              width: '100%',
+              padding: '0.875rem',
+              backgroundColor: isLoading || !isFormValid ? '#9ca3af' : '#16a34a',
+              color: 'white',
+              border: 'none',
+              borderRadius: '0.375rem',
+              fontSize: '1rem',
+              fontWeight: '600',
+              cursor: isLoading || !isFormValid ? 'not-allowed' : 'pointer',
+              opacity: isLoading || !isFormValid ? 0.6 : 1,
+            }"
+          >
+            {{ isLoading ? 'Creating Account...' : 'Create Account' }}
+          </button>
+        </form>
+
+        <!-- Divider -->
+        <div style="text-align: center; margin: 1.5rem 0; position: relative">
+          <div
+            style="
+              position: absolute;
+              top: 50%;
+              left: 0;
+              right: 0;
+              height: 1px;
+              background-color: #d1d5db;
+            "
+          ></div>
+          <span
+            style="
+              position: relative;
+              background-color: #f9fafb;
+              padding: 0 1rem;
+              font-size: 0.875rem;
+              color: #6b7280;
+            "
+          >
+            or
+          </span>
+        </div>
+
+        <!-- Footer -->
+        <p style="text-align: center; margin-top: 1.5rem; font-size: 0.875rem; color: #6b7280">
+          Already have an account?
+          <router-link to="/login" style="color: #16a34a; text-decoration: none; font-weight: 600">
+            Login
+          </router-link>
+        </p>
+      </div>
     </div>
   </div>
 </template>
