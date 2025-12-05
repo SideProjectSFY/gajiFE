@@ -27,3 +27,7 @@ dist-ssr
 styled-system/
 
 pnpm-lock.yaml
+
+playwright-report
+test-results
+test-results-auth.json
