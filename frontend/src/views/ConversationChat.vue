@@ -1,11 +1,14 @@
 <script setup lang="ts">
-import { ref, computed, nextTick } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, computed, nextTick, onMounted } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import { css } from '../../styled-system/css'
 import AppHeader from '../components/common/AppHeader.vue'
 import AppFooter from '../components/common/AppFooter.vue'
+import { useAnalytics } from '@/composables/useAnalytics'
 
 const router = useRouter()
+const route = useRoute()
+const { trackConversationStarted, trackMessageSent } = useAnalytics()
 
 // Mock data for scenario info
 const scenarioInfo = ref({
@@ -56,17 +59,23 @@ const scrollToBottom = () => {
 const sendMessage = () => {
   if (!messageInput.value.trim()) return
 
+  const messageContent = messageInput.value
+
   // Add user message
   messages.value.push({
     id: messages.value.length + 1,
     role: 'user',
-    content: messageInput.value,
+    content: messageContent,
     timestamp: new Date().toLocaleTimeString('en-US', {
       hour: '2-digit',
       minute: '2-digit',
       hour12: true,
     }),
   })
+
+  // GA4: 메시지 전송 추적
+  const conversationId = route.params.id as string
+  trackMessageSent(conversationId, messageContent.length)
 
   messageInput.value = ''
   scrollToBottom()
@@ -99,6 +108,16 @@ const handleKeyPress = (event: KeyboardEvent) => {
 const goBackToList = () => {
   router.push('/conversations')
 }
+
+// GA4: 대화 시작 추적
+onMounted(() => {
+  const conversationId = route.params.id as string
+  // TODO: 실제 API에서 parent conversation 정보를 받아와서 isFork 판단
+  trackConversationStarted({
+    scenarioId: conversationId,
+    isFork: false, // 실제 구현 시 부모 대화 존재 여부로 판단
+  })
+})
 </script>
 
 <template>
