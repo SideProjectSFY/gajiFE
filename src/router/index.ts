@@ -1,0 +1,172 @@
+import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
+import { useAnalytics } from '@/composables/useAnalytics'
+
+// Views
+import Home from '@/views/Home.vue'
+import About from '@/views/About.vue'
+import Books from '@/views/Books.vue'
+import BookDetailPage from '@/views/BookDetailPage.vue'
+import Conversations from '@/views/Conversations.vue'
+import Login from '@/views/Login.vue'
+import Register from '@/views/Register.vue'
+import ConversationChat from '@/views/ConversationChat.vue'
+import Profile from '@/views/Profile.vue'
+import ProfileEdit from '@/views/ProfileEdit.vue'
+import Health from '@/views/Health.vue'
+import NotFound from '@/views/NotFound.vue'
+import ScenarioBrowsePage from '@/views/ScenarioBrowsePage.vue'
+import ScenarioDetailPage from '@/views/ScenarioDetailPage.vue'
+import ScenarioTreeTestPage from '@/views/ScenarioTreeTestPage.vue'
+import FollowerList from '@/views/FollowerList.vue'
+import FollowingList from '@/views/FollowingList.vue'
+import LikedConversations from '@/views/LikedConversations.vue'
+import SearchPage from '@/views/SearchPage.vue'
+
+const routes: RouteRecordRaw[] = [
+  {
+    path: '/',
+    name: 'Home',
+    component: Home,
+    meta: { requiresAuth: false },
+  },
+  {
+    path: '/about',
+    name: 'About',
+    component: About,
+    meta: { requiresAuth: false },
+  },
+  {
+    path: '/books',
+    name: 'Books',
+    component: Books,
+    meta: { requiresAuth: false },
+  },
+  {
+    path: '/books/:id',
+    name: 'BookDetail',
+    component: BookDetailPage,
+    meta: { requiresAuth: false },
+  },
+  {
+    path: '/conversations',
+    name: 'Conversations',
+    component: Conversations,
+    meta: { requiresAuth: false },
+  },
+  {
+    path: '/login',
+    name: 'Login',
+    component: Login,
+    meta: { requiresAuth: false },
+  },
+  {
+    path: '/register',
+    name: 'Register',
+    component: Register,
+    meta: { requiresAuth: false },
+  },
+  {
+    path: '/search',
+    name: 'Search',
+    component: SearchPage,
+    meta: { requiresAuth: false },
+  },
+  {
+    path: '/scenarios/browse',
+    name: 'ScenarioBrowse',
+    component: ScenarioBrowsePage,
+    meta: { requiresAuth: false },
+  },
+  {
+    path: '/scenarios/:id',
+    name: 'ScenarioDetail',
+    component: ScenarioDetailPage,
+    meta: { requiresAuth: false },
+  },
+  {
+    path: '/conversations/:id',
+    name: 'ConversationChat',
+    component: ConversationChat,
+    meta: { requiresAuth: false }, // TODO: 테스트 후 true로 변경
+  },
+  {
+    path: '/liked',
+    name: 'LikedConversations',
+    component: LikedConversations,
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/profile/:username',
+    name: 'Profile',
+    component: Profile,
+    meta: { requiresAuth: false },
+  },
+  {
+    path: '/profile/:username/followers',
+    name: 'FollowerList',
+    component: FollowerList,
+    meta: { requiresAuth: false },
+  },
+  {
+    path: '/profile/:username/following',
+    name: 'FollowingList',
+    component: FollowingList,
+    meta: { requiresAuth: false },
+  },
+  {
+    path: '/profile/edit',
+    name: 'ProfileEdit',
+    component: ProfileEdit,
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/health',
+    name: 'Health',
+    component: Health,
+    meta: { requiresAuth: false },
+  },
+  {
+    path: '/test/scenario-tree',
+    name: 'ScenarioTreeTest',
+    component: ScenarioTreeTestPage,
+    meta: { requiresAuth: false },
+  },
+  {
+    path: '/404',
+    name: 'NotFound',
+    component: NotFound,
+    meta: { requiresAuth: false },
+  },
+  {
+    path: '/:pathMatch(.*)*',
+    redirect: '/404',
+  },
+]
+
+const router = createRouter({
+  history: createWebHistory(),
+  routes,
+})
+
+// Navigation guard for authentication
+router.beforeEach((to, _from, next) => {
+  const authStore = useAuthStore()
+  const requiresAuth = to.meta.requiresAuth
+
+  if (requiresAuth && !authStore.isAuthenticated) {
+    next({ name: 'Login', query: { redirect: to.fullPath } })
+  } else {
+    next()
+  }
+})
+
+// GA4 페이지뷰 추적
+router.afterEach((to) => {
+  const { trackPageView } = useAnalytics()
+  const pageTitle =
+    typeof to.meta.title === 'string' ? to.meta.title : String(to.name || 'Unknown Page')
+  trackPageView(to.fullPath, pageTitle)
+})
+
+export default router
