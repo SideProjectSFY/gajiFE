@@ -1,0 +1,502 @@
+<!-- eslint-disable @typescript-eslint/explicit-function-return-type -->
+<!-- eslint-disable @typescript-eslint/no-unused-vars -->
+<script setup lang="ts">
+import { ref, nextTick, onMounted, watch, computed } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
+import { css } from '../../styled-system/css'
+import AppHeader from '../components/common/AppHeader.vue'
+import ChatMessage from '../components/chat/ChatMessage.vue'
+import ChatInput from '../components/chat/ChatInput.vue'
+import TypingIndicator from '../components/chat/TypingIndicator.vue'
+import ConversationsSidebar from '../components/chat/ConversationsSidebar.vue'
+import { useAnalytics } from '@/composables/useAnalytics'
+import type { Message } from '@/stores/conversation'
+
+const router = useRouter()
+const route = useRoute()
+const { trackConversationStarted, trackMessageSent } = useAnalytics()
+
+// Loading states
+const isLoading = ref(true)
+const isTyping = ref(false)
+const showSidebar = ref(false)
+
+// Mock data for scenario info
+const scenarioInfo = ref({
+  bookTitle: 'The Great Gatsby',
+  author: 'F. Scott Fitzgerald',
+  characterName: 'Nick Carraway',
+  scenarioType: 'What If...',
+  scenarioDescription:
+    "His Midwestern values provide a stark contrast to the decadence of East Egg. Without his perspective, you wouldn't see the tragedy of my story.",
+})
+
+// Messages state - typed properly
+const messages = ref<Message[]>([])
+
+const messagesContainer = ref<HTMLDivElement | null>(null)
+
+// Computed for empty state
+const isEmpty = computed(() => messages.value.length === 0 && !isLoading.value)
+
+const scrollToBottom = (smooth = true) => {
+  nextTick(() => {
+    if (messagesContainer.value) {
+      messagesContainer.value.scrollTo({
+        top: messagesContainer.value.scrollHeight,
+        behavior: smooth ? 'smooth' : 'auto',
+      })
+    }
+  })
+}
+
+// Watch for new messages and scroll
+watch(
+  () => messages.value.length,
+  () => {
+    scrollToBottom()
+  }
+)
+
+// Watch for typing indicator
+watch(isTyping, () => {
+  scrollToBottom()
+})
+
+const handleSendMessage = (messageContent: string) => {
+  if (!messageContent.trim()) return
+
+  // Add user message
+  const userMessage: Message = {
+    id: `msg-${Date.now()}`,
+    conversationId: route.params.id as string,
+    role: 'user',
+    content: messageContent,
+    timestamp: new Date().toISOString(),
+  }
+  messages.value.push(userMessage)
+
+  // GA4: 메시지 전송 추적
+  const conversationId = route.params.id as string
+  trackMessageSent(conversationId, messageContent.length)
+
+  scrollToBottom()
+
+  // Simulate AI response
+  isTyping.value = true
+  setTimeout(() => {
+    const assistantMessage: Message = {
+      id: `msg-${Date.now() + 1}`,
+      conversationId: route.params.id as string,
+      role: 'assistant',
+      content:
+        'This is a simulated response from the AI character. In production, this would be fetched from the AI service.',
+      timestamp: new Date().toISOString(),
+    }
+    messages.value.push(assistantMessage)
+    isTyping.value = false
+    scrollToBottom()
+  }, 1500)
+}
+
+const goBackToList = () => {
+  router.push('/conversations')
+}
+
+// Load initial messages
+onMounted(async () => {
+  const conversationId = route.params.id as string
+
+  // Simulate loading messages
+  isLoading.value = true
+  try {
+    // TODO: Replace with actual API call
+    await new Promise((resolve) => setTimeout(resolve, 500))
+
+    // Mock initial messages
+    messages.value = [
+      {
+        id: '1',
+        conversationId,
+        role: 'assistant',
+        content:
+          "Old sport, this green light that burns across the bay symbolizes my eternal hope for Daisy. It represents everything I've worked for, everything I dream about. That distant green light is my future, always just out of reach.",
+        timestamp: new Date(Date.now() - 120000).toISOString(),
+      },
+      {
+        id: '2',
+        conversationId,
+        role: 'user',
+        content: "What do you think about Nick Carraway's role as the narrator?",
+        timestamp: new Date(Date.now() - 60000).toISOString(),
+      },
+      {
+        id: '3',
+        conversationId,
+        role: 'assistant',
+        content:
+          "Ah, Nick Carraway. He serves as our moral compass in this tale of excess and dream. His Midwestern values provide a stark contrast to the decadence of East Egg. Without his perspective, you wouldn't see the tragedy of my story.",
+        timestamp: new Date().toISOString(),
+      },
+    ]
+
+    // GA4: 대화 시작 추적
+    trackConversationStarted({
+      scenarioId: conversationId,
+      isFork: false,
+    })
+  } finally {
+    isLoading.value = false
+    scrollToBottom(false)
+  }
+})
+</script>
+
+<template>
+  <div :class="css({ display: 'flex', flexDirection: 'column', minH: '100vh', bg: 'gray.50' })">
+    <AppHeader />
+    <div :class="css({ h: '16' })" />
+
+    <!-- Conversations Sidebar -->
+    <ConversationsSidebar
+      v-model:visible="showSidebar"
+      @select="(id) => console.log('Selected conversation:', id)"
+    />
+
+    <!-- Main Chat Container -->
+    <div
+      :class="
+        css({
+          flex: 1,
+          display: 'flex',
+          overflow: 'hidden',
+          maxW: '1920px',
+          w: 'full',
+          mx: 'auto',
+          gap: '0',
+        })
+      "
+    >
+      <!-- Left Sidebar - Scenario Info -->
+      <div
+        :class="
+          css({
+            w: '320px',
+            bg: 'white',
+            borderRight: '1px solid',
+            borderColor: 'gray.200',
+            display: 'flex',
+            flexDirection: 'column',
+            overflow: 'hidden',
+          })
+        "
+      >
+        <!-- Back Button & Sidebar Toggle -->
+        <div
+          :class="
+            css({
+              p: '4',
+              borderColor: 'gray.200',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+            })
+          "
+        >
+          <button
+            :class="
+              css({
+                display: 'flex',
+                alignItems: 'center',
+                gap: '2',
+                color: 'gray.700',
+                fontSize: '0.875rem',
+                fontWeight: '500',
+                cursor: 'pointer',
+                bg: 'transparent',
+                border: 'none',
+                _hover: { color: 'green.600' },
+              })
+            "
+            @click="goBackToList"
+          >
+            <span>←</span>
+            <span>Back to List</span>
+          </button>
+          <button
+            :class="
+              css({
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '0.5rem',
+                color: 'gray.600',
+                fontSize: '1.25rem',
+                cursor: 'pointer',
+                bg: 'transparent',
+                border: 'none',
+                borderRadius: '0.5rem',
+                transition: 'all 0.2s',
+                _hover: { bg: 'gray.100', color: 'gray.800' },
+              })
+            "
+            aria-label="대화 목록 열기"
+            data-testid="sidebar-toggle"
+            @click="showSidebar = true"
+          >
+            ☰
+          </button>
+        </div>
+
+        <!-- Book Cover -->
+        <div
+          :class="
+            css({
+              p: '6',
+              display: 'flex',
+              justifyContent: 'center',
+            })
+          "
+        >
+          <div
+            :class="
+              css({
+                w: '48',
+                h: '64',
+                bg: 'gray.200',
+                borderRadius: '0.5rem',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '3rem',
+              })
+            "
+          >
+            📚
+          </div>
+        </div>
+
+        <!-- Book Info -->
+        <div :class="css({ px: '6', pb: '6' })">
+          <h2
+            :class="
+              css({
+                fontSize: '1.25rem',
+                fontWeight: 'bold',
+                color: 'gray.900',
+                mb: '2',
+                textAlign: 'center',
+              })
+            "
+          >
+            {{ scenarioInfo.bookTitle }}
+          </h2>
+          <p :class="css({ fontSize: '0.875rem', color: 'gray.600', textAlign: 'center' })">
+            {{ scenarioInfo.author }}
+          </p>
+        </div>
+
+        <!-- Scenario Details -->
+        <div
+          :class="
+            css({
+              flex: 1,
+              px: '6',
+              pb: '6',
+              overflowY: 'auto',
+            })
+          "
+        >
+          <div :class="css({ mb: '4' })">
+            <h3
+              :class="
+                css({
+                  fontSize: '0.875rem',
+                  fontWeight: '600',
+                  color: 'gray.900',
+                  mb: '2',
+                })
+              "
+            >
+              Title
+            </h3>
+            <p :class="css({ fontSize: '0.875rem', color: 'gray.700' })">
+              {{ scenarioInfo.scenarioType }}
+            </p>
+          </div>
+
+          <div :class="css({ mb: '4' })">
+            <h3
+              :class="
+                css({
+                  fontSize: '0.875rem',
+                  fontWeight: '600',
+                  color: 'gray.900',
+                  mb: '2',
+                })
+              "
+            >
+              What If...
+            </h3>
+            <p :class="css({ fontSize: '0.875rem', color: 'gray.700', lineHeight: '1.6' })">
+              {{ scenarioInfo.scenarioDescription }}
+            </p>
+          </div>
+
+          <div>
+            <h3
+              :class="
+                css({
+                  fontSize: '0.875rem',
+                  fontWeight: '600',
+                  color: 'gray.900',
+                  mb: '2',
+                })
+              "
+            >
+              Forked From
+            </h3>
+            <div
+              :class="
+                css({
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '2',
+                  p: '3',
+                  bg: 'gray.50',
+                  borderRadius: '0.5rem',
+                  border: '1px solid',
+                  borderColor: 'gray.200',
+                })
+              "
+            >
+              <span :class="css({ fontSize: '0.75rem', color: 'gray.600' })">
+                {{ scenarioInfo.characterName }}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Main Chat Area -->
+      <div
+        :class="
+          css({
+            flex: 1,
+            display: 'flex',
+            flexDirection: 'column',
+            bg: 'white',
+          })
+        "
+      >
+        <!-- Messages Container -->
+        <div
+          ref="messagesContainer"
+          :class="
+            css({
+              flex: 1,
+              overflowY: 'auto',
+              px: '6',
+              py: '6',
+              bg: 'gray.50',
+              scrollBehavior: 'smooth',
+            })
+          "
+          data-testid="messages-container"
+          aria-label="대화 메시지 목록"
+        >
+          <div :class="css({ maxW: '900px', mx: 'auto' })">
+            <!-- Loading State -->
+            <div
+              v-if="isLoading"
+              :class="
+                css({
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  padding: '12',
+                  color: 'gray.500',
+                  gap: '4',
+                })
+              "
+              data-testid="loading-state"
+            >
+              <div
+                :class="
+                  css({
+                    width: '40px',
+                    height: '40px',
+                    border: '3px solid',
+                    borderColor: 'gray.200',
+                    borderTopColor: 'blue.500',
+                    borderRadius: 'full',
+                    animation: 'spin 1s linear infinite',
+                  })
+                "
+              />
+              <p>메시지를 불러오는 중...</p>
+            </div>
+
+            <!-- Empty State -->
+            <div
+              v-else-if="isEmpty"
+              :class="
+                css({
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  padding: '12',
+                  color: 'gray.500',
+                  gap: '4',
+                  minHeight: '300px',
+                })
+              "
+              data-testid="empty-state"
+            >
+              <span :class="css({ fontSize: '3rem' })">💬</span>
+              <p :class="css({ fontSize: '1rem' })">
+                대화를 시작해보세요
+              </p>
+              <p :class="css({ fontSize: '0.875rem', color: 'gray.400' })">
+                캐릭터에게 무엇이든 물어보세요
+              </p>
+            </div>
+
+            <!-- Messages List -->
+            <template v-else>
+              <ChatMessage
+                v-for="(message, index) in messages"
+                :key="message.id"
+                :message="message"
+                :is-latest="index === messages.length - 1"
+              />
+            </template>
+
+            <!-- Typing Indicator -->
+            <TypingIndicator v-if="isTyping" />
+          </div>
+        </div>
+
+        <!-- Input Area using ChatInput component -->
+        <ChatInput
+          :disabled="isLoading"
+          :loading="isTyping"
+          @send="handleSendMessage"
+        />
+      </div>
+    </div>
+  </div>
+</template>
+
+<style scoped>
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+</style>
