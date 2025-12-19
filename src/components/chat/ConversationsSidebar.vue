@@ -43,41 +43,46 @@ onMounted(async () => {
 async function loadConversations(): Promise<void> {
   try {
     isLoading.value = true
-    // TODO: Replace with actual API call
-    await new Promise((resolve) => setTimeout(resolve, 300))
 
-    // Mock data
-    conversations.value = [
-      {
-        id: '1',
-        scenarioTitle: 'What if Gatsby never met Daisy?',
-        bookTitle: 'The Great Gatsby',
-        lastMessage: 'Ah, Nick Carraway. He serves as our moral compass...',
-        lastMessageAt: new Date().toISOString(),
-        messageCount: 12,
-        type: 'ROOT',
-      },
-      {
-        id: '2',
-        scenarioTitle: 'Elizabeth meets Darcy first',
-        bookTitle: 'Pride and Prejudice',
-        lastMessage: 'Indeed, first impressions can be quite deceiving...',
-        lastMessageAt: new Date(Date.now() - 3600000).toISOString(),
-        messageCount: 8,
-        type: 'ROOT',
-      },
-      {
-        id: '3',
-        scenarioTitle: 'Alternative ending discussion',
-        bookTitle: 'The Great Gatsby',
-        lastMessage: 'The green light would still burn bright...',
-        lastMessageAt: new Date(Date.now() - 86400000).toISOString(),
-        messageCount: 5,
-        type: 'FORKED',
-      },
-    ]
+    // Import API function
+    const { listConversations } = await import('@/services/conversationApi')
+    const { scenarioApi } = await import('@/services/scenarioApi')
+
+    // Fetch actual conversations from API
+    const conversationList = await listConversations(0, 20)
+
+    // Transform to component format
+    conversations.value = await Promise.all(
+      conversationList.map(async (conv) => {
+        try {
+          const scenario = await scenarioApi.getScenario(conv.scenarioId)
+          return {
+            id: conv.id,
+            scenarioTitle: scenario.whatIfQuestion || scenario.title,
+            bookTitle: scenario.bookTitle,
+            lastMessage: 'Click to view messages',
+            lastMessageAt: conv.updatedAt || conv.createdAt,
+            messageCount: conv.messageCount || 0,
+            type: conv.isRoot ? ('ROOT' as const) : ('FORKED' as const),
+          }
+        } catch (error) {
+          console.error('Failed to load scenario:', error)
+          return {
+            id: conv.id,
+            scenarioTitle: conv.title,
+            bookTitle: 'Unknown',
+            lastMessage: 'Click to view messages',
+            lastMessageAt: conv.updatedAt || conv.createdAt,
+            messageCount: conv.messageCount || 0,
+            type: conv.isRoot ? ('ROOT' as const) : ('FORKED' as const),
+          }
+        }
+      })
+    )
   } catch (error) {
     console.error('Failed to load conversations:', error)
+    // Fallback to empty array on error
+    conversations.value = []
   } finally {
     isLoading.value = false
   }
@@ -320,12 +325,7 @@ const styles = {
   <Teleport to="body">
     <!-- Overlay -->
     <Transition name="fade">
-      <div
-        v-if="visible"
-        :class="styles.overlay"
-        aria-hidden="true"
-        @click="closeSidebar"
-      />
+      <div v-if="visible" :class="styles.overlay" aria-hidden="true" @click="closeSidebar" />
     </Transition>
 
     <!-- Sidebar -->
@@ -340,17 +340,8 @@ const styles = {
       >
         <!-- Header -->
         <header :class="styles.header">
-          <h2
-            id="sidebar-title"
-            :class="styles.title"
-          >
-            대화 목록
-          </h2>
-          <button
-            :class="styles.closeButton"
-            aria-label="사이드바 닫기"
-            @click="closeSidebar"
-          >
+          <h2 id="sidebar-title" :class="styles.title">대화 목록</h2>
+          <button :class="styles.closeButton" aria-label="사이드바 닫기" @click="closeSidebar">
             ✕
           </button>
         </header>
@@ -358,27 +349,16 @@ const styles = {
         <!-- Content -->
         <div :class="styles.content">
           <!-- Loading State -->
-          <div
-            v-if="isLoading"
-            :class="styles.loadingContainer"
-          >
+          <div v-if="isLoading" :class="styles.loadingContainer">
             <div :class="styles.spinner" />
             <p>불러오는 중...</p>
           </div>
 
           <!-- Empty State -->
-          <div
-            v-else-if="conversations.length === 0"
-            :class="styles.emptyContainer"
-          >
+          <div v-else-if="conversations.length === 0" :class="styles.emptyContainer">
             <span :class="styles.emptyIcon">📭</span>
-            <p :class="styles.emptyText">
-              아직 대화가 없습니다
-            </p>
-            <button
-              :class="styles.newChatButton"
-              @click="router.push('/scenarios')"
-            >
+            <p :class="styles.emptyText">아직 대화가 없습니다</p>
+            <button :class="styles.newChatButton" @click="router.push('/scenarios')">
               <span>➕</span>
               새 대화 시작
             </button>
@@ -387,6 +367,7 @@ const styles = {
           <!-- Conversations List -->
           <ul
             v-else
+            data-testid="conversations-list"
             :class="styles.conversationList"
             aria-label="대화 목록"
           >
@@ -416,9 +397,7 @@ const styles = {
                 </div>
 
                 <!-- Book Title -->
-                <p :class="styles.bookTitle">
-                  📚 {{ conversation.bookTitle }}
-                </p>
+                <p :class="styles.bookTitle">📚 {{ conversation.bookTitle }}</p>
 
                 <!-- Last Message Preview -->
                 <p :class="styles.lastMessage">
@@ -428,10 +407,7 @@ const styles = {
                 <!-- Meta Row -->
                 <div :class="styles.metaRow">
                   <span :class="styles.metaItem"> 💬 {{ conversation.messageCount }} </span>
-                  <span
-                    v-if="conversation.type === 'FORKED'"
-                    :class="styles.forkedBadge"
-                  >
+                  <span v-if="conversation.type === 'FORKED'" :class="styles.forkedBadge">
                     🔀 포크됨
                   </span>
                 </div>
