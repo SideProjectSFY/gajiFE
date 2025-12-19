@@ -33,10 +33,7 @@
 
         <!-- Search Input -->
         <div :class="css({ position: 'relative' })">
-          <label
-            for="search-input"
-            class="sr-only"
-          >검색어 입력</label>
+          <label for="search-input" class="sr-only">검색어 입력</label>
           <input
             id="search-input"
             v-model="searchQuery"
@@ -64,11 +61,8 @@
             "
             @input="handleSearchInput"
             @keydown.escape="clearSearch"
-          >
-          <span
-            id="search-hint"
-            :class="css({ position: 'absolute', left: '-9999px' })"
-          >
+          />
+          <span id="search-hint" :class="css({ position: 'absolute', left: '-9999px' })">
             Enter 키로 검색, Escape 키로 검색어 초기화
           </span>
           <button
@@ -481,9 +475,7 @@
           })
         "
       >
-        <div :class="css({ fontSize: '4rem', mb: '4' })">
-          🔍
-        </div>
+        <div :class="css({ fontSize: '4rem', mb: '4' })">🔍</div>
         <p :class="css({ fontSize: '1.25rem', fontWeight: '600', color: 'gray.700', mb: '2' })">
           Start searching
         </p>
@@ -502,9 +494,7 @@
           })
         "
       >
-        <div :class="css({ fontSize: '4rem', mb: '4' })">
-          😞
-        </div>
+        <div :class="css({ fontSize: '4rem', mb: '4' })">😞</div>
         <p :class="css({ fontSize: '1.25rem', fontWeight: '600', color: 'gray.700', mb: '2' })">
           No results found
         </p>
@@ -518,10 +508,7 @@
         <!-- All Tab -->
         <div v-if="activeTab === 'all'">
           <!-- Books Section -->
-          <div
-            v-if="bookResults.length > 0"
-            :class="css({ mb: '8' })"
-          >
+          <div v-if="bookResults.length > 0" :class="css({ mb: '8' })">
             <h2
               :class="
                 css({
@@ -634,10 +621,7 @@
           </div>
 
           <!-- Stories Section -->
-          <div
-            v-if="storyResults.length > 0"
-            :class="css({ mb: '8' })"
-          >
+          <div v-if="storyResults.length > 0" :class="css({ mb: '8' })">
             <h2
               :class="
                 css({
@@ -692,8 +676,12 @@
                     css({ display: 'flex', justifyContent: 'space-between', alignItems: 'center' })
                   "
                 >
-                  <span :class="css({ fontSize: '0.875rem', color: 'gray.500' })">by {{ story.author }}</span>
-                  <span :class="css({ fontSize: '0.875rem', color: 'gray.500' })">❤️ {{ story.likes }}</span>
+                  <span :class="css({ fontSize: '0.875rem', color: 'gray.500' })"
+                    >by {{ story.author }}</span
+                  >
+                  <span :class="css({ fontSize: '0.875rem', color: 'gray.500' })"
+                    >❤️ {{ story.likes }}</span
+                  >
                 </div>
               </div>
             </div>
@@ -722,10 +710,7 @@
           </div>
 
           <!-- Users Section -->
-          <div
-            v-if="userResults.length > 0"
-            :class="css({ mb: '8' })"
-          >
+          <div v-if="userResults.length > 0" :class="css({ mb: '8' })">
             <h2
               :class="
                 css({
@@ -910,13 +895,13 @@
           </div>
         </div>
 
-        <!-- Story Tab -->
-        <div v-else-if="activeTab === 'story'">
+        <!-- Conversation Tab -->
+        <div v-else-if="activeTab === 'conversation'">
           <div :class="css({ display: 'flex', flexDirection: 'column', gap: '3' })">
-            <!-- Story Card -->
+            <!-- Conversation Card -->
             <div
-              v-for="story in storyResults"
-              :key="story.id"
+              v-for="conversation in conversationResults"
+              :key="conversation.id"
               :class="
                 css({
                   bg: 'white',
@@ -928,14 +913,14 @@
                   _hover: { boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' },
                 })
               "
-              @click="navigateToScenario(story.id)"
+              @click="navigateToScenario(conversation.id)"
             >
               <h3
                 :class="
                   css({ fontSize: '1.125rem', fontWeight: '600', color: 'gray.900', mb: '2' })
                 "
               >
-                {{ story.title }}
+                {{ conversation.title }}
               </h3>
               <p
                 :class="
@@ -947,15 +932,19 @@
                   })
                 "
               >
-                {{ story.description }}
+                {{ conversation.description }}
               </p>
               <div
                 :class="
                   css({ display: 'flex', justifyContent: 'space-between', alignItems: 'center' })
                 "
               >
-                <span :class="css({ fontSize: '0.875rem', color: 'gray.500' })">by {{ story.author }}</span>
-                <span :class="css({ fontSize: '0.875rem', color: 'gray.500' })">❤️ {{ story.likes }}</span>
+                <span :class="css({ fontSize: '0.875rem', color: 'gray.500' })"
+                  >by {{ conversation.author }}</span
+                >
+                <span :class="css({ fontSize: '0.875rem', color: 'gray.500' })"
+                  >❤️ {{ conversation.likes }}</span
+                >
               </div>
             </div>
           </div>
@@ -1046,6 +1035,7 @@ import { useRouter } from 'vue-router'
 import { css } from 'styled-system/css'
 import AppHeader from '../components/common/AppHeader.vue'
 import AppFooter from '../components/common/AppFooter.vue'
+import { searchApi } from '../services/searchApi'
 
 const router = useRouter()
 
@@ -1057,19 +1047,19 @@ const isSearching = ref(false)
 interface SearchResult {
   id: string
   name: string
-  [key: string]: unknown
+  [key: string]: any
 }
 
-// Mock results - 실제로는 API에서 가져옴
-const bookResults = ref<SearchResult[]>([])
-const storyResults = ref<SearchResult[]>([])
-const userResults = ref<SearchResult[]>([])
+// Results
+const bookResults = ref<any[]>([])
+const conversationResults = ref<any[]>([])
+const userResults = ref<any[]>([])
 
 // Tabs configuration
 const tabs = [
   { label: 'All', value: 'all' },
   { label: 'Book', value: 'books' },
-  { label: 'Story', value: 'story' },
+  { label: 'Conversation', value: 'conversation' },
   { label: 'Users', value: 'users' },
 ]
 
@@ -1087,7 +1077,7 @@ const handleSearchInput = () => {
 const performSearch = async () => {
   if (!searchQuery.value) {
     bookResults.value = []
-    storyResults.value = []
+    conversationResults.value = []
     userResults.value = []
     return
   }
@@ -1095,74 +1085,34 @@ const performSearch = async () => {
   isSearching.value = true
 
   try {
-    // Mock search - 실제로는 API 호출
-    await new Promise((resolve) => setTimeout(resolve, 500))
+    const response = await searchApi.search(searchQuery.value)
 
-    const query = searchQuery.value.toLowerCase()
+    // Map books
+    bookResults.value = response.books.map((book: any) => ({
+      id: book.id,
+      title: book.title,
+      author: book.author,
+      year: new Date(book.createdAt).getFullYear().toString(),
+      tags: [book.genre],
+    }))
 
-    // Mock book search
-    bookResults.value = [
-      {
-        id: 1,
-        title: 'The Great Gatsby',
-        author: 'F. Scott Fitzgerald',
-        year: '1925',
-        tags: ['Classic', 'Drama'],
-      },
-      {
-        id: 2,
-        title: 'Pride and Prejudice',
-        author: 'Jane Austen',
-        year: '1813',
-        tags: ['Romance', 'Classic'],
-      },
-    ].filter(
-      (book) =>
-        book.title.toLowerCase().includes(query) || book.author.toLowerCase().includes(query)
-    )
+    // Map conversations
+    conversationResults.value = response.conversations.map((conv: any) => ({
+      id: conv.id,
+      title: conv.title || 'Untitled Conversation',
+      description: conv.scenarioTitle || 'No description',
+      author: 'Unknown', // API might not return author name directly if it's just userId
+      likes: conv.likeCount || 0,
+    }))
 
-    // Mock story search
-    storyResults.value = [
-      {
-        id: 1,
-        title: 'What if Gatsby never met Daisy?',
-        description: 'Exploring an alternate timeline where Jay Gatsby pursues a different path',
-        author: 'user123',
-        likes: 245,
-      },
-      {
-        id: 2,
-        title: 'Elizabeth Bennet becomes a writer',
-        description: 'A scenario where Elizabeth chooses independence over marriage',
-        author: 'janefan',
-        likes: 189,
-      },
-    ].filter(
-      (story) =>
-        story.title.toLowerCase().includes(query) || story.description.toLowerCase().includes(query)
-    )
-
-    // Mock user search
-    userResults.value = [
-      {
-        id: 1,
-        username: 'bookworm99',
-        displayName: 'Literary Explorer',
-        followers: 1234,
-        stories: 45,
-      },
-      {
-        id: 2,
-        username: 'classicreader',
-        displayName: 'Classic Literature Fan',
-        followers: 892,
-        stories: 32,
-      },
-    ].filter(
-      (user) =>
-        user.username.toLowerCase().includes(query) ||
-        user.displayName.toLowerCase().includes(query)
-    )
+    // Map users
+    userResults.value = response.users.map((user: any) => ({
+      id: user.id,
+      username: user.username,
+      displayName: user.username, // Use username as display name for now
+      followers: 0, // Not implemented yet
+      stories: 0, // Not implemented yet
+    }))
   } catch (error) {
     console.error('Search failed:', error)
   } finally {
@@ -1173,18 +1123,18 @@ const performSearch = async () => {
 const clearSearch = () => {
   searchQuery.value = ''
   bookResults.value = []
-  storyResults.value = []
+  conversationResults.value = []
   userResults.value = []
 }
 
 const getTabCount = (tab: string): number => {
   switch (tab) {
     case 'all':
-      return bookResults.value.length + storyResults.value.length + userResults.value.length
+      return bookResults.value.length + conversationResults.value.length + userResults.value.length
     case 'books':
       return bookResults.value.length
-    case 'story':
-      return storyResults.value.length
+    case 'conversation':
+      return conversationResults.value.length
     case 'users':
       return userResults.value.length
     default:
@@ -1193,7 +1143,7 @@ const getTabCount = (tab: string): number => {
 }
 
 const getTotalResults = (): number => {
-  return bookResults.value.length + storyResults.value.length + userResults.value.length
+  return bookResults.value.length + conversationResults.value.length + userResults.value.length
 }
 
 const navigateToBook = (id: number) => {
