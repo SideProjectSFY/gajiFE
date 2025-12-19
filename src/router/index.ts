@@ -51,7 +51,7 @@ const routes: RouteRecordRaw[] = [
     path: '/conversations',
     name: 'Conversations',
     component: Conversations,
-    meta: { requiresAuth: false },
+    meta: { requiresAuth: true },
   },
   {
     path: '/login',
