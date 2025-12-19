@@ -52,6 +52,20 @@ export const bookApi = {
   },
 
   /**
+   * Get liked books
+   * @param userId Optional User ID to fetch liked books for
+   */
+  async getLikedBooks(userId?: string): Promise<BooksResponse> {
+    const params: any = { size: 100 } // Fetch more for now
+    if (userId) params.userId = userId
+
+    const response = await axios.get<BooksResponse>(`${API_BASE_URL}/api/v1/books/liked`, {
+      params,
+    })
+    return response.data
+  },
+
+  /**
    * Like a book
    * @param bookId Book UUID
    * @returns Promise with success response
