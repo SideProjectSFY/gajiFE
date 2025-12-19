@@ -9,7 +9,6 @@ import ChatMessage from '../components/chat/ChatMessage.vue'
 import ChatInput from '../components/chat/ChatInput.vue'
 import TypingIndicator from '../components/chat/TypingIndicator.vue'
 import ConversationsSidebar from '../components/chat/ConversationsSidebar.vue'
-import ForkConversationModal from '../components/chat/ForkConversationModal.vue'
 import ForkNavigationWidget from '../components/chat/ForkNavigationWidget.vue'
 import { useAnalytics } from '@/composables/useAnalytics'
 import type { Message } from '@/stores/conversation'
@@ -26,7 +25,6 @@ const { trackConversationStarted, trackMessageSent } = useAnalytics()
 const isLoading = ref(true)
 const isTyping = ref(false)
 const showSidebar = ref(false)
-const showForkModal = ref(false)
 
 // Scenario info from API
 const scenarioInfo = ref<CreateScenarioResponse | null>(null)
@@ -111,35 +109,6 @@ const handleSendMessage = async (messageContent: string) => {
     console.error('Failed to send message:', error)
     isTyping.value = false
     // TODO: Show error toast to user
-  }
-}
-
-const handleForkClick = () => {
-  showForkModal.value = true
-}
-
-const handleForkConfirm = async (description: string) => {
-  try {
-    // Import forkConversation API
-    const { forkConversation } = await import('@/services/conversationApi')
-
-    // Call actual fork API
-    const forkResult = await forkConversation(route.params.id as string, description)
-
-    showForkModal.value = false
-
-    const toast = await import('@/composables/useToast').then((m) => m.useToast())
-    toast.success('분기가 생성되었습니다')
-
-    // Navigate to new forked conversation
-    // Watch on route.params.id will trigger loadConversation
-    await router.push(`/conversations/${forkResult.id}`)
-  } catch (error) {
-    console.error('Failed to fork conversation:', error)
-    showForkModal.value = false
-
-    const toast = await import('@/composables/useToast').then((m) => m.useToast())
-    toast.error('분기 생성 실패')
   }
 }
 
@@ -483,32 +452,6 @@ watch(
                 🔀 분기된 대화 (깊이: {{ conversationDepth }})
               </p>
             </div>
-            <button
-              v-if="isRootConversation && !hasBeenForked"
-              data-testid="fork-conversation-button"
-              :class="
-                css({
-                  mt: '4',
-                  w: 'full',
-                  py: '2',
-                  px: '4',
-                  bg: messages.length === 0 ? 'gray.400' : 'green.600',
-                  color: 'white',
-                  borderRadius: '0.5rem',
-                  fontSize: '0.875rem',
-                  fontWeight: '500',
-                  cursor: messages.length === 0 ? 'not-allowed' : 'pointer',
-                  border: 'none',
-                  _hover: { bg: messages.length === 0 ? 'gray.400' : 'green.700' },
-                  _disabled: { opacity: 0.5, cursor: 'not-allowed' },
-                })
-              "
-              :disabled="hasBeenForked || messages.length === 0"
-              :title="messages.length === 0 ? '메시지가 없으면 분기할 수 없습니다' : ''"
-              @click="handleForkClick"
-            >
-              🔀 Fork Conversation
-            </button>
           </div>
         </div>
       </div>
@@ -646,9 +589,6 @@ watch(
         <ChatInput :disabled="isLoading" :loading="isTyping" @send="handleSendMessage" />
       </div>
     </div>
-
-    <!-- Fork Conversation Modal -->
-    <ForkConversationModal v-model="showForkModal" :messages="messages" @fork="handleForkConfirm" />
   </div>
 </template>
 
