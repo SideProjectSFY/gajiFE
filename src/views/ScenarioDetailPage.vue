@@ -108,11 +108,13 @@ import ScenarioTreeView from '@/components/scenario/ScenarioTreeView.vue'
 import ForkHistoryTree from '@/components/scenario/ForkHistoryTree.vue'
 import type { BrowseScenario } from '@/types'
 import api from '@/services/api'
+import { useAuthStore } from '@/stores/auth'
 
 const route = useRoute()
 const router = useRouter()
 const { success, error: showErrorToast } = useToast()
 const { trackScenarioViewed, trackScenarioForked } = useAnalytics()
+const authStore = useAuthStore()
 const scenarioId = route.params.id as string
 
 const scenario = ref<BrowseScenario | null>(null)
@@ -168,6 +170,12 @@ const fetchScenario = async () => {
 }
 
 const handleFork = () => {
+  if (!authStore.isAuthenticated) {
+    showErrorToast('Please login to fork a scenario')
+    router.push({ name: 'Login', query: { redirect: route.fullPath } })
+    return
+  }
+
   if (scenario.value?.parent_scenario_id) {
     alert('Cannot fork a forked scenario. Maximum fork depth is 1.')
     return
