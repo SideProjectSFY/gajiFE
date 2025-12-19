@@ -1,214 +1,166 @@
 <!-- eslint-disable @typescript-eslint/explicit-function-return-type -->
 <!-- eslint-disable @typescript-eslint/no-unused-vars -->
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
-import { useRoute } from 'vue-router'
+import { ref, onMounted, computed } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { css } from 'styled-system/css'
 import AppHeader from '../components/common/AppHeader.vue'
 import AppFooter from '../components/common/AppFooter.vue'
+import BookComments from '../components/book/BookComments.vue'
+import CreateScenarioModal from '../components/scenario/CreateScenarioModal.vue'
 import { useAnalytics } from '@/composables/useAnalytics'
+import { useAuthStore } from '@/stores/auth'
+import { bookApi } from '@/services/bookApi'
+import type { BooksResponse } from '@/types/book'
 
 const route = useRoute()
+const router = useRouter()
 const { trackBookViewed } = useAnalytics()
+const authStore = useAuthStore()
 
-// Mock database - 실제로는 API에서 가져올 데이터
-const booksDatabase = {
-  '1': {
-    id: 1,
-    title: 'The Great Gatsby',
-    author: 'F. Scott Fitzgerald',
-    year: '1925',
-    description:
-      "Set in the summer of 1922, the novel follows aspiring writer Nick Carraway and his interactions with the mysterious millionaire Jay Gatsby and Gatsby's obsession to reunite with his former lover, Daisy Buchanan. The story explores themes of decadence, idealism, social upheaval, and excess.",
-    tags: ['Classic', 'Drama', 'American'],
-    charactersCount: 6,
-    conversationsCount: 1623,
-    viewsCount: 3456,
-    characters: [
+// State
+const loading = ref(true)
+const error = ref('')
+const book = ref<BooksResponse['content'][0] | null>(null)
+const bookId = route.params.id as string
+
+// Scenario form state
+const MIN_CHARS = 10
+const scenarioForm = ref({
+  characterChanges: '',
+  eventAlterations: '',
+  settingModifications: '',
+  description: '',
+})
+
+// Mock characters data (temporary until backend provides this)
+const characters = ref<any[]>([])
+const relationships = ref<any[]>([])
+const selectedCharacter = ref<number | null>(null)
+const showScenarioModal = ref(false)
+
+// Validation computed properties
+const isCharacterChangesValid = computed(() => {
+  const length = scenarioForm.value.characterChanges.trim().length
+  return length === 0 || length >= MIN_CHARS
+})
+
+const isEventAlterationsValid = computed(() => {
+  const length = scenarioForm.value.eventAlterations.trim().length
+  return length === 0 || length >= MIN_CHARS
+})
+
+const isSettingModificationsValid = computed(() => {
+  const length = scenarioForm.value.settingModifications.trim().length
+  return length === 0 || length >= MIN_CHARS
+})
+
+const hasAtLeastOneValidType = computed(() => {
+  return (
+    scenarioForm.value.characterChanges.trim().length >= MIN_CHARS ||
+    scenarioForm.value.eventAlterations.trim().length >= MIN_CHARS ||
+    scenarioForm.value.settingModifications.trim().length >= MIN_CHARS
+  )
+})
+
+const isFormValid = computed(() => {
+  return (
+    isCharacterChangesValid.value &&
+    isEventAlterationsValid.value &&
+    isSettingModificationsValid.value &&
+    hasAtLeastOneValidType.value
+  )
+})
+
+const showValidationError = computed(() => {
+  const hasTyped =
+    scenarioForm.value.characterChanges.length > 0 ||
+    scenarioForm.value.eventAlterations.length > 0 ||
+    scenarioForm.value.settingModifications.length > 0
+  return hasTyped && !hasAtLeastOneValidType.value
+})
+
+const getCharCount = (text: string) => {
+  return text.trim().length
+}
+
+// Fetch book data from API
+const fetchBook = async () => {
+  console.log('[BookDetailPage] START fetchBook, bookId:', bookId)
+  try {
+    loading.value = true
+    error.value = ''
+    console.log('[BookDetailPage] About to call API')
+    const data = await bookApi.getBookById(bookId)
+    console.log('[BookDetailPage] API response:', JSON.stringify(data))
+    book.value = data
+    console.log('[BookDetailPage] book.value set:', book.value)
+
+    // Track book view
+    try {
+      trackBookViewed(String(data.id), data.title)
+      console.log('[BookDetailPage] trackBookViewed success')
+    } catch (trackErr) {
+      console.error('[BookDetailPage] trackBookViewed failed:', trackErr)
+    }
+
+    // TODO: Fetch characters and relationships from backend
+    // For now, using mock data for testing
+    characters.value = [
       {
         id: 1,
-        name: 'Jay Gatsby',
-        description:
-          'Mysterious millionaire known for lavish parties, obsessed with winning back Daisy',
-        tags: ['Mysterious', 'Romantic', 'Ambitious'],
-        conversations: 892,
+        name: 'Harry Potter',
+        description: 'The Boy Who Lived',
         isFeatured: true,
+        tags: ['Brave', 'Wizard'],
+        conversations: 150,
       },
       {
         id: 2,
-        name: 'Tom Buchanan',
-        description:
-          "Daisy's millionaire husband, arrogant and controlling with old money background",
-        tags: ['Wealthy', 'Arrogant', 'Powerful'],
-        conversations: 456,
+        name: 'Hermione Granger',
+        description: 'Brightest witch of her age',
         isFeatured: true,
+        tags: ['Intelligent', 'Loyal'],
+        conversations: 120,
       },
-      {
-        id: 3,
-        name: 'Nick Carraway',
-        description:
-          'The narrator, a bond salesman who becomes entangled in the lives of his wealthy neighbors',
-        tags: ['Observant', 'Honest', 'Thoughtful'],
-        conversations: 543,
-        isFeatured: false,
-      },
-      {
-        id: 4,
-        name: 'Daisy Buchanan',
-        description:
-          "Gatsby's former lover, now married to Tom, torn between old love and current comfort",
-        tags: ['Charming', 'Conflicted', 'Beautiful'],
-        conversations: 678,
-        isFeatured: true,
-      },
-    ],
-    relationships: [
-      { from: 'Jay Gatsby', to: 'Daisy Buchanan', type: 'love', label: 'Main Story' },
-      { from: 'Jay Gatsby', to: 'Nick Carraway', type: 'friend', label: 'Strong Bond' },
-      { from: 'Tom Buchanan', to: 'Daisy Buchanan', type: 'married', label: 'Mean Conflict' },
-      { from: 'Daisy Buchanan', to: 'Nick Carraway', type: 'cousin', label: '' },
-    ],
-  },
-  '2': {
-    id: 2,
-    title: 'Pride and Prejudice',
-    author: 'Jane Austen',
-    year: '1813',
-    description:
-      'The novel follows the character development of Elizabeth Bennet, the protagonist of the book, who learns about the repercussions of hasty judgments and comes to appreciate the difference between superficial goodness and actual goodness.',
-    tags: ['Romance', 'Classic', 'Social Commentary'],
-    charactersCount: 8,
-    conversationsCount: 2145,
-    viewsCount: 4567,
-    characters: [
-      {
-        id: 5,
-        name: 'Elizabeth Bennet',
-        description:
-          'Witty and independent-minded second daughter, refuses to marry for convenience',
-        tags: ['Witty', 'Independent', 'Principled'],
-        conversations: 1234,
-        isFeatured: true,
-      },
-      {
-        id: 6,
-        name: 'Mr. Darcy',
-        description: 'Wealthy but proud gentleman who learns to overcome his initial prejudices',
-        tags: ['Proud', 'Noble', 'Complex'],
-        conversations: 1098,
-        isFeatured: true,
-      },
-      {
-        id: 7,
-        name: 'Jane Bennet',
-        description: "Elizabeth's beautiful and sweet-natured elder sister",
-        tags: ['Kind', 'Beautiful', 'Gentle'],
-        conversations: 456,
-        isFeatured: false,
-      },
-      {
-        id: 8,
-        name: 'Mr. Bingley',
-        description: "Darcy's good-natured friend who falls in love with Jane Bennet",
-        tags: ['Friendly', 'Wealthy', 'Amiable'],
-        conversations: 389,
-        isFeatured: false,
-      },
-      {
-        id: 9,
-        name: 'Mr. Wickham',
-        description: 'Charming militia officer with a dark past and connection to Darcy',
-        tags: ['Charming', 'Deceptive', 'Opportunistic'],
-        conversations: 267,
-        isFeatured: false,
-      },
-    ],
-    relationships: [
-      { from: 'Elizabeth Bennet', to: 'Mr. Darcy', type: 'love', label: 'Main Story' },
-      { from: 'Jane Bennet', to: 'Mr. Bingley', type: 'love', label: 'Strong Bond' },
-      { from: 'Mr. Darcy', to: 'Mr. Bingley', type: 'friend', label: 'Strong Bond' },
-      { from: 'Elizabeth Bennet', to: 'Jane Bennet', type: 'sister', label: '' },
-      { from: 'Mr. Wickham', to: 'Mr. Darcy', type: 'conflict', label: 'Mean Conflict' },
-    ],
-  },
-  '3': {
-    id: 3,
-    title: '1984',
-    author: 'George Orwell',
-    year: '1949',
-    description:
-      'A dystopian social science fiction novel that follows Winston Smith, a man who struggles with oppression in Oceania, a totalitarian state where the Party scrutinizes every human action with Big Brother watching.',
-    tags: ['Dystopian', 'Political', 'Classic'],
-    charactersCount: 5,
-    conversationsCount: 1876,
-    viewsCount: 3890,
-    characters: [
-      {
-        id: 10,
-        name: 'Winston Smith',
-        description: 'Party member who secretly rebels against totalitarian regime',
-        tags: ['Rebellious', 'Thoughtful', 'Tragic'],
-        conversations: 945,
-        isFeatured: true,
-      },
-      {
-        id: 11,
-        name: 'Julia',
-        description: "Winston's lover who also rebels against the Party in her own way",
-        tags: ['Rebellious', 'Practical', 'Passionate'],
-        conversations: 678,
-        isFeatured: true,
-      },
-      {
-        id: 12,
-        name: "O'Brien",
-        description: 'Member of the Inner Party who Winston believes is a secret rebel',
-        tags: ['Manipulative', 'Intelligent', 'Powerful'],
-        conversations: 423,
-        isFeatured: true,
-      },
-      {
-        id: 13,
-        name: 'Big Brother',
-        description: 'The face of the Party, omnipresent leader who may or may not exist',
-        tags: ['Omnipresent', 'Symbolic', 'Authoritarian'],
-        conversations: 567,
-        isFeatured: false,
-      },
-    ],
-    relationships: [
-      { from: 'Winston Smith', to: 'Julia', type: 'love', label: 'Main Story' },
-      { from: 'Winston Smith', to: "O'Brien", type: 'conflict', label: 'Mean Conflict' },
-      { from: 'Big Brother', to: 'Winston Smith', type: 'oppressor', label: 'Mean Conflict' },
-    ],
-  },
+    ]
+    relationships.value = []
+    console.log('[BookDetailPage] Book loaded successfully')
+  } catch (err: any) {
+    console.error('[BookDetailPage] Failed to fetch book:', err, err.message, err.stack)
+    error.value = 'Failed to load book details'
+    // Redirect to books page if book not found
+    if (err.response?.status === 404) {
+      console.log('[BookDetailPage] 404, redirecting')
+      router.push('/books')
+    }
+  } finally {
+    loading.value = false
+    console.log(
+      '[BookDetailPage] FINALLY - loading:',
+      loading.value,
+      ', book:',
+      !!book.value,
+      ', error:',
+      error.value
+    )
+  }
 }
 
-// 현재 책 ID로 데이터 로드
-const bookId = route.params.id as string
-const bookData = booksDatabase[bookId as keyof typeof booksDatabase]
+// Load book data on mount
+onMounted(() => {
+  fetchBook()
+})
 
-// 책이 없으면 기본값 설정
-const book = ref(
-  bookData || {
-    id: 0,
-    title: 'Book Not Found',
-    author: 'Unknown',
-    year: '0000',
-    description: 'This book does not exist in our database.',
-    tags: [],
-    charactersCount: 0,
-    conversationsCount: 0,
-    viewsCount: 0,
-    characters: [],
-    relationships: [],
+const getCharCountDisplay = (text: string, fieldName: string) => {
+  const count = getCharCount(text)
+  const isValid = count === 0 || count >= MIN_CHARS
+  return {
+    text: `${count}/${MIN_CHARS}`,
+    isValid,
+    showCheck: count >= MIN_CHARS,
   }
-)
-
-const characters = ref(book.value.characters || [])
-const relationships = book.value.relationships || []
-const selectedCharacter = ref<number | null>(null)
-const showScenarioModal = ref(false)
+}
 
 // SVG Graph State
 const svgWidth = 400
@@ -219,17 +171,15 @@ const edges = ref<Array<{ from: string; to: string; type: string; label: string 
 // Initialize graph layout
 onMounted(() => {
   initializeGraph()
-
-  // GA4: 책 조회 추적
-  if (book.value) {
-    trackBookViewed(String(book.value.id), book.value.title)
-  }
 })
 
 const initializeGraph = () => {
   // Define node positions manually for better layout
   const characterNames = [
-    ...new Set([...relationships.map((r) => r.from), ...relationships.map((r) => r.to)]),
+    ...new Set([
+      ...relationships.value.map((r) => r.from),
+      ...relationships.value.map((r) => r.to),
+    ]),
   ]
 
   const centerX = svgWidth / 2
@@ -271,6 +221,13 @@ const getEdgeLabel = (label: string) => {
 }
 
 const toggleCharacterSelection = (characterId: number) => {
+  // Check if user is authenticated
+  if (!authStore.isAuthenticated) {
+    // Redirect to login page
+    router.push('/login')
+    return
+  }
+
   if (selectedCharacter.value === characterId) {
     selectedCharacter.value = null
   } else {
@@ -287,10 +244,9 @@ const closeScenarioModal = () => {
   showScenarioModal.value = false
 }
 
-const createScenario = () => {
-  console.log('Create scenario with character', selectedCharacter.value)
-  // TODO: 시나리오 생성 로직 구현
-  closeScenarioModal()
+const handleScenarioCreated = (data: any) => {
+  console.log('Scenario created:', data)
+  // TODO: Navigate to conversation or refresh scenarios
 }
 </script>
 
@@ -335,8 +291,56 @@ const createScenario = () => {
         </div>
       </div>
 
+      <!-- Loading State -->
+      <div
+        v-if="loading"
+        :class="
+          css({
+            bg: 'white',
+            borderRadius: '0.75rem',
+            p: '12',
+            boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)',
+            textAlign: 'center',
+          })
+        "
+      >
+        <p :class="css({ color: 'gray.600' })">Loading book details...</p>
+      </div>
+
+      <!-- Error State -->
+      <div
+        v-else-if="error"
+        :class="
+          css({
+            bg: 'white',
+            borderRadius: '0.75rem',
+            p: '12',
+            boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)',
+            textAlign: 'center',
+          })
+        "
+      >
+        <p :class="css({ color: 'red.600', mb: '4' })">{{ error }}</p>
+        <button
+          @click="fetchBook"
+          :class="
+            css({
+              px: '4',
+              py: '2',
+              bg: 'green.500',
+              color: 'white',
+              borderRadius: '0.375rem',
+              _hover: { bg: 'green.600' },
+            })
+          "
+        >
+          Retry
+        </button>
+      </div>
+
       <!-- Book Header Section -->
       <div
+        v-else-if="book"
         :class="
           css({
             bg: 'white',
@@ -373,7 +377,10 @@ const createScenario = () => {
           <!-- Book Info -->
           <div :class="css({ flex: 1 })">
             <!-- Tags -->
-            <div :class="css({ display: 'flex', gap: '2', mb: '3' })">
+            <div
+              v-if="book.tags && book.tags.length"
+              :class="css({ display: 'flex', gap: '2', mb: '3' })"
+            >
               <span
                 v-for="tag in book.tags"
                 :key="tag"
@@ -407,13 +414,14 @@ const createScenario = () => {
               {{ book.title }}
             </h1>
 
-            <!-- Author & Year -->
+            <!-- Author & Genre -->
             <p :class="css({ fontSize: '1rem', color: 'gray.600', mb: '4' })">
-              by {{ book.author }} • {{ book.year }}
+              by {{ book.author }} • {{ book.genre }}
             </p>
 
             <!-- Description -->
             <p
+              v-if="book.description"
               :class="
                 css({
                   fontSize: '0.875rem',
@@ -430,10 +438,10 @@ const createScenario = () => {
             <div :class="css({ display: 'flex', gap: '6', mb: '0' })">
               <div>
                 <div :class="css({ fontSize: '0.75rem', color: 'gray.500', mb: '1' })">
-                  👥 Characters
+                  📝 Scenarios
                 </div>
                 <div :class="css({ fontSize: '1.125rem', fontWeight: 'bold', color: 'gray.900' })">
-                  {{ book.charactersCount }}
+                  {{ book.scenarioCount }}
                 </div>
               </div>
               <div>
@@ -441,15 +449,15 @@ const createScenario = () => {
                   💬 Conversations
                 </div>
                 <div :class="css({ fontSize: '1.125rem', fontWeight: 'bold', color: 'gray.900' })">
-                  {{ book.conversationsCount.toLocaleString() }}
+                  {{ book.conversationCount.toLocaleString() }}
                 </div>
               </div>
               <div>
                 <div :class="css({ fontSize: '0.75rem', color: 'gray.500', mb: '1' })">
-                  📖 Total read
+                  ❤️ Likes
                 </div>
                 <div :class="css({ fontSize: '1.125rem', fontWeight: 'bold', color: 'gray.900' })">
-                  {{ book.viewsCount.toLocaleString() }}
+                  {{ book.likeCount ?? 0 }}
                 </div>
               </div>
             </div>
@@ -457,200 +465,19 @@ const createScenario = () => {
         </div>
       </div>
 
-      <!-- Main Content: Graph + Characters -->
-      <div
-        :class="
-          css({
-            display: 'grid',
-            gridTemplateColumns: { base: '1fr', lg: '400px 1fr' },
-            gap: '6',
-          })
-        "
-      >
-        <!-- Left: Relationship Graph -->
+      <!-- Book Content Container -->
+      <template v-if="book">
+        <!-- Main Content: Graph + Characters -->
         <div
           :class="
             css({
-              bg: 'white',
-              borderRadius: '0.75rem',
-              p: '6',
-              boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)',
-              h: 'fit-content',
+              display: 'grid',
+              gridTemplateColumns: { base: '1fr', lg: '400px 1fr' },
+              gap: '6',
             })
           "
         >
-          <h2
-            :class="
-              css({
-                fontSize: '1.125rem',
-                fontWeight: '600',
-                color: 'gray.900',
-                mb: '4',
-              })
-            "
-          >
-            🔗 Search Characters
-          </h2>
-
-          <!-- SVG Graph -->
-          <div
-            :class="
-              css({
-                w: 'full',
-                bg: 'gray.50',
-                borderRadius: '0.5rem',
-                p: '4',
-                mb: '4',
-              })
-            "
-          >
-            <svg
-              :width="svgWidth"
-              :height="svgHeight"
-              :viewBox="`0 0 ${svgWidth} ${svgHeight}`"
-            >
-              <!-- Edges -->
-              <g
-                v-for="(edge, idx) in edges"
-                :key="`edge-${idx}`"
-              >
-                <line
-                  :x1="getNodePosition(edge.from).x"
-                  :y1="getNodePosition(edge.from).y"
-                  :x2="getNodePosition(edge.to).x"
-                  :y2="getNodePosition(edge.to).y"
-                  :stroke="getEdgeColor(edge.type)"
-                  :stroke-width="edge.label === 'Main Story' ? 3 : 2"
-                  stroke-linecap="round"
-                />
-                <text
-                  v-if="edge.label"
-                  :x="(getNodePosition(edge.from).x + getNodePosition(edge.to).x) / 2"
-                  :y="(getNodePosition(edge.from).y + getNodePosition(edge.to).y) / 2"
-                  :class="css({ fontSize: '0.625rem', fill: 'gray.600' })"
-                  text-anchor="middle"
-                >
-                  {{ getEdgeLabel(edge.label) }}
-                </text>
-              </g>
-
-              <!-- Nodes -->
-              <g
-                v-for="node in nodes"
-                :key="node.id"
-              >
-                <circle
-                  :cx="node.x"
-                  :cy="node.y"
-                  :r="node.type === 'main' ? 35 : 30"
-                  :fill="node.type === 'main' ? '#ef4444' : '#3b82f6'"
-                  stroke="white"
-                  stroke-width="3"
-                />
-                <text
-                  :x="node.x"
-                  :y="node.y + 50"
-                  :class="
-                    css({
-                      fontSize: '0.75rem',
-                      fontWeight: '600',
-                      fill: 'gray.900',
-                      textAlign: 'center',
-                    })
-                  "
-                  text-anchor="middle"
-                >
-                  {{ node.id.split(' ')[0] }}
-                </text>
-                <text
-                  :x="node.x"
-                  :y="node.y + 65"
-                  :class="
-                    css({
-                      fontSize: '0.75rem',
-                      fontWeight: '600',
-                      fill: 'gray.900',
-                    })
-                  "
-                  text-anchor="middle"
-                >
-                  {{ node.id.split(' ').slice(1).join(' ') }}
-                </text>
-              </g>
-            </svg>
-          </div>
-
-          <!-- Legend -->
-          <div>
-            <div :class="css({ display: 'flex', flexDirection: 'column', gap: '2' })">
-              <div :class="css({ display: 'flex', alignItems: 'center', gap: '2' })">
-                <div
-                  :class="
-                    css({
-                      w: '3',
-                      h: '3',
-                      bg: 'red.500',
-                      borderRadius: 'full',
-                    })
-                  "
-                />
-                <span :class="css({ fontSize: '0.75rem', color: 'gray.700' })">Main Character</span>
-              </div>
-              <div :class="css({ display: 'flex', alignItems: 'center', gap: '2' })">
-                <div
-                  :class="
-                    css({
-                      w: '3',
-                      h: '3',
-                      bg: 'blue.500',
-                      borderRadius: 'full',
-                    })
-                  "
-                />
-                <span :class="css({ fontSize: '0.75rem', color: 'gray.700' })">Minor Character</span>
-              </div>
-              <div :class="css({ display: 'flex', alignItems: 'center', gap: '2' })">
-                <div
-                  :class="
-                    css({
-                      w: '6',
-                      h: '0.5',
-                      bg: 'green.500',
-                    })
-                  "
-                />
-                <span :class="css({ fontSize: '0.75rem', color: 'gray.700' })">Strong Bond</span>
-              </div>
-              <div :class="css({ display: 'flex', alignItems: 'center', gap: '2' })">
-                <div
-                  :class="
-                    css({
-                      w: '6',
-                      h: '0.5',
-                      bg: 'cyan.500',
-                    })
-                  "
-                />
-                <span :class="css({ fontSize: '0.75rem', color: 'gray.700' })">Weak Connect</span>
-              </div>
-              <div :class="css({ display: 'flex', alignItems: 'center', gap: '2' })">
-                <div
-                  :class="
-                    css({
-                      w: '6',
-                      h: '0.5',
-                      bg: 'red.500',
-                    })
-                  "
-                />
-                <span :class="css({ fontSize: '0.75rem', color: 'gray.700' })">Mean Conflict</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Right: Characters List -->
-        <div>
+          <!-- Left: Relationship Graph -->
           <div
             :class="
               css({
@@ -658,8 +485,7 @@ const createScenario = () => {
                 borderRadius: '0.75rem',
                 p: '6',
                 boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)',
-                maxH: '800px',
-                overflowY: 'auto',
+                h: 'fit-content',
               })
             "
           >
@@ -673,118 +499,327 @@ const createScenario = () => {
                 })
               "
             >
-              All Characters
+              🔗 Search Characters
             </h2>
-            <div :class="css({ display: 'flex', flexDirection: 'column', gap: '3' })">
-              <div
-                v-for="character in characters"
-                :key="character.id"
+
+            <!-- SVG Graph -->
+            <div
+              :class="
+                css({
+                  w: 'full',
+                  bg: 'gray.50',
+                  borderRadius: '0.5rem',
+                  p: '4',
+                  mb: '4',
+                })
+              "
+            >
+              <svg :width="svgWidth" :height="svgHeight" :viewBox="`0 0 ${svgWidth} ${svgHeight}`">
+                <!-- Edges -->
+                <g v-for="(edge, idx) in edges" :key="`edge-${idx}`">
+                  <line
+                    :x1="getNodePosition(edge.from).x"
+                    :y1="getNodePosition(edge.from).y"
+                    :x2="getNodePosition(edge.to).x"
+                    :y2="getNodePosition(edge.to).y"
+                    :stroke="getEdgeColor(edge.type)"
+                    :stroke-width="edge.label === 'Main Story' ? 3 : 2"
+                    stroke-linecap="round"
+                  />
+                  <text
+                    v-if="edge.label"
+                    :x="(getNodePosition(edge.from).x + getNodePosition(edge.to).x) / 2"
+                    :y="(getNodePosition(edge.from).y + getNodePosition(edge.to).y) / 2"
+                    :class="css({ fontSize: '0.625rem', fill: 'gray.600' })"
+                    text-anchor="middle"
+                  >
+                    {{ getEdgeLabel(edge.label) }}
+                  </text>
+                </g>
+
+                <!-- Nodes -->
+                <g v-for="node in nodes" :key="node.id">
+                  <circle
+                    :cx="node.x"
+                    :cy="node.y"
+                    :r="node.type === 'main' ? 35 : 30"
+                    :fill="node.type === 'main' ? '#ef4444' : '#3b82f6'"
+                    stroke="white"
+                    stroke-width="3"
+                  />
+                  <text
+                    :x="node.x"
+                    :y="node.y + 50"
+                    :class="
+                      css({
+                        fontSize: '0.75rem',
+                        fontWeight: '600',
+                        fill: 'gray.900',
+                        textAlign: 'center',
+                      })
+                    "
+                    text-anchor="middle"
+                  >
+                    {{ node.id.split(' ')[0] }}
+                  </text>
+                  <text
+                    :x="node.x"
+                    :y="node.y + 65"
+                    :class="
+                      css({
+                        fontSize: '0.75rem',
+                        fontWeight: '600',
+                        fill: 'gray.900',
+                      })
+                    "
+                    text-anchor="middle"
+                  >
+                    {{ node.id.split(' ').slice(1).join(' ') }}
+                  </text>
+                </g>
+              </svg>
+            </div>
+
+            <!-- Legend -->
+            <div>
+              <div :class="css({ display: 'flex', flexDirection: 'column', gap: '2' })">
+                <div :class="css({ display: 'flex', alignItems: 'center', gap: '2' })">
+                  <div
+                    :class="
+                      css({
+                        w: '3',
+                        h: '3',
+                        bg: 'red.500',
+                        borderRadius: 'full',
+                      })
+                    "
+                  />
+                  <span :class="css({ fontSize: '0.75rem', color: 'gray.700' })"
+                    >Main Character</span
+                  >
+                </div>
+                <div :class="css({ display: 'flex', alignItems: 'center', gap: '2' })">
+                  <div
+                    :class="
+                      css({
+                        w: '3',
+                        h: '3',
+                        bg: 'blue.500',
+                        borderRadius: 'full',
+                      })
+                    "
+                  />
+                  <span :class="css({ fontSize: '0.75rem', color: 'gray.700' })"
+                    >Minor Character</span
+                  >
+                </div>
+                <div :class="css({ display: 'flex', alignItems: 'center', gap: '2' })">
+                  <div
+                    :class="
+                      css({
+                        w: '6',
+                        h: '0.5',
+                        bg: 'green.500',
+                      })
+                    "
+                  />
+                  <span :class="css({ fontSize: '0.75rem', color: 'gray.700' })">Strong Bond</span>
+                </div>
+                <div :class="css({ display: 'flex', alignItems: 'center', gap: '2' })">
+                  <div
+                    :class="
+                      css({
+                        w: '6',
+                        h: '0.5',
+                        bg: 'cyan.500',
+                      })
+                    "
+                  />
+                  <span :class="css({ fontSize: '0.75rem', color: 'gray.700' })">Weak Connect</span>
+                </div>
+                <div :class="css({ display: 'flex', alignItems: 'center', gap: '2' })">
+                  <div
+                    :class="
+                      css({
+                        w: '6',
+                        h: '0.5',
+                        bg: 'red.500',
+                      })
+                    "
+                  />
+                  <span :class="css({ fontSize: '0.75rem', color: 'gray.700' })"
+                    >Mean Conflict</span
+                  >
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Right: Characters List -->
+          <div>
+            <div
+              :class="
+                css({
+                  bg: 'white',
+                  borderRadius: '0.75rem',
+                  p: '6',
+                  boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)',
+                  maxH: '800px',
+                  overflowY: 'auto',
+                })
+              "
+            >
+              <h2
                 :class="
                   css({
-                    borderRadius: '0.5rem',
-                    p: '4',
-                    border: '2px solid',
-                    borderColor: selectedCharacter === character.id ? 'green.500' : 'gray.200',
-                    bg: selectedCharacter === character.id ? 'green.50' : 'white',
-                    _hover: { borderColor: 'green.500', boxShadow: 'sm' },
-                    transition: 'all 0.2s',
-                    cursor: 'pointer',
+                    fontSize: '1.125rem',
+                    fontWeight: '600',
+                    color: 'gray.900',
+                    mb: '4',
                   })
                 "
-                @click="toggleCharacterSelection(character.id)"
               >
-                <div :class="css({ display: 'flex', alignItems: 'flex-start', gap: '3', mb: '3' })">
-                  <h3
-                    :class="
-                      css({
-                        fontSize: '1.125rem',
-                        fontWeight: 'bold',
-                        color: 'gray.900',
-                        flex: 1,
-                      })
-                    "
+                All Characters
+              </h2>
+              <div :class="css({ display: 'flex', flexDirection: 'column', gap: '3' })">
+                <div
+                  v-for="character in characters"
+                  :key="character.id"
+                  :class="
+                    css({
+                      borderRadius: '0.5rem',
+                      p: '4',
+                      border: '2px solid',
+                      borderColor: selectedCharacter === character.id ? 'green.500' : 'gray.200',
+                      bg: selectedCharacter === character.id ? 'green.50' : 'white',
+                      _hover: { borderColor: 'green.500', boxShadow: 'sm' },
+                      transition: 'all 0.2s',
+                      cursor: 'pointer',
+                    })
+                  "
+                  @click="toggleCharacterSelection(character.id)"
+                >
+                  <div
+                    :class="css({ display: 'flex', alignItems: 'flex-start', gap: '3', mb: '3' })"
                   >
-                    {{ character.name }}
-                  </h3>
-                  <span
-                    v-if="character.isFeatured"
-                    :class="
-                      css({
-                        px: '2',
-                        py: '0.5',
-                        bg: 'red.500',
-                        color: 'white',
-                        fontSize: '0.625rem',
-                        fontWeight: '600',
-                        borderRadius: '0.25rem',
-                      })
-                    "
-                  >
-                    Featured
-                  </span>
+                    <h3
+                      :class="
+                        css({
+                          fontSize: '1.125rem',
+                          fontWeight: 'bold',
+                          color: 'gray.900',
+                          flex: 1,
+                        })
+                      "
+                    >
+                      {{ character.name }}
+                    </h3>
+                    <span
+                      v-if="character.isFeatured"
+                      :class="
+                        css({
+                          px: '2',
+                          py: '0.5',
+                          bg: 'red.500',
+                          color: 'white',
+                          fontSize: '0.625rem',
+                          fontWeight: '600',
+                          borderRadius: '0.25rem',
+                        })
+                      "
+                    >
+                      Featured
+                    </span>
+                  </div>
+                  <p :class="css({ fontSize: '0.875rem', color: 'gray.600', mb: '3' })">
+                    {{ character.description }}
+                  </p>
+                  <div :class="css({ display: 'flex', gap: '2', flexWrap: 'wrap', mb: '3' })">
+                    <span
+                      v-for="tag in character.tags"
+                      :key="tag"
+                      :class="
+                        css({
+                          px: '2',
+                          py: '0.5',
+                          bg: 'gray.100',
+                          color: 'gray.700',
+                          fontSize: '0.625rem',
+                          borderRadius: '9999px',
+                        })
+                      "
+                    >
+                      {{ tag }}
+                    </span>
+                  </div>
+                  <p :class="css({ fontSize: '0.75rem', color: 'gray.500', mb: '3' })">
+                    💬 {{ character.conversations.toLocaleString() }} conversations started
+                  </p>
                 </div>
-                <p :class="css({ fontSize: '0.875rem', color: 'gray.600', mb: '3' })">
-                  {{ character.description }}
-                </p>
-                <div :class="css({ display: 'flex', gap: '2', flexWrap: 'wrap', mb: '3' })">
-                  <span
-                    v-for="tag in character.tags"
-                    :key="tag"
-                    :class="
-                      css({
-                        px: '2',
-                        py: '0.5',
-                        bg: 'gray.100',
-                        color: 'gray.700',
-                        fontSize: '0.625rem',
-                        borderRadius: '9999px',
-                      })
-                    "
-                  >
-                    {{ tag }}
-                  </span>
-                </div>
-                <p :class="css({ fontSize: '0.75rem', color: 'gray.500', mb: '3' })">
-                  💬 {{ character.conversations.toLocaleString() }} conversations started
-                </p>
               </div>
             </div>
           </div>
         </div>
-      </div>
 
-      <!-- Create Any Button -->
-      <div :class="css({ mt: '8', textAlign: 'center' })">
-        <button
-          :disabled="selectedCharacter === null"
+        <!-- Create Any Button -->
+        <div :class="css({ mt: '8', textAlign: 'center' })">
+          <button
+            data-testid="create-scenario-button"
+            :disabled="selectedCharacter === null"
+            :class="
+              css({
+                px: '12',
+                py: '3',
+                bg: selectedCharacter === null ? 'gray.300' : 'green.500',
+                color: 'white',
+                border: 'none',
+                borderRadius: '0.5rem',
+                fontSize: '1rem',
+                fontWeight: '600',
+                cursor: selectedCharacter === null ? 'not-allowed' : 'pointer',
+                transition: 'all 0.2s',
+                opacity: selectedCharacter === null ? 0.6 : 1,
+                _hover:
+                  selectedCharacter !== null
+                    ? { bg: 'green.600', transform: 'translateY(-2px)' }
+                    : {},
+              })
+            "
+            @click="openScenarioModal"
+          >
+            {{
+              selectedCharacter === null
+                ? 'Select Character'
+                : `Create ${characters.find((c) => c.id === selectedCharacter)?.name}`
+            }}
+          </button>
+        </div>
+
+        <!-- Section Divider -->
+        <div
           :class="
             css({
-              px: '12',
-              py: '3',
-              bg: selectedCharacter === null ? 'gray.300' : 'green.500',
-              color: 'white',
-              border: 'none',
-              borderRadius: '0.5rem',
-              fontSize: '1rem',
-              fontWeight: '600',
-              cursor: selectedCharacter === null ? 'not-allowed' : 'pointer',
-              transition: 'all 0.2s',
-              opacity: selectedCharacter === null ? 0.6 : 1,
-              _hover:
-                selectedCharacter !== null
-                  ? { bg: 'green.600', transform: 'translateY(-2px)' }
-                  : {},
+              h: '1px',
+              bg: 'gray.200',
+              my: '12',
             })
           "
-          @click="openScenarioModal"
+        />
+
+        <!-- Comments Section -->
+        <section
+          :class="
+            css({
+              bg: 'white',
+              borderRadius: '0.75rem',
+              p: '6',
+              boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)',
+            })
+          "
         >
-          {{
-            selectedCharacter === null
-              ? 'Select Character'
-              : `Create ${characters.find((c) => c.id === selectedCharacter)?.name}`
-          }}
-        </button>
-      </div>
+          <BookComments :book-id="bookId" />
+        </section>
+      </template>
     </main>
 
     <!-- Scenario Creation Modal -->
@@ -909,12 +944,39 @@ const createScenario = () => {
               })
             "
           >
-            <h4
-              :class="css({ fontSize: '0.9375rem', fontWeight: '600', color: 'gray.900', mb: '2' })"
-            >
-              Character Property
-            </h4>
+            <div :class="css({ display: 'flex', justifyContent: 'space-between', mb: '2' })">
+              <h4
+                :class="
+                  css({ fontSize: '0.9375rem', fontWeight: '600', color: 'gray.900', mb: '2' })
+                "
+              >
+                Character Property
+              </h4>
+              <span
+                :class="
+                  css({
+                    fontSize: '0.75rem',
+                    color: getCharCountDisplay(scenarioForm.characterChanges, 'characterChanges')
+                      .isValid
+                      ? 'gray.500'
+                      : 'red.500',
+                  })
+                "
+              >
+                {{ getCharCountDisplay(scenarioForm.characterChanges, 'characterChanges').text }}
+                <span
+                  v-if="
+                    getCharCountDisplay(scenarioForm.characterChanges, 'characterChanges').showCheck
+                  "
+                  :class="css({ color: 'green.500', ml: '1' })"
+                >
+                  ✓
+                </span>
+              </span>
+            </div>
             <textarea
+              v-model="scenarioForm.characterChanges"
+              data-testid="character-changes-textarea"
               placeholder="e.g., Change personality from reserved to outgoing"
               :class="
                 css({
@@ -922,7 +984,7 @@ const createScenario = () => {
                   px: '3',
                   py: '2',
                   border: '1px solid',
-                  borderColor: 'gray.300',
+                  borderColor: isCharacterChangesValid ? 'gray.300' : 'red.300',
                   borderRadius: '0.5rem',
                   fontSize: '0.875rem',
                   minH: '16',
@@ -950,10 +1012,35 @@ const createScenario = () => {
               })
             "
           >
-            <h4 :class="css({ fontSize: '1rem', fontWeight: '600', color: 'gray.900', mb: '3' })">
-              Event Alterations
-            </h4>
+            <div :class="css({ display: 'flex', justifyContent: 'space-between', mb: '2' })">
+              <h4 :class="css({ fontSize: '1rem', fontWeight: '600', color: 'gray.900', mb: '3' })">
+                Event Alterations
+              </h4>
+              <span
+                :class="
+                  css({
+                    fontSize: '0.75rem',
+                    color: getCharCountDisplay(scenarioForm.eventAlterations, 'eventAlterations')
+                      .isValid
+                      ? 'gray.500'
+                      : 'red.500',
+                  })
+                "
+              >
+                {{ getCharCountDisplay(scenarioForm.eventAlterations, 'eventAlterations').text }}
+                <span
+                  v-if="
+                    getCharCountDisplay(scenarioForm.eventAlterations, 'eventAlterations').showCheck
+                  "
+                  :class="css({ color: 'green.500', ml: '1' })"
+                >
+                  ✓
+                </span>
+              </span>
+            </div>
             <textarea
+              v-model="scenarioForm.eventAlterations"
+              data-testid="event-alterations-textarea"
               placeholder="e.g., Character survives the confrontation"
               :class="
                 css({
@@ -961,7 +1048,7 @@ const createScenario = () => {
                   px: '3',
                   py: '2',
                   border: '1px solid',
-                  borderColor: 'gray.300',
+                  borderColor: isEventAlterationsValid ? 'gray.300' : 'red.300',
                   borderRadius: '0.5rem',
                   fontSize: '0.875rem',
                   minH: '20',
@@ -988,10 +1075,41 @@ const createScenario = () => {
               })
             "
           >
-            <h4 :class="css({ fontSize: '1rem', fontWeight: '600', color: 'gray.900', mb: '3' })">
-              Setting Modifications
-            </h4>
+            <div :class="css({ display: 'flex', justifyContent: 'space-between', mb: '2' })">
+              <h4 :class="css({ fontSize: '1rem', fontWeight: '600', color: 'gray.900', mb: '3' })">
+                Setting Modifications
+              </h4>
+              <span
+                :class="
+                  css({
+                    fontSize: '0.75rem',
+                    color: getCharCountDisplay(
+                      scenarioForm.settingModifications,
+                      'settingModifications'
+                    ).isValid
+                      ? 'gray.500'
+                      : 'red.500',
+                  })
+                "
+              >
+                {{
+                  getCharCountDisplay(scenarioForm.settingModifications, 'settingModifications')
+                    .text
+                }}
+                <span
+                  v-if="
+                    getCharCountDisplay(scenarioForm.settingModifications, 'settingModifications')
+                      .showCheck
+                  "
+                  :class="css({ color: 'green.500', ml: '1' })"
+                >
+                  ✓
+                </span>
+              </span>
+            </div>
             <textarea
+              v-model="scenarioForm.settingModifications"
+              data-testid="setting-modifications-textarea"
               placeholder="e.g., Story takes place in modern times instead of 1920s"
               :class="
                 css({
@@ -999,7 +1117,7 @@ const createScenario = () => {
                   px: '3',
                   py: '2',
                   border: '1px solid',
-                  borderColor: 'gray.300',
+                  borderColor: isSettingModificationsValid ? 'gray.300' : 'red.300',
                   borderRadius: '0.5rem',
                   fontSize: '0.875rem',
                   minH: '20',
@@ -1012,6 +1130,25 @@ const createScenario = () => {
                 })
               "
             />
+          </div>
+
+          <!-- Validation Error Message -->
+          <div
+            v-if="showValidationError"
+            :class="
+              css({
+                mt: '3',
+                p: '3',
+                bg: 'red.50',
+                border: '1px solid',
+                borderColor: 'red.200',
+                borderRadius: '0.5rem',
+                fontSize: '0.875rem',
+                color: 'red.700',
+              })
+            "
+          >
+            Please provide at least one scenario type with 10+ characters
           </div>
         </div>
 
@@ -1033,6 +1170,8 @@ const createScenario = () => {
           </label>
           <textarea
             id="scenario-description"
+            v-model="scenarioForm.description"
+            data-testid="scenario-description-textarea"
             :class="
               css({
                 w: 'full',
@@ -1057,20 +1196,23 @@ const createScenario = () => {
         <!-- Action Buttons -->
         <div :class="css({ display: 'flex', gap: '3' })">
           <button
+            data-testid="create-scenario-button"
+            :disabled="!isFormValid"
             :class="
               css({
                 flex: 1,
                 px: '4',
                 py: '2.5',
-                bg: 'green.500',
+                bg: isFormValid ? 'green.500' : 'gray.300',
                 color: 'white',
                 border: 'none',
                 borderRadius: '0.5rem',
                 fontSize: '0.875rem',
                 fontWeight: '600',
-                cursor: 'pointer',
+                cursor: isFormValid ? 'pointer' : 'not-allowed',
                 transition: 'all 0.2s',
-                _hover: { bg: 'green.600' },
+                _hover: isFormValid ? { bg: 'green.600' } : {},
+                opacity: isFormValid ? '1' : '0.6',
               })
             "
             @click="createScenario"
@@ -1078,6 +1220,7 @@ const createScenario = () => {
             Create Scenario
           </button>
           <button
+            data-testid="cancel-button"
             :class="
               css({
                 flex: 1,
