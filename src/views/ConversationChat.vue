@@ -9,8 +9,14 @@ import ChatMessage from '../components/chat/ChatMessage.vue'
 import ChatInput from '../components/chat/ChatInput.vue'
 import TypingIndicator from '../components/chat/TypingIndicator.vue'
 import ConversationsSidebar from '../components/chat/ConversationsSidebar.vue'
+import ForkConversationModal from '../components/chat/ForkConversationModal.vue'
+import ForkNavigationWidget from '../components/chat/ForkNavigationWidget.vue'
 import { useAnalytics } from '@/composables/useAnalytics'
 import type { Message } from '@/stores/conversation'
+import { getConversation, getForkRelationship } from '@/services/conversationApi'
+import { scenarioApi } from '@/services/scenarioApi'
+import type { CreateScenarioResponse } from '@/types'
+import type { ForkRelationship } from '../components/chat/ForkNavigationWidget.vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -20,16 +26,14 @@ const { trackConversationStarted, trackMessageSent } = useAnalytics()
 const isLoading = ref(true)
 const isTyping = ref(false)
 const showSidebar = ref(false)
+const showForkModal = ref(false)
 
-// Mock data for scenario info
-const scenarioInfo = ref({
-  bookTitle: 'The Great Gatsby',
-  author: 'F. Scott Fitzgerald',
-  characterName: 'Nick Carraway',
-  scenarioType: 'What If...',
-  scenarioDescription:
-    "His Midwestern values provide a stark contrast to the decadence of East Egg. Without his perspective, you wouldn't see the tragedy of my story.",
-})
+// Scenario info from API
+const scenarioInfo = ref<CreateScenarioResponse | null>(null)
+const conversationDepth = ref<number>(0)
+const isRootConversation = ref<boolean>(true)
+const hasBeenForked = ref<boolean>(false)
+const forkRelationship = ref<ForkRelationship | null>(null)
 
 // Messages state - typed properly
 const messages = ref<Message[]>([])
@@ -63,7 +67,7 @@ watch(isTyping, () => {
   scrollToBottom()
 })
 
-const handleSendMessage = (messageContent: string) => {
+const handleSendMessage = async (messageContent: string) => {
   if (!messageContent.trim()) return
 
   // Add user message
@@ -82,84 +86,136 @@ const handleSendMessage = (messageContent: string) => {
 
   scrollToBottom()
 
-  // Simulate AI response
+  // Send message to API and get AI response
   isTyping.value = true
-  setTimeout(() => {
+
+  try {
+    // Import sendMessage API
+    const { sendMessage } = await import('@/services/conversationApi')
+
+    // Call actual API
+    const response = await sendMessage(route.params.id as string, messageContent)
+
+    // Add assistant response to messages
     const assistantMessage: Message = {
-      id: `msg-${Date.now() + 1}`,
-      conversationId: route.params.id as string,
+      id: response.assistantMessage.id,
+      conversationId: response.assistantMessage.conversationId,
       role: 'assistant',
-      content:
-        'This is a simulated response from the AI character. In production, this would be fetched from the AI service.',
-      timestamp: new Date().toISOString(),
+      content: response.assistantMessage.content,
+      timestamp: response.assistantMessage.timestamp,
     }
     messages.value.push(assistantMessage)
     isTyping.value = false
     scrollToBottom()
-  }, 1500)
+  } catch (error) {
+    console.error('Failed to send message:', error)
+    isTyping.value = false
+    // TODO: Show error toast to user
+  }
+}
+
+const handleForkClick = () => {
+  showForkModal.value = true
+}
+
+const handleForkConfirm = async (description: string) => {
+  try {
+    // Import forkConversation API
+    const { forkConversation } = await import('@/services/conversationApi')
+
+    // Call actual fork API
+    const forkResult = await forkConversation(route.params.id as string, description)
+
+    showForkModal.value = false
+
+    const toast = await import('@/composables/useToast').then((m) => m.useToast())
+    toast.success('분기가 생성되었습니다')
+
+    // Navigate to new forked conversation
+    // Watch on route.params.id will trigger loadConversation
+    await router.push(`/conversations/${forkResult.id}`)
+  } catch (error) {
+    console.error('Failed to fork conversation:', error)
+    showForkModal.value = false
+
+    const toast = await import('@/composables/useToast').then((m) => m.useToast())
+    toast.error('분기 생성 실패')
+  }
 }
 
 const goBackToList = () => {
   router.push('/conversations')
 }
 
-// Load initial messages
-onMounted(async () => {
-  const conversationId = route.params.id as string
-
-  // Simulate loading messages
+// Load conversation data
+const loadConversation = async (conversationId: string) => {
   isLoading.value = true
   try {
-    // TODO: Replace with actual API call
-    await new Promise((resolve) => setTimeout(resolve, 500))
+    // Fetch conversation data with messages
+    const conversation = await getConversation(conversationId)
+    messages.value = conversation.messages
+    conversationDepth.value = conversation.depth
+    isRootConversation.value = conversation.isRoot
+    hasBeenForked.value = conversation.hasBeenForked
 
-    // Mock initial messages
-    messages.value = [
-      {
-        id: '1',
-        conversationId,
-        role: 'assistant',
-        content:
-          "Old sport, this green light that burns across the bay symbolizes my eternal hope for Daisy. It represents everything I've worked for, everything I dream about. That distant green light is my future, always just out of reach.",
-        timestamp: new Date(Date.now() - 120000).toISOString(),
-      },
-      {
-        id: '2',
-        conversationId,
-        role: 'user',
-        content: "What do you think about Nick Carraway's role as the narrator?",
-        timestamp: new Date(Date.now() - 60000).toISOString(),
-      },
-      {
-        id: '3',
-        conversationId,
-        role: 'assistant',
-        content:
-          "Ah, Nick Carraway. He serves as our moral compass in this tale of excess and dream. His Midwestern values provide a stark contrast to the decadence of East Egg. Without his perspective, you wouldn't see the tragedy of my story.",
-        timestamp: new Date().toISOString(),
-      },
-    ]
+    // Fetch scenario data
+    scenarioInfo.value = await scenarioApi.getScenario(conversation.scenarioId)
+
+    // Fetch fork relationship (optional - may not be implemented in backend yet)
+    try {
+      forkRelationship.value = await getForkRelationship(conversationId)
+    } catch (error) {
+      // Fork relationship API may not be available yet, continue without it
+      console.warn('Fork relationship API not available:', error)
+      forkRelationship.value = null
+    }
 
     // GA4: 대화 시작 추적
     trackConversationStarted({
-      scenarioId: conversationId,
-      isFork: false,
+      scenarioId: conversation.scenarioId,
+      isFork: !conversation.isRoot,
     })
+  } catch (error) {
+    console.error('Failed to load conversation:', error)
+    // TODO: Show error message to user
   } finally {
     isLoading.value = false
     scrollToBottom(false)
   }
+}
+
+// Load initial messages
+onMounted(async () => {
+  const conversationId = route.params.id as string
+  await loadConversation(conversationId)
 })
+
+// Watch route changes to reload conversation when navigating between conversations
+watch(
+  () => route.params.id,
+  async (newId, oldId) => {
+    if (newId && newId !== oldId) {
+      await loadConversation(newId as string)
+    }
+  }
+)
 </script>
 
 <template>
-  <div :class="css({ display: 'flex', flexDirection: 'column', minH: '100vh', bg: 'gray.50' })">
+  <div
+    data-testid="conversation-page"
+    :data-is-root="String(isRootConversation)"
+    :data-depth="String(conversationDepth)"
+    :data-has-been-forked="String(hasBeenForked)"
+    :class="css({ display: 'flex', flexDirection: 'column', minH: '100vh', bg: 'gray.50' })"
+  >
     <AppHeader />
     <div :class="css({ h: '16' })" />
 
     <!-- Conversations Sidebar -->
     <ConversationsSidebar
       v-model:visible="showSidebar"
+      data-testid="conversations-list"
       @select="(id) => console.log('Selected conversation:', id)"
     />
 
@@ -179,6 +235,7 @@ onMounted(async () => {
     >
       <!-- Left Sidebar - Scenario Info -->
       <div
+        data-testid="scenario-context"
         :class="
           css({
             w: '320px',
@@ -277,7 +334,7 @@ onMounted(async () => {
         </div>
 
         <!-- Book Info -->
-        <div :class="css({ px: '6', pb: '6' })">
+        <div v-if="scenarioInfo" :class="css({ px: '6', pb: '6' })">
           <h2
             :class="
               css({
@@ -289,10 +346,10 @@ onMounted(async () => {
               })
             "
           >
-            {{ scenarioInfo.bookTitle }}
+            📚 {{ scenarioInfo.title }}
           </h2>
           <p :class="css({ fontSize: '0.875rem', color: 'gray.600', textAlign: 'center' })">
-            {{ scenarioInfo.author }}
+            {{ scenarioInfo.bookTitle }}
           </p>
         </div>
 
@@ -307,7 +364,7 @@ onMounted(async () => {
             })
           "
         >
-          <div :class="css({ mb: '4' })">
+          <div v-if="scenarioInfo" :class="css({ mb: '4' })">
             <h3
               :class="
                 css({
@@ -321,11 +378,11 @@ onMounted(async () => {
               Title
             </h3>
             <p :class="css({ fontSize: '0.875rem', color: 'gray.700' })">
-              {{ scenarioInfo.scenarioType }}
+              {{ scenarioInfo.title }}
             </p>
           </div>
 
-          <div :class="css({ mb: '4' })">
+          <div v-if="scenarioInfo" :class="css({ mb: '4' })">
             <h3
               :class="
                 css({
@@ -339,7 +396,7 @@ onMounted(async () => {
               What If...
             </h3>
             <p :class="css({ fontSize: '0.875rem', color: 'gray.700', lineHeight: '1.6' })">
-              {{ scenarioInfo.scenarioDescription }}
+              {{ scenarioInfo.whatIfQuestion }}
             </p>
           </div>
 
@@ -357,6 +414,7 @@ onMounted(async () => {
               Forked From
             </h3>
             <div
+              :data-is-root="String(isRootConversation)"
               :class="
                 css({
                   display: 'flex',
@@ -370,10 +428,87 @@ onMounted(async () => {
                 })
               "
             >
-              <span :class="css({ fontSize: '0.75rem', color: 'gray.600' })">
+              <span v-if="scenarioInfo" :class="css({ fontSize: '0.75rem', color: 'gray.600' })">
                 {{ scenarioInfo.characterName }}
               </span>
             </div>
+            <div
+              data-testid="has-been-forked"
+              :data-forked="String(hasBeenForked)"
+              style="display: none"
+            />
+            <div
+              data-testid="conversation-depth"
+              :data-depth="String(conversationDepth)"
+              style="display: none"
+            />
+            <div
+              data-testid="is-root-conversation"
+              :data-is-root="String(isRootConversation)"
+              style="display: none"
+            />
+            <div
+              v-if="hasBeenForked"
+              data-testid="already-forked-indicator"
+              :class="
+                css({
+                  mt: '4',
+                  p: '3',
+                  bg: 'yellow.50',
+                  borderRadius: '0.5rem',
+                  border: '1px solid',
+                  borderColor: 'yellow.200',
+                })
+              "
+            >
+              <p :class="css({ fontSize: '0.875rem', color: 'yellow.800', textAlign: 'center' })">
+                ⚠️ 이미 분기된 대화입니다
+              </p>
+            </div>
+            <div
+              v-if="!isRootConversation"
+              data-testid="fork-depth-indicator"
+              :class="
+                css({
+                  mt: '4',
+                  p: '3',
+                  bg: 'purple.50',
+                  borderRadius: '0.5rem',
+                  border: '1px solid',
+                  borderColor: 'purple.200',
+                })
+              "
+            >
+              <p :class="css({ fontSize: '0.875rem', color: 'purple.800', textAlign: 'center' })">
+                🔀 분기된 대화 (깊이: {{ conversationDepth }})
+              </p>
+            </div>
+            <button
+              v-if="isRootConversation && !hasBeenForked"
+              data-testid="fork-conversation-button"
+              :class="
+                css({
+                  mt: '4',
+                  w: 'full',
+                  py: '2',
+                  px: '4',
+                  bg: messages.length === 0 ? 'gray.400' : 'green.600',
+                  color: 'white',
+                  borderRadius: '0.5rem',
+                  fontSize: '0.875rem',
+                  fontWeight: '500',
+                  cursor: messages.length === 0 ? 'not-allowed' : 'pointer',
+                  border: 'none',
+                  _hover: { bg: messages.length === 0 ? 'gray.400' : 'green.700' },
+                  _disabled: { opacity: 0.5, cursor: 'not-allowed' },
+                })
+              "
+              :disabled="hasBeenForked || messages.length === 0"
+              :title="messages.length === 0 ? '메시지가 없으면 분기할 수 없습니다' : ''"
+              @click="handleForkClick"
+            >
+              🔀 Fork Conversation
+            </button>
           </div>
         </div>
       </div>
@@ -389,6 +524,36 @@ onMounted(async () => {
           })
         "
       >
+        <!-- Fork Navigation Widget -->
+        <div
+          v-if="!isRootConversation && (forkRelationship || conversationDepth > 0)"
+          data-testid="fork-navigation-widget"
+          :class="
+            css({
+              borderBottom: '1px solid',
+              borderColor: 'gray.200',
+              px: '6',
+              py: '3',
+              bg: 'purple.50',
+            })
+          "
+        >
+          <div v-if="forkRelationship">
+            <ForkNavigationWidget
+              :conversation-id="route.params.id as string"
+              :fork-relationship="forkRelationship"
+              :is-loading="false"
+              :has-error="false"
+            />
+          </div>
+          <div
+            v-else
+            :class="css({ fontSize: '0.875rem', color: 'purple.800', textAlign: 'center' })"
+          >
+            🔀 Forked Conversation (Depth: {{ conversationDepth }})
+          </div>
+        </div>
+
         <!-- Messages Container -->
         <div
           ref="messagesContainer"
@@ -456,9 +621,7 @@ onMounted(async () => {
               data-testid="empty-state"
             >
               <span :class="css({ fontSize: '3rem' })">💬</span>
-              <p :class="css({ fontSize: '1rem' })">
-                대화를 시작해보세요
-              </p>
+              <p :class="css({ fontSize: '1rem' })">대화를 시작해보세요</p>
               <p :class="css({ fontSize: '0.875rem', color: 'gray.400' })">
                 캐릭터에게 무엇이든 물어보세요
               </p>
@@ -480,13 +643,12 @@ onMounted(async () => {
         </div>
 
         <!-- Input Area using ChatInput component -->
-        <ChatInput
-          :disabled="isLoading"
-          :loading="isTyping"
-          @send="handleSendMessage"
-        />
+        <ChatInput :disabled="isLoading" :loading="isTyping" @send="handleSendMessage" />
       </div>
     </div>
+
+    <!-- Fork Conversation Modal -->
+    <ForkConversationModal v-model="showForkModal" :messages="messages" @fork="handleForkConfirm" />
   </div>
 </template>
 

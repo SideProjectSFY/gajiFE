@@ -1,65 +1,37 @@
 <template>
   <div class="book-grid">
     <!-- Loading State -->
-    <output
-      v-if="loading"
-      class="book-grid__skeleton"
-      aria-label="Loading books"
-    >
+    <output v-if="loading" class="book-grid__skeleton" aria-label="Loading books">
       <div
         v-for="i in skeletonCount"
         :key="i"
         class="skeleton-card"
         :aria-label="`Loading book ${i}`"
       >
-        <div
-          class="skeleton-cover"
-          aria-hidden="true"
-        />
+        <div class="skeleton-cover" aria-hidden="true" />
         <div class="skeleton-content">
-          <div
-            class="skeleton-title"
-            aria-hidden="true"
-          />
-          <div
-            class="skeleton-author"
-            aria-hidden="true"
-          />
-          <div
-            class="skeleton-meta"
-            aria-hidden="true"
-          />
+          <div class="skeleton-title" aria-hidden="true" />
+          <div class="skeleton-author" aria-hidden="true" />
+          <div class="skeleton-meta" aria-hidden="true" />
         </div>
       </div>
       <span class="sr-only">Loading books, please wait...</span>
     </output>
 
     <!-- Books Grid -->
-    <div
-      v-else-if="books.length > 0"
-      class="book-grid__content"
-    >
+    <div v-else-if="books.length > 0" class="book-grid__content">
       <BookCard
         v-for="book in books"
         :key="book.id"
         :book="book"
         @click="handleBookClick"
         @like="handleLike"
-        @bookmark="handleBookmark"
       />
     </div>
 
     <!-- Empty State -->
-    <output
-      v-else
-      class="book-grid__empty"
-      aria-live="polite"
-    >
-      <i
-        class="pi pi-inbox"
-        style="font-size: 3rem; color: #ccc"
-        aria-hidden="true"
-      />
+    <output v-else class="book-grid__empty" aria-live="polite">
+      <i class="pi pi-inbox" style="font-size: 3rem; color: #ccc" aria-hidden="true" />
       <p>{{ emptyMessage }}</p>
     </output>
   </div>
@@ -85,7 +57,6 @@ withDefaults(defineProps<Props>(), {
 const emit = defineEmits<{
   bookClick: [book: Book]
   like: [bookId: string, isLiked: boolean]
-  bookmark: [bookId: string, isBookmarked: boolean]
 }>()
 
 const handleBookClick = (book: Book): void => {
@@ -94,10 +65,6 @@ const handleBookClick = (book: Book): void => {
 
 const handleLike = (bookId: string, isLiked: boolean): void => {
   emit('like', bookId, isLiked)
-}
-
-const handleBookmark = (bookId: string, isBookmarked: boolean): void => {
-  emit('bookmark', bookId, isBookmarked)
 }
 </script>
 

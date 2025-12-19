@@ -8,19 +8,24 @@ import { useAuthStore } from '@/stores/auth'
 
 // Create axios instance
 const api: AxiosInstance = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api',
+  baseURL: import.meta.env.VITE_API_BASE_URL || '/api/v1',
   timeout: 60000, // 60s for AI operations
   headers: {
     'Content-Type': 'application/json',
   },
+  withCredentials: true, // Enable sending cookies
 })
 
-// Request interceptor - Add JWT token
+// Request interceptor - Add JWT token and User ID
 api.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
     const authStore = useAuthStore()
     if (authStore.accessToken) {
       config.headers.Authorization = `Bearer ${authStore.accessToken}`
+    }
+    // Add X-User-Id header if user is authenticated
+    if (authStore.user?.id) {
+      config.headers['X-User-Id'] = authStore.user.id
     }
     return config
   },
@@ -46,6 +51,10 @@ api.interceptors.response.use(
 
       if (refreshed && originalRequest.headers) {
         originalRequest.headers.Authorization = `Bearer ${authStore.accessToken}`
+        // Re-add X-User-Id header after refresh
+        if (authStore.user?.id) {
+          originalRequest.headers['X-User-Id'] = authStore.user.id
+        }
         return api(originalRequest)
       } else {
         // Refresh failed, logout and redirect

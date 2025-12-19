@@ -15,6 +15,7 @@ const form = reactive({
   username: '',
   email: '',
   password: '',
+  confirmPassword: '',
   agreeToTerms: false,
 })
 
@@ -22,19 +23,31 @@ const errors = reactive({
   username: '',
   email: '',
   password: '',
+  confirmPassword: '',
 })
 
 const touched = reactive({
   username: false,
   email: false,
   password: false,
+  confirmPassword: false,
 })
 
 const isLoading = ref(false)
 
-const isFormValid = computed(
-  () => form.username && form.email && form.password && form.agreeToTerms
-)
+const isFormValid = computed(() => {
+  return (
+    form.username &&
+    form.email &&
+    form.password &&
+    form.confirmPassword &&
+    form.password === form.confirmPassword &&
+    !errors.username &&
+    !errors.email &&
+    !errors.password &&
+    !errors.confirmPassword
+  )
+})
 
 const getPasswordStrength = (password: string): string => {
   if (!password) return 'none'
@@ -94,15 +107,25 @@ const validatePassword = (): void => {
   if (!form.password) {
     errors.password = 'Password is required'
   } else if (form.password.length < 8) {
-    errors.password = 'Password must be at least 8 characters'
+    errors.password = 'Password must be at least 8 characters with uppercase, lowercase, and number'
   } else if (!/[A-Z]/.test(form.password)) {
-    errors.password = 'Password must contain at least one uppercase letter'
+    errors.password = 'Password must be at least 8 characters with uppercase, lowercase, and number'
   } else if (!/[a-z]/.test(form.password)) {
-    errors.password = 'Password must contain at least one lowercase letter'
+    errors.password = 'Password must be at least 8 characters with uppercase, lowercase, and number'
   } else if (!/[0-9]/.test(form.password)) {
-    errors.password = 'Password must contain at least one digit'
+    errors.password = 'Password must be at least 8 characters with uppercase, lowercase, and number'
   } else {
     errors.password = ''
+  }
+}
+
+const validateConfirmPassword = (): void => {
+  if (!form.confirmPassword) {
+    errors.confirmPassword = 'Please confirm your password'
+  } else if (form.password !== form.confirmPassword) {
+    errors.confirmPassword = 'Passwords do not match'
+  } else {
+    errors.confirmPassword = ''
   }
 }
 
@@ -121,19 +144,31 @@ const handlePasswordBlur = (): void => {
   validatePassword()
 }
 
+const handleConfirmPasswordBlur = (): void => {
+  touched.confirmPassword = true
+  validateConfirmPassword()
+}
+
 const validateForm = (): boolean => {
   validateUsername()
   validateEmail()
   validatePassword()
+  validateConfirmPassword()
   touched.username = true
   touched.email = true
   touched.password = true
+  touched.confirmPassword = true
 
-  return !errors.username && !errors.email && !errors.password
+  return !errors.username && !errors.email && !errors.password && !errors.confirmPassword
 }
 
 const handleRegister = async () => {
   if (!validateForm()) return
+
+  if (!form.agreeToTerms) {
+    // Show an error or prevent submission
+    return
+  }
 
   isLoading.value = true
 
@@ -198,9 +233,7 @@ onMounted(() => {
         <h1 style="font-size: 1.75rem; font-weight: bold; margin-bottom: 0.5rem; color: #111827">
           Start exploring infinite story branches
         </h1>
-        <p style="color: #6b7280; margin-bottom: 2rem; font-size: 0.875rem">
-          Email
-        </p>
+        <p style="color: #6b7280; margin-bottom: 2rem; font-size: 0.875rem">Email</p>
 
         <form
           style="display: flex; flex-direction: column; gap: 1.25rem"
@@ -243,7 +276,7 @@ onMounted(() => {
                 transition: 'border-color 0.2s, box-shadow 0.2s',
               }"
               @blur="handleEmailBlur"
-            >
+            />
             <span
               v-if="errors.email && touched.email"
               id="email-error"
@@ -292,7 +325,7 @@ onMounted(() => {
                 transition: 'border-color 0.2s, box-shadow 0.2s',
               }"
               @blur="handleUsernameBlur"
-            >
+            />
             <span
               v-if="errors.username && touched.username"
               id="username-error"
@@ -340,7 +373,7 @@ onMounted(() => {
                 transition: 'border-color 0.2s, box-shadow 0.2s',
               }"
               @blur="handlePasswordBlur"
-            >
+            />
             <!-- Password Strength Indicator -->
             <div
               v-if="form.password && passwordStrength !== 'none'"
@@ -402,6 +435,56 @@ onMounted(() => {
             </span>
           </div>
 
+          <!-- Confirm Password Input -->
+          <div>
+            <label
+              for="confirm-password"
+              style="
+                font-size: 0.875rem;
+                font-weight: 500;
+                color: #374151;
+                display: block;
+                margin-bottom: 0.5rem;
+              "
+            >
+              Confirm Password
+            </label>
+            <input
+              id="confirm-password"
+              v-model="form.confirmPassword"
+              type="password"
+              placeholder="Re-enter your password"
+              required
+              autocomplete="new-password"
+              data-testid="confirm-password-input"
+              aria-required="true"
+              :aria-invalid="touched.confirmPassword && !!errors.confirmPassword"
+              :aria-describedby="errors.confirmPassword ? 'confirm-password-error' : undefined"
+              :style="{
+                width: '100%',
+                padding: '0.75rem',
+                border:
+                  errors.confirmPassword && touched.confirmPassword
+                    ? '2px solid #ef4444'
+                    : '1px solid #d1d5db',
+                borderRadius: '0.375rem',
+                fontSize: '0.875rem',
+                outline: 'none',
+                transition: 'border-color 0.2s, box-shadow 0.2s',
+              }"
+              @blur="handleConfirmPasswordBlur"
+            />
+            <span
+              v-if="errors.confirmPassword && touched.confirmPassword"
+              id="confirm-password-error"
+              role="alert"
+              data-testid="confirm-password-error"
+              style="color: #ef4444; font-size: 0.75rem; display: block; margin-top: 0.25rem"
+            >
+              {{ errors.confirmPassword }}
+            </span>
+          </div>
+
           <!-- Terms Checkbox -->
           <div style="display: flex; align-items: flex-start; gap: 0.5rem">
             <input
@@ -412,11 +495,8 @@ onMounted(() => {
               data-testid="agree-to-terms-checkbox"
               aria-required="true"
               aria-label="I agree to the Terms of Service and Privacy Policy"
-            >
-            <label
-              for="agreeToTerms"
-              style="font-size: 0.75rem; color: #6b7280; line-height: 1.4"
-            >
+            />
+            <label for="agreeToTerms" style="font-size: 0.75rem; color: #6b7280; line-height: 1.4">
               I agree to the Terms of Service and Privacy Policy
             </label>
           </div>
@@ -471,10 +551,7 @@ onMounted(() => {
         <!-- Footer -->
         <p style="text-align: center; margin-top: 1.5rem; font-size: 0.875rem; color: #6b7280">
           Already have an account?
-          <router-link
-            to="/login"
-            style="color: #16a34a; text-decoration: none; font-weight: 600"
-          >
+          <router-link to="/login" style="color: #16a34a; text-decoration: none; font-weight: 600">
             Login
           </router-link>
         </p>

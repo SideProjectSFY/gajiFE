@@ -2,6 +2,7 @@
   "name": "gaji-frontend",
   "version": "1.0.0",
   "type": "module",
+  "packageManager": "pnpm@9.5.0",
   "scripts": {
     "dev": "vite",
     "build": "vite build",

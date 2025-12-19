@@ -2,28 +2,21 @@
   <div
     v-if="isOpen"
     class="fork-modal-overlay"
+    data-testid="scenario-modal"
     @click.self="handleClose"
   >
     <div :class="css({ ...modalContent, animation: 'fadeIn 0.2s ease-out' })">
       <!-- Header -->
       <div :class="css(modalHeader)">
         <h2 :class="css({ fontSize: '1.5rem', fontWeight: '600', color: 'gray.900' })">
-          {{ step === 1 ? 'Review Parent Scenario' : 'Create Your Fork' }}
+          Fork Scenario
         </h2>
-        <button
-          :class="css(closeButton)"
-          aria-label="Close modal"
-          @click="handleClose"
-        >
-          ✕
-        </button>
+        <button :class="css(closeButton)" aria-label="Close modal" @click="handleClose">✕</button>
       </div>
 
-      <!-- Step 1: Review Parent -->
-      <div
-        v-if="step === 1"
-        :class="css(stepContainer)"
-      >
+      <!-- Review Parent -->
+      <div :class="css(stepContainer)">
+        `
         <div :class="css(parentCard)">
           <div :class="css({ mb: '3' })">
             <span :class="css(baseStoryBadge)">
@@ -45,12 +38,36 @@
               Current Setup:
             </h4>
             <div :class="css({ fontSize: '0.875rem', color: 'gray.600', spaceY: '1' })">
-              <p v-if="parentScenario.title">
-                <strong>Title:</strong> {{ parentScenario.title }}
-              </p>
+              <p v-if="parentScenario.title"><strong>Title:</strong> {{ parentScenario.title }}</p>
               <p v-if="parentScenario.description">
                 <strong>Description:</strong> {{ parentScenario.description }}
               </p>
+            </div>
+          </div>
+
+          <!-- Read-only scenario details -->
+          <div :class="css(readOnlySection)">
+            <h4 :class="css(readOnlySectionTitle)">📖 Original Scenario Details (Read-only)</h4>
+
+            <div :class="css(readOnlyField)">
+              <label :class="css(readOnlyLabel)">Character Properties</label>
+              <div :class="css(readOnlyContent)">
+                {{ parentScenario.parameters?.character_changes || 'Not specified' }}
+              </div>
+            </div>
+
+            <div :class="css(readOnlyField)">
+              <label :class="css(readOnlyLabel)">Event Alterations</label>
+              <div :class="css(readOnlyContent)">
+                {{ parentScenario.parameters?.event_alterations || 'Not specified' }}
+              </div>
+            </div>
+
+            <div :class="css(readOnlyField)">
+              <label :class="css(readOnlyLabel)">Setting Modifications</label>
+              <div :class="css(readOnlyContent)">
+                {{ parentScenario.parameters?.setting_modifications || 'Not specified' }}
+              </div>
             </div>
           </div>
         </div>
@@ -66,128 +83,18 @@
           </p>
         </div>
 
-        <button
-          :class="css(primaryButton)"
-          @click="step = 2"
-        >
-          Continue to Customize →
-        </button>
-      </div>
-
-      <!-- Step 2: Customize Fork -->
-      <div
-        v-if="step === 2"
-        :class="css(stepContainer)"
-      >
-        <div :class="css(lineageBreadcrumb)">
-          <span>{{ parentScenario.base_story }}</span>
-          <span :class="css({ mx: '2', color: 'gray.400' })">→</span>
-          <span :class="css({ color: 'gray.600' })">{{ parentScenario.title }}</span>
-          <span :class="css({ mx: '2', color: 'gray.400' })">→</span>
-          <strong :class="css({ color: 'blue.600' })">Your Fork</strong>
+        <div :class="css({ display: 'flex', gap: '3', justifyContent: 'flex-end' })">
+          <button type="button" :class="css(secondaryButton)" @click="handleClose">Cancel</button>
+          <button
+            type="button"
+            :class="css(primaryButton)"
+            data-testid="submit-scenario-button"
+            :disabled="isSubmitting"
+            @click="handleForkSubmit"
+          >
+            {{ isSubmitting ? 'Creating Fork...' : '🍴 Create Fork' }}
+          </button>
         </div>
-
-        <form
-          :class="css({ spaceY: '4' })"
-          @submit.prevent="handleSubmit"
-        >
-          <div :class="css(formGroup)">
-            <label :class="css(formLabel)">
-              Fork Title
-              <span :class="css({ fontSize: '0.875rem', color: 'gray.500', fontWeight: 'normal' })">
-                (optional)
-              </span>
-            </label>
-            <input
-              v-model="formData.title"
-              type="text"
-              :class="css(formInput)"
-              placeholder="e.g., Hermione in Slytherin as Head Girl"
-              maxlength="200"
-            >
-            <p :class="css(formHint)">
-              Leave empty to use: "Fork of {{ parentScenario.title }}"
-            </p>
-          </div>
-
-          <div :class="css(formGroup)">
-            <label :class="css(formLabel)">
-              Description
-              <span :class="css({ fontSize: '0.875rem', color: 'gray.500', fontWeight: 'normal' })">
-                (optional)
-              </span>
-            </label>
-            <textarea
-              v-model="formData.description"
-              :class="css(formTextarea)"
-              rows="3"
-              placeholder="Describe what makes your fork unique..."
-            />
-          </div>
-
-          <div :class="css(formGroup)">
-            <label :class="css(formLabel)">
-              What If Question
-              <span :class="css({ fontSize: '0.875rem', color: 'gray.500', fontWeight: 'normal' })">
-                (optional)
-              </span>
-            </label>
-            <input
-              v-model="formData.whatIfQuestion"
-              type="text"
-              :class="css(formInput)"
-              placeholder="What if Hermione was in Slytherin AND became Head Girl?"
-            >
-            <p :class="css(formHint)">
-              Leave empty to inherit: "{{ parentScenario.whatIfQuestion }}"
-            </p>
-          </div>
-
-          <div :class="css(formGroup)">
-            <label
-              :class="css({ display: 'flex', alignItems: 'center', gap: '2', cursor: 'pointer' })"
-            >
-              <input
-                v-model="formData.isPrivate"
-                type="checkbox"
-                :class="css({ w: '4', h: '4', cursor: 'pointer' })"
-              >
-              <span :class="css({ fontSize: '0.875rem', color: 'gray.700' })">
-                Make this fork private
-              </span>
-            </label>
-          </div>
-
-          <div :class="css(previewPanel)">
-            <h4
-              :class="
-                css({ fontSize: '0.875rem', fontWeight: '600', mb: '2', color: 'orange.800' })
-              "
-            >
-              Preview
-            </h4>
-            <p :class="css({ fontSize: '1rem', fontWeight: '500', color: 'orange.900' })">
-              {{ previewText }}
-            </p>
-          </div>
-
-          <div :class="css({ display: 'flex', gap: '3', justifyContent: 'flex-end', mt: '6' })">
-            <button
-              type="button"
-              :class="css(secondaryButton)"
-              @click="step = 1"
-            >
-              ← Back
-            </button>
-            <button
-              type="submit"
-              :class="css(primaryButton)"
-              :disabled="isSubmitting"
-            >
-              {{ isSubmitting ? 'Creating Fork...' : 'Create Fork' }}
-            </button>
-          </div>
-        </form>
       </div>
     </div>
   </div>
@@ -196,7 +103,8 @@
 <script setup lang="ts">
 /* eslint-disable @typescript-eslint/explicit-function-return-type */
 /* eslint-disable @typescript-eslint/no-unused-vars */
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import { css } from '../../../styled-system/css'
 import { useToast } from '@/composables/useToast'
 import type { BrowseScenario, ForkScenarioRequest } from '@/types'
@@ -218,17 +126,10 @@ const emit = defineEmits<{
   forked: [scenario: ForkEmitData]
 }>()
 
+const router = useRouter()
 const { success, error: showError } = useToast()
 
-const step = ref(1)
 const isSubmitting = ref(false)
-
-const formData = ref<ForkScenarioRequest>({
-  title: '',
-  description: '',
-  whatIfQuestion: '',
-  isPrivate: false,
-})
 
 const scenarioTypeLabel = computed(() => {
   const labels = {
@@ -251,55 +152,43 @@ const parentPreview = computed(() => {
   }
 })
 
-const previewText = computed(() => {
-  if (formData.value.whatIfQuestion && formData.value.whatIfQuestion.trim()) {
-    return formData.value.whatIfQuestion
-  }
-  if (formData.value.title && formData.value.title.trim()) {
-    return `What if... ${formData.value.title}`
-  }
-  return parentPreview.value
-})
-
 const handleClose = (): void => {
-  step.value = 1
-  formData.value = {
-    title: '',
-    description: '',
-    whatIfQuestion: '',
-    isPrivate: false,
-  }
   emit('close')
 }
 
-const handleSubmit = async (): Promise<void> => {
+const handleForkSubmit = async (): Promise<void> => {
   isSubmitting.value = true
 
   try {
-    const payload: ForkScenarioRequest = {}
+    // Fork the scenario
+    const payload: ForkScenarioRequest = {
+      isPrivate: false,
+    }
 
-    if (formData.value.title?.trim()) {
-      payload.title = formData.value.title.trim()
-    }
-    if (formData.value.description?.trim()) {
-      payload.description = formData.value.description.trim()
-    }
-    if (formData.value.whatIfQuestion?.trim()) {
-      payload.whatIfQuestion = formData.value.whatIfQuestion.trim()
-    }
-    payload.isPrivate = formData.value.isPrivate
-
-    const response = await api.post(`/scenarios/${props.parentScenario.id}/fork`, payload, {
+    const forkResponse = await api.post(`/scenarios/${props.parentScenario.id}/fork`, payload, {
       headers: {
         'X-User-Id': 'test-user-id', // TODO: Replace with actual user ID from auth
       },
     })
 
-    emit('forked', response.data)
+    const forkedScenarioId = forkResponse.data.id
+
+    // Create conversation for the forked scenario
+    const conversationPayload = {
+      scenarioId: forkedScenarioId,
+      title: `Forked: ${props.parentScenario.title || props.parentScenario.base_story}`,
+    }
+
+    const conversationResponse = await api.post('/conversations', conversationPayload)
+    const conversationId = conversationResponse.data.id
+
+    emit('forked', { id: forkedScenarioId, conversationId })
     handleClose()
 
-    // Show success toast
-    success('🍴 Scenario forked! Explore your meta-timeline.')
+    success('🍴 Scenario forked! Starting conversation...')
+
+    // Navigate to conversation page
+    router.push(`/conversations/${conversationId}`)
   } catch (error: unknown) {
     const err = error as { response?: { data?: { message?: string } } }
     console.error('Failed to fork scenario:', error)
@@ -316,8 +205,8 @@ const modalContent = {
   bg: 'white',
   borderRadius: 'lg',
   p: '6',
-  maxW: '2xl',
-  w: '90vw',
+  maxW: 'xl',
+  w: '85%',
   maxH: '85vh',
   overflowY: 'auto' as const,
   boxShadow: '2xl',
@@ -387,74 +276,6 @@ const infoBox = {
   color: 'blue.900',
 }
 
-const lineageBreadcrumb = {
-  bg: 'gray.100',
-  p: '3',
-  borderRadius: 'md',
-  fontSize: '0.875rem',
-  mb: '4',
-  display: 'flex',
-  alignItems: 'center',
-  flexWrap: 'wrap' as const,
-}
-
-const formGroup = {
-  spaceY: '2',
-}
-
-const formLabel = {
-  display: 'block',
-  fontSize: '0.875rem',
-  fontWeight: '600',
-  color: 'gray.700',
-}
-
-const formInput = {
-  w: 'full',
-  px: '3',
-  py: '2',
-  border: '1px solid',
-  borderColor: 'gray.300',
-  borderRadius: 'md',
-  fontSize: '0.875rem',
-  _focus: {
-    outline: 'none',
-    borderColor: 'blue.500',
-    ring: '2px',
-    ringColor: 'blue.200',
-  },
-}
-
-const formTextarea = {
-  w: 'full',
-  px: '3',
-  py: '2',
-  border: '1px solid',
-  borderColor: 'gray.300',
-  borderRadius: 'md',
-  fontSize: '0.875rem',
-  _focus: {
-    outline: 'none',
-    borderColor: 'blue.500',
-    ring: '2px',
-    ringColor: 'blue.200',
-  },
-}
-
-const formHint = {
-  fontSize: '0.75rem',
-  color: 'gray.500',
-  mt: '1',
-}
-
-const previewPanel = {
-  bg: 'orange.50',
-  border: '1px solid',
-  borderColor: 'orange.200',
-  p: '4',
-  borderRadius: 'md',
-}
-
 const primaryButton = {
   w: 'full',
   px: '4',
@@ -480,6 +301,50 @@ const secondaryButton = {
   borderRadius: 'md',
   cursor: 'pointer',
   _hover: { bg: 'gray.300' },
+}
+
+const readOnlySection = {
+  bg: 'gray.50',
+  border: '2px solid',
+  borderColor: 'gray.300',
+  p: '4',
+  borderRadius: 'md',
+  mb: '4',
+  spaceY: '3',
+}
+
+const readOnlySectionTitle = {
+  fontSize: '0.875rem',
+  fontWeight: '600',
+  color: 'gray.700',
+  mb: '3',
+  pb: '2',
+  borderBottom: '1px solid',
+  borderColor: 'gray.300',
+}
+
+const readOnlyField = {
+  spaceY: '1',
+}
+
+const readOnlyLabel = {
+  display: 'block',
+  fontSize: '0.75rem',
+  fontWeight: '600',
+  color: 'gray.600',
+  textTransform: 'uppercase' as const,
+  letterSpacing: 'wide',
+}
+
+const readOnlyContent = {
+  bg: 'white',
+  p: '2.5',
+  borderRadius: 'md',
+  border: '1px solid',
+  borderColor: 'gray.200',
+  fontSize: '0.875rem',
+  color: 'gray.700',
+  minH: '10',
 }
 </script>
 

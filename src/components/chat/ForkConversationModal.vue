@@ -2,6 +2,7 @@
   <Teleport to="body">
     <div
       v-if="modelValue"
+      data-testid="fork-conversation-modal"
       class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
       @click.self="closeModal"
     >
@@ -9,19 +10,9 @@
         <!-- Header -->
         <div class="px-6 py-4 border-b border-gray-200">
           <div class="flex items-center justify-between">
-            <h2 class="text-xl font-semibold text-gray-900">
-              🔀 대화 분기 생성
-            </h2>
-            <button
-              class="text-gray-400 hover:text-gray-600 transition-colors"
-              @click="closeModal"
-            >
-              <svg
-                class="w-6 h-6"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
+            <h2 class="text-xl font-semibold text-gray-900">🔀 대화 분기 생성</h2>
+            <button class="text-gray-400 hover:text-gray-600 transition-colors" @click="closeModal">
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path
                   stroke-linecap="round"
                   stroke-linejoin="round"
@@ -36,7 +27,10 @@
         <!-- Content -->
         <div class="flex-1 overflow-y-auto px-6 py-4 space-y-4">
           <!-- Message Preview Info -->
-          <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <div
+            data-testid="fork-message-preview-info"
+            class="bg-blue-50 border border-blue-200 rounded-lg p-4"
+          >
             <p class="text-sm text-blue-800">
               {{ messagePreviewText }}
             </p>
@@ -62,12 +56,38 @@
             </div>
           </div>
 
+          <!-- No messages warning -->
+          <div
+            v-if="messages.length === 0"
+            data-testid="fork-warning"
+            class="bg-red-50 border border-red-200 rounded-lg p-4"
+            role="alert"
+            aria-live="polite"
+          >
+            <div class="flex items-start">
+              <svg
+                class="w-5 h-5 text-red-600 mt-0.5 mr-2 flex-shrink-0"
+                fill="currentColor"
+                viewBox="0 0 20 20"
+                aria-hidden="true"
+              >
+                <path
+                  fill-rule="evenodd"
+                  d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                  clip-rule="evenodd"
+                />
+              </svg>
+              <p class="text-sm text-red-800">
+                <strong>경고:</strong> 메시지가 없는 대화는 분기할 수 없습니다. 먼저 메시지를
+                작성해주세요.
+              </p>
+            </div>
+          </div>
+
           <!-- Message Preview (scrollable) -->
           <div class="border border-gray-200 rounded-lg">
             <div class="bg-gray-50 px-4 py-2 border-b border-gray-200">
-              <h3 class="text-sm font-medium text-gray-700">
-                복사될 메시지 미리보기
-              </h3>
+              <h3 class="text-sm font-medium text-gray-700">복사될 메시지 미리보기</h3>
             </div>
             <div class="max-h-64 overflow-y-auto p-4 space-y-3">
               <div
@@ -96,14 +116,12 @@
 
           <!-- Optional Description Input -->
           <div>
-            <label
-              for="fork-description"
-              class="block text-sm font-medium text-gray-700 mb-2"
-            >
+            <label for="fork-description" class="block text-sm font-medium text-gray-700 mb-2">
               분기 설명 (선택사항)
             </label>
             <textarea
               id="fork-description"
+              data-testid="fork-description-input"
               v-model="description"
               rows="3"
               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
@@ -115,6 +133,7 @@
         <!-- Footer -->
         <div class="px-6 py-4 border-t border-gray-200 flex justify-end space-x-3">
           <button
+            data-testid="cancel-fork-button"
             class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
             :disabled="isSubmitting"
             @click="closeModal"
@@ -122,14 +141,12 @@
             취소
           </button>
           <button
+            data-testid="confirm-fork-button"
             class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
             :disabled="isSubmitting"
             @click="handleFork"
           >
-            <span
-              v-if="isSubmitting"
-              class="mr-2"
-            >
+            <span v-if="isSubmitting" class="mr-2">
               <svg
                 class="animate-spin h-4 w-4 text-white"
                 xmlns="http://www.w3.org/2000/svg"

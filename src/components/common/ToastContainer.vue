@@ -4,6 +4,7 @@
       <div
         v-for="toast in toasts"
         :key="toast.id"
+        :data-testid="'toast-message'"
         :class="css(toastStyle(toast.type))"
         @click="removeToast(toast.id)"
       >

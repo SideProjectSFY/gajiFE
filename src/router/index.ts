@@ -5,7 +5,7 @@ import { useAnalytics } from '@/composables/useAnalytics'
 // Views
 import Home from '@/views/Home.vue'
 import About from '@/views/About.vue'
-import Books from '@/views/Books.vue'
+import BookBrowsePage from '@/views/BookBrowsePage.vue'
 import BookDetailPage from '@/views/BookDetailPage.vue'
 import Conversations from '@/views/Conversations.vue'
 import Login from '@/views/Login.vue'
@@ -13,7 +13,6 @@ import Register from '@/views/Register.vue'
 import ConversationChat from '@/views/ConversationChat.vue'
 import Profile from '@/views/Profile.vue'
 import ProfileEdit from '@/views/ProfileEdit.vue'
-import Health from '@/views/Health.vue'
 import NotFound from '@/views/NotFound.vue'
 import ScenarioBrowsePage from '@/views/ScenarioBrowsePage.vue'
 import ScenarioDetailPage from '@/views/ScenarioDetailPage.vue'
@@ -39,7 +38,7 @@ const routes: RouteRecordRaw[] = [
   {
     path: '/books',
     name: 'Books',
-    component: Books,
+    component: BookBrowsePage,
     meta: { requiresAuth: false },
   },
   {
@@ -82,13 +81,13 @@ const routes: RouteRecordRaw[] = [
     path: '/scenarios/:id',
     name: 'ScenarioDetail',
     component: ScenarioDetailPage,
-    meta: { requiresAuth: false },
+    meta: { requiresAuth: true },
   },
   {
     path: '/conversations/:id',
     name: 'ConversationChat',
     component: ConversationChat,
-    meta: { requiresAuth: false }, // TODO: 테스트 후 true로 변경
+    meta: { requiresAuth: true },
   },
   {
     path: '/liked',
@@ -100,31 +99,25 @@ const routes: RouteRecordRaw[] = [
     path: '/profile/:username',
     name: 'Profile',
     component: Profile,
-    meta: { requiresAuth: false },
+    meta: { requiresAuth: true },
   },
   {
     path: '/profile/:username/followers',
     name: 'FollowerList',
     component: FollowerList,
-    meta: { requiresAuth: false },
+    meta: { requiresAuth: true },
   },
   {
     path: '/profile/:username/following',
     name: 'FollowingList',
     component: FollowingList,
-    meta: { requiresAuth: false },
+    meta: { requiresAuth: true },
   },
   {
     path: '/profile/edit',
     name: 'ProfileEdit',
     component: ProfileEdit,
     meta: { requiresAuth: true },
-  },
-  {
-    path: '/health',
-    name: 'Health',
-    component: Health,
-    meta: { requiresAuth: false },
   },
   {
     path: '/test/scenario-tree',

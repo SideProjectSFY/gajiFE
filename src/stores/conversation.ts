@@ -1,11 +1,12 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import axios from 'axios'
+import { useAuthStore } from './auth'
 
 export interface Message {
   id: string
   conversationId: string
-  role: 'user' | 'assistant'
+  role: 'user' | 'assistant' | 'system'
   content: string
   timestamp: string
 }
@@ -95,8 +96,9 @@ export const useConversationStore = defineStore('conversation', () => {
       }
       addMessage(userMessage)
 
-      // Get user ID from localStorage or auth store
-      const userId = localStorage.getItem('userId') || '00000000-0000-0000-0000-000000000000'
+      // Get user ID from auth store
+      const authStore = useAuthStore()
+      const userId = authStore.user?.id || '00000000-0000-0000-0000-000000000000'
 
       // Submit message to backend
       await axios.post(
@@ -229,7 +231,8 @@ export const useConversationStore = defineStore('conversation', () => {
       loading.value = true
       error.value = null
 
-      const userId = localStorage.getItem('userId') || '00000000-0000-0000-0000-000000000000'
+      const authStore = useAuthStore()
+      const userId = authStore.user?.id || '00000000-0000-0000-0000-000000000000'
 
       const response = await axios.post<Conversation>(
         `${API_BASE_URL}/api/v1/conversations/${conversationId}/fork`,

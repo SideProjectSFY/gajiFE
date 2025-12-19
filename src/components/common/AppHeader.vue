@@ -44,6 +44,13 @@ const goToSignUp = (): void => {
   closeMenu()
 }
 
+const goToProfile = (): void => {
+  if (authStore.currentUser?.username) {
+    router.push(`/profile/${authStore.currentUser.username}`)
+  }
+  closeMenu()
+}
+
 const handleLogout = (): void => {
   authStore.logout()
   router.push('/')
@@ -113,7 +120,9 @@ const handleMenuKeydown = (event: KeyboardEvent): void => {
         @click="goToHome"
       >
         <span :class="css({ fontSize: '1.5rem' })">🌱</span>
-        <span :class="css({ fontSize: '1.5rem', fontWeight: 'bold', color: 'green.500' })">Gaji</span>
+        <span :class="css({ fontSize: '1.5rem', fontWeight: 'bold', color: 'green.500' })"
+          >Gaji</span
+        >
       </a>
 
       <!-- Desktop Navigation -->
@@ -207,7 +216,7 @@ const handleMenuKeydown = (event: KeyboardEvent): void => {
               })
             "
             @keyup="handleSearchKeyup"
-          >
+          />
           <button
             :class="
               css({
@@ -274,22 +283,26 @@ const handleMenuKeydown = (event: KeyboardEvent): void => {
           </button>
         </template>
         <template v-else>
-          <router-link
-            to="/profile"
+          <button
             :class="
               css({
-                textDecoration: 'none',
-                color: 'gray.700',
+                bg: 'none',
+                border: 'none',
+                cursor: 'pointer',
                 fontSize: '1rem',
                 fontWeight: '500',
+                color: 'gray.700',
+                px: '4',
+                py: '2',
                 transition: 'color 0.2s',
                 _hover: { color: 'green.500' },
               })
             "
             aria-label="Go to your profile"
+            @click="goToProfile"
           >
             Profile
-          </router-link>
+          </button>
           <button
             :class="
               css({
@@ -524,23 +537,25 @@ const handleMenuKeydown = (event: KeyboardEvent): void => {
             </button>
           </template>
           <template v-else>
-            <router-link
-              to="/profile"
+            <button
               :class="
                 css({
-                  textDecoration: 'none',
-                  color: 'gray.700',
+                  bg: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
                   fontSize: '1rem',
                   fontWeight: '500',
+                  color: 'gray.700',
                   py: '2',
+                  textAlign: 'left',
                   transition: 'color 0.2s',
                   _hover: { color: 'green.500' },
                 })
               "
-              @click="closeMenu"
+              @click="goToProfile"
             >
               Profile
-            </router-link>
+            </button>
             <button
               :class="
                 css({

@@ -11,6 +11,31 @@ export interface ConversationSummary {
   hasBeenForked: boolean
   parentId?: string
   messageCount?: number
+  likeCount?: number
+  bookTitle?: string
+  bookAuthor?: string
+  bookCoverUrl?: string
+  scenarioDescription?: string
+}
+
+export interface ConversationDetail {
+  id: string
+  scenarioId: string
+  userId: string
+  title: string
+  isPrivate: boolean
+  isRoot: boolean
+  hasBeenForked: boolean
+  depth: number
+  createdAt: string
+  updatedAt: string
+  messages: Array<{
+    id: string
+    conversationId: string
+    role: 'system' | 'user' | 'assistant'
+    content: string
+    timestamp: string
+  }>
 }
 
 export interface ForkRelationshipResponse {
@@ -145,6 +170,22 @@ export async function getForkRelationship(
 }
 
 /**
+ * Get conversation by ID with messages
+ * GET /api/v1/conversations/:id
+ */
+export const getConversations = async (
+  params: { userId?: string; filter?: string; page?: number; size?: number } = {}
+): Promise<ConversationSummary[]> => {
+  const response = await api.get('/conversations', { params })
+  return response.data
+}
+
+export const getConversation = async (id: string): Promise<ConversationDetail> => {
+  const response = await api.get<ConversationDetail>(`/conversations/${id}`)
+  return response.data
+}
+
+/**
  * Get parent conversation (if exists)
  */
 export async function getParentConversation(
@@ -240,4 +281,140 @@ export async function likeConversation(conversationId: string): Promise<void> {
  */
 export async function unlikeConversation(conversationId: string): Promise<void> {
   await api.delete(`/conversations/${conversationId}/like`)
+}
+
+/**
+ * Fork a conversation
+ * POST /api/v1/conversations/:id/fork
+ */
+export interface ForkConversationResponse {
+  id: string
+  parentConversationId: string
+  copiedMessageCount: number
+  messageCount: number
+  isRoot: boolean
+  depth: number
+}
+
+export async function forkConversation(
+  conversationId: string,
+  description?: string
+): Promise<ForkConversationResponse> {
+  const response = await api.post<ForkConversationResponse>(
+    `/conversations/${conversationId}/fork`,
+    { description }
+  )
+  return response.data
+}
+
+/**
+ * List user's conversations
+ * GET /api/v1/conversations
+ */
+export async function listConversations(page = 0, size = 20): Promise<ConversationSummary[]> {
+  const response = await api.get<ConversationSummary[]>('/conversations', {
+    params: { page, size },
+  })
+  return response.data
+}
+
+/**
+ * Send a message in a conversation
+ * POST /api/v1/conversations/:id/messages
+ */
+export interface SendMessageRequest {
+  content: string
+}
+
+export interface SendMessageResponse {
+  userMessage: {
+    id: string
+    conversationId: string
+    role: 'user'
+    content: string
+    timestamp: string
+  }
+  assistantMessage: {
+    id: string
+    conversationId: string
+    role: 'assistant'
+    content: string
+    timestamp: string
+  }
+}
+
+interface MessageResponse {
+  id: string
+  conversationId: string
+  role: string
+  content: string
+  createdAt: string
+}
+
+interface PollResponse {
+  status: string
+  content?: string
+  messageId?: string
+  error?: string
+}
+
+export async function sendMessage(
+  conversationId: string,
+  content: string
+): Promise<SendMessageResponse> {
+  // Submit user message
+  const submitResponse = await api.post<MessageResponse>(
+    `/conversations/${conversationId}/messages`,
+    { content }
+  )
+
+  // Poll for AI response (max 30 seconds)
+  const maxAttempts = 15 // 15 attempts * 2 seconds = 30 seconds
+  for (let i = 0; i < maxAttempts; i++) {
+    await new Promise((resolve) => setTimeout(resolve, 2000)) // Wait 2 seconds
+
+    try {
+      const pollResponse = await api.get<PollResponse>(
+        `/conversations/${conversationId}/messages/poll`
+      )
+
+      if (pollResponse.data.status === 'completed' && pollResponse.data.content) {
+        return {
+          userMessage: {
+            id: submitResponse.data.id,
+            conversationId: submitResponse.data.conversationId,
+            role: 'user',
+            content: submitResponse.data.content,
+            timestamp: submitResponse.data.createdAt,
+          },
+          assistantMessage: {
+            id: pollResponse.data.messageId!,
+            conversationId,
+            role: 'assistant',
+            content: pollResponse.data.content,
+            timestamp: new Date().toISOString(),
+          },
+        }
+      }
+
+      if (pollResponse.data.status === 'failed') {
+        // Don't catch this - propagate the error immediately
+        const errorMessage = pollResponse.data.error || 'AI generation failed'
+        console.error('AI generation failed:', errorMessage)
+        throw new Error(errorMessage)
+      }
+
+      // Continue polling if status is 'processing' or 'queued'
+    } catch (error) {
+      // If it's a failed status error, propagate it
+      if (error instanceof Error && error.message.includes('generation failed')) {
+        throw error
+      }
+      // For network errors, log and continue polling
+      console.error('Poll attempt failed:', error)
+    }
+  }
+
+  // Timeout after max attempts
+  throw new Error('AI response timeout after 30 seconds')
 }

@@ -11,6 +11,13 @@ export interface Book {
   coverImageUrl: string | null
   scenarioCount: number
   conversationCount: number
+  likeCount?: number // Optional: backend provides this
+  // Optional fields not yet provided by backend:
+  tags?: string[]
+  year?: number
+  description?: string
+  charactersCount?: number
+  viewsCount?: number
 }
 
 export interface BooksResponse {
@@ -28,13 +35,12 @@ export interface BookFilters {
   sort?: BookSortOption
 }
 
-export type BookSortOption = 'scenarios' | 'conversations' | 'newest' | 'alphabetical'
+export type BookSortOption = 'latest' | 'recommended' | 'popular'
 
 export const BOOK_SORT_OPTIONS: { value: BookSortOption; label: string }[] = [
-  { value: 'scenarios', label: 'Most Scenarios' },
-  { value: 'conversations', label: 'Most Conversations' },
-  { value: 'newest', label: 'Newest Books' },
-  { value: 'alphabetical', label: 'Alphabetical (A-Z)' },
+  { value: 'latest', label: 'Latest' },
+  { value: 'recommended', label: 'Recommended' },
+  { value: 'popular', label: 'Popular' },
 ]
 
 export const BOOK_GENRES = [

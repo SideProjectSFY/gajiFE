@@ -1,10 +1,13 @@
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 import PrimeVue from 'primevue/config'
+import ToastService from 'primevue/toastservice'
+import ConfirmationService from 'primevue/confirmationservice'
 import 'primeicons/primeicons.css'
 import router from './router'
 import App from './App.vue'
 import './styles/main.css'
+import { useAuthStore } from './stores/auth'
 
 // Google Analytics 4 초기화
 const GA4_MEASUREMENT_ID = import.meta.env.VITE_GA4_MEASUREMENT_ID
@@ -41,7 +44,14 @@ const pinia = createPinia()
 // IMPORTANT: Pinia must be installed before the router
 // The router's navigation guards use useAuthStore(), which requires Pinia to be initialized first
 app.use(pinia)
+
+// Initialize auth state from cookies after Pinia is installed
+const authStore = useAuthStore()
+authStore.initializeFromCookies()
+
 app.use(router)
 app.use(PrimeVue, { unstyled: true }) // Use unstyled mode to apply PandaCSS
+app.use(ToastService)
+app.use(ConfirmationService)
 
 app.mount('#app')

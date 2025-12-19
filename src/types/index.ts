@@ -1,3 +1,9 @@
+// Comment Types
+export * from './comment'
+
+// Book Types
+export * from './book'
+
 // Scenario Creation Types
 export interface CreateScenarioRequest {
   book_id: string
@@ -9,13 +15,21 @@ export interface CreateScenarioRequest {
 
 export interface CreateScenarioResponse {
   id: string
-  book_id: string
-  scenario_title: string
-  character_changes: string | null
-  event_alterations: string | null
-  setting_modifications: string | null
-  created_at: string
-  updated_at: string
+  userId: string
+  baseScenarioId?: string
+  parentScenarioId?: string
+  title: string
+  description: string
+  whatIfQuestion: string
+  isPrivate: boolean
+  forkCount?: number
+  scenarioType: 'ROOT' | 'LEAF'
+  scenarioCategory: string
+  createdAt: string
+  updatedAt: string
+  // Additional fields for UI
+  bookTitle?: string
+  characterName?: string
 }
 
 // Scenario Form State

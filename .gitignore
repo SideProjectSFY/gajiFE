@@ -40,3 +40,6 @@ playwright-report
 
 coverage
 e2e
+
+# Test data
+.test-data/
