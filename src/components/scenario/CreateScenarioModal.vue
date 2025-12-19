@@ -36,12 +36,6 @@
             placeholder="Describe character changes (e.g., 'What if Hermione was sorted into Slytherin?')"
             data-testid="character-changes-input"
           />
-          <div :class="css(validationRow)">
-            <p v-if="!isCharacterChangesValid" :class="css(errorText)">
-              Must be at least {{ MIN_CHARS }} characters
-            </p>
-            <p :class="css(charCount)">{{ getCharCount(formData.characterChanges) }} characters</p>
-          </div>
         </div>
 
         <!-- Event Alterations -->
@@ -57,12 +51,6 @@
             placeholder="Describe event changes (e.g., 'What if Harry Potter lost in the first task of the Triwizard Tournament?')"
             data-testid="event-alterations-input"
           />
-          <div :class="css(validationRow)">
-            <p v-if="!isEventAlterationsValid" :class="css(errorText)">
-              Must be at least {{ MIN_CHARS }} characters
-            </p>
-            <p :class="css(charCount)">{{ getCharCount(formData.eventAlterations) }} characters</p>
-          </div>
         </div>
 
         <!-- Setting Modifications -->
@@ -78,14 +66,6 @@
             placeholder="Describe setting changes (e.g., 'What if Hogwarts was located in Japan?')"
             data-testid="setting-modifications-input"
           />
-          <div :class="css(validationRow)">
-            <p v-if="!isSettingModificationsValid" :class="css(errorText)">
-              Must be at least {{ MIN_CHARS }} characters
-            </p>
-            <p :class="css(charCount)">
-              {{ getCharCount(formData.settingModifications) }} characters
-            </p>
-          </div>
         </div>
 
         <!-- Description -->
@@ -98,14 +78,6 @@
             placeholder="Add additional details about your scenario..."
             data-testid="description-input"
           />
-        </div>
-
-        <!-- Validation Message -->
-        <div v-if="showValidationError" :class="css(validationMessage)">
-          <p>
-            ⚠️ At least one field (Character, Event, or Setting) must have {{ MIN_CHARS }}+
-            characters
-          </p>
         </div>
 
         <!-- Actions -->
@@ -155,7 +127,7 @@ const emit = defineEmits<Emits>()
 const router = useRouter()
 const { success, error: showError } = useToast()
 
-const MIN_CHARS = 10
+const MIN_CHARS = 0
 const isSubmitting = ref(false)
 
 const formData = ref<CreateScenarioForm>({
@@ -166,26 +138,17 @@ const formData = ref<CreateScenarioForm>({
 })
 
 // Validation
-const isCharacterChangesValid = computed(() => {
-  const length = formData.value.characterChanges.trim().length
-  return length === 0 || length >= MIN_CHARS
-})
+const isCharacterChangesValid = computed(() => true)
 
-const isEventAlterationsValid = computed(() => {
-  const length = formData.value.eventAlterations.trim().length
-  return length === 0 || length >= MIN_CHARS
-})
+const isEventAlterationsValid = computed(() => true)
 
-const isSettingModificationsValid = computed(() => {
-  const length = formData.value.settingModifications.trim().length
-  return length === 0 || length >= MIN_CHARS
-})
+const isSettingModificationsValid = computed(() => true)
 
 const hasAtLeastOneValidType = computed(() => {
   return (
-    formData.value.characterChanges.trim().length >= MIN_CHARS ||
-    formData.value.eventAlterations.trim().length >= MIN_CHARS ||
-    formData.value.settingModifications.trim().length >= MIN_CHARS
+    formData.value.characterChanges.trim().length > 0 ||
+    formData.value.eventAlterations.trim().length > 0 ||
+    formData.value.settingModifications.trim().length > 0
   )
 })
 
@@ -197,18 +160,6 @@ const isFormValid = computed(() => {
     hasAtLeastOneValidType.value
   )
 })
-
-const showValidationError = computed(() => {
-  const hasTyped =
-    formData.value.characterChanges.length > 0 ||
-    formData.value.eventAlterations.length > 0 ||
-    formData.value.settingModifications.length > 0
-  return hasTyped && !hasAtLeastOneValidType.value
-})
-
-const getCharCount = (text: string) => {
-  return text.trim().length
-}
 
 const handleClose = () => {
   formData.value = {
