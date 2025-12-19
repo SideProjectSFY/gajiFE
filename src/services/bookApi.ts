@@ -6,7 +6,9 @@
 import axios from 'axios'
 import type { BooksResponse } from '@/types/book'
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
+// Use the base API URL without /api/v1 since we'll add the full path
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL?.replace('/api/v1', '') || 'http://localhost:8080'
 
 export interface GetBooksParams {
   page?: number
@@ -39,7 +41,13 @@ export const bookApi = {
    * @returns Promise with book details
    */
   async getBookById(id: string): Promise<BooksResponse['content'][0]> {
-    const response = await axios.get(`${API_BASE_URL}/api/v1/books/${id}`)
+    const response = await axios.get(`${API_BASE_URL}/api/v1/books/${id}`, {
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      // Don't send credentials to prevent auth token from being sent
+      withCredentials: false,
+    })
     return response.data
   },
 
