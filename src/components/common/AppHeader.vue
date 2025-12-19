@@ -196,8 +196,8 @@ const handleMenuKeydown = (event: KeyboardEvent): void => {
           <input
             v-model="searchQuery"
             type="text"
-            placeholder="Search books, scenarios..."
-            aria-label="Search books, scenarios"
+            placeholder="Search books, conversations..."
+            aria-label="Search books, conversations"
             :class="
               css({
                 px: '4',
