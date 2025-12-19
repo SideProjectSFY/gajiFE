@@ -1,33 +1,34 @@
 <!-- eslint-disable @typescript-eslint/explicit-function-return-type -->
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { css } from 'styled-system/css'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import AppHeader from '../components/common/AppHeader.vue'
 import AppFooter from '../components/common/AppFooter.vue'
 import { useAnalytics } from '@/composables/useAnalytics'
+import { searchApi } from '@/services/searchApi'
 
 const router = useRouter()
+const route = useRoute()
 const { trackSearch } = useAnalytics()
 const searchQuery = ref('')
-const activeTab = ref<'all' | 'book' | 'story' | 'user'>('all')
+const activeTab = ref<'all' | 'book' | 'conversation' | 'user'>('all')
 const isLoading = ref(false)
 const hasSearched = ref(false)
 
 interface SearchResult {
   id: string
   name: string
-  [key: string]: unknown
+  [key: string]: any
 }
 
-// Mock data - 이미지와 동일하게 6개의 Elizabeth Bennet 캐릭터
 const searchResults = ref<{
   books: SearchResult[]
-  stories: SearchResult[]
+  conversations: SearchResult[]
   users: SearchResult[]
 }>({
   books: [],
-  stories: [],
+  conversations: [],
   users: [],
 })
 
@@ -35,121 +36,107 @@ const filteredResults = computed(() => {
   if (activeTab.value === 'all') {
     return {
       books: searchResults.value.books,
-      stories: searchResults.value.stories,
+      conversations: searchResults.value.conversations,
       users: searchResults.value.users,
     }
   }
   return {
     books: activeTab.value === 'book' ? searchResults.value.books : [],
-    stories: activeTab.value === 'story' ? searchResults.value.stories : [],
+    conversations: activeTab.value === 'conversation' ? searchResults.value.conversations : [],
     users: activeTab.value === 'user' ? searchResults.value.users : [],
   }
 })
 
 const totalCount = computed(() => {
-  const { books, stories, users } = filteredResults.value
-  return books.length + stories.length + users.length
+  const { books, conversations, users } = filteredResults.value
+  return books.length + conversations.length + users.length
 })
 
 const bookCount = computed(() => searchResults.value.books.length)
-const storyCount = computed(() => searchResults.value.stories.length)
+const conversationCount = computed(() => searchResults.value.conversations.length)
 const userCount = computed(() => searchResults.value.users.length)
 
-const handleSearch = async () => {
+const performSearch = async () => {
   if (!searchQuery.value.trim()) {
     hasSearched.value = false
     return
   }
 
-  // URL 쿼리 파라미터 업데이트
-  router.push({ path: '/search', query: { q: searchQuery.value.trim() } })
-
   isLoading.value = true
   hasSearched.value = true
 
-  // TODO: API 호출로 실제 검색 구현
-  // Mock data로 시뮬레이션
-  setTimeout(() => {
+  try {
+    const response = await searchApi.search(searchQuery.value.trim())
+
     searchResults.value = {
-      books: [
-        {
-          id: 1,
-          title: 'Elizabeth Bennet',
-          subtitle: 'Pride and Prejudice',
-          author: 'Jane Austen',
-          description: 'The spirited and intelligent second daughter of the Bennet family.',
-          trait: 'Witty',
-        },
-        {
-          id: 2,
-          title: 'Elizabeth Bennet',
-          subtitle: 'Pride and Prejudice',
-          author: 'Jane Austen',
-          description: 'The spirited and intelligent second daughter of the Bennet family.',
-          trait: 'Witty',
-        },
-        {
-          id: 3,
-          title: 'Elizabeth Bennet',
-          subtitle: 'Pride and Prejudice',
-          author: 'Jane Austen',
-          description: 'The spirited and intelligent second daughter of the Bennet family.',
-          trait: 'Witty',
-        },
-        {
-          id: 4,
-          title: 'Elizabeth Bennet',
-          subtitle: 'Pride and Prejudice',
-          author: 'Jane Austen',
-          description: 'The spirited and intelligent second daughter of the Bennet family.',
-          trait: 'Witty',
-        },
-        {
-          id: 5,
-          title: 'Elizabeth Bennet',
-          subtitle: 'Pride and Prejudice',
-          author: 'Jane Austen',
-          description: 'The spirited and intelligent second daughter of the Bennet family.',
-          trait: 'Witty',
-        },
-        {
-          id: 6,
-          title: 'Elizabeth Bennet',
-          subtitle: 'Pride and Prejudice',
-          author: 'Jane Austen',
-          description: 'The spirited and intelligent second daughter of the Bennet family.',
-          trait: 'Witty',
-        },
-      ],
-      stories: [],
-      users: [],
+      books: response.books.map((book: any) => ({
+        id: book.id,
+        title: book.title,
+        subtitle: book.genre,
+        author: book.author,
+        description: `Scenarios: ${book.scenarioCount}, Conversations: ${book.conversationCount}`,
+        trait: book.genre,
+        coverImageUrl: book.coverImageUrl,
+      })),
+      conversations: response.conversations.map((conv: any) => ({
+        id: conv.id,
+        title: conv.title || 'Untitled Conversation',
+        description: conv.scenarioTitle || 'No description',
+        author: 'Unknown',
+        likes: conv.likeCount || 0,
+      })),
+      users: response.users.map((user: any) => ({
+        id: user.id,
+        username: user.username,
+        displayName: user.username,
+        bio: user.bio,
+        avatarUrl: user.avatarUrl,
+      })),
     }
 
     // GA4: 검색 추적
     const totalResults =
       searchResults.value.books.length +
-      searchResults.value.stories.length +
+      searchResults.value.conversations.length +
       searchResults.value.users.length
     trackSearch({
       searchTerm: searchQuery.value.trim(),
       searchType: 'integrated',
       resultsCount: totalResults,
     })
-
+  } catch (error) {
+    console.error('Search failed:', error)
+  } finally {
     isLoading.value = false
-  }, 800)
+  }
+}
+
+const handleSearch = () => {
+  if (searchQuery.value.trim()) {
+    router.push({ path: '/search', query: { q: searchQuery.value.trim() } })
+  }
 }
 
 const goToBookDetail = (bookId: number) => {
   router.push(`/books/${bookId}`)
 }
 
+watch(
+  () => route.query.q,
+  (newQuery) => {
+    if (newQuery && typeof newQuery === 'string') {
+      searchQuery.value = newQuery
+      performSearch()
+    }
+  }
+)
+
 onMounted(() => {
   // URL query parameter에서 검색어 가져오기
-  const query = router.currentRoute.value.query.q as string
+  const query = route.query.q as string
   if (query) {
     searchQuery.value = query
-    handleSearch()
+    performSearch()
   }
 })
 </script>
@@ -207,7 +194,8 @@ onMounted(() => {
                   zIndex: 1,
                 })
               "
-            >🔍</span>
+              >🔍</span
+            >
             <input
               v-model="searchQuery"
               type="text"
@@ -232,7 +220,7 @@ onMounted(() => {
                 })
               "
               @keyup.enter="handleSearch"
-            >
+            />
           </div>
         </div>
 
@@ -298,8 +286,8 @@ onMounted(() => {
                 bg: 'transparent',
                 border: 'none',
                 borderBottom: '3px solid',
-                borderColor: activeTab === 'story' ? 'green.600' : 'transparent',
-                color: activeTab === 'story' ? 'green.600' : 'gray.500',
+                borderColor: activeTab === 'conversation' ? 'green.600' : 'transparent',
+                color: activeTab === 'conversation' ? 'green.600' : 'gray.500',
                 fontSize: '1rem',
                 fontWeight: '500',
                 cursor: 'pointer',
@@ -308,9 +296,9 @@ onMounted(() => {
                 _hover: { color: 'green.600' },
               })
             "
-            @click="activeTab = 'story'"
+            @click="activeTab = 'conversation'"
           >
-            Story({{ storyCount }}+)
+            Conversation({{ conversationCount }}+)
           </button>
           <button
             :class="
