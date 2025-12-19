@@ -51,7 +51,7 @@ const routes: RouteRecordRaw[] = [
     path: '/conversations',
     name: 'Conversations',
     component: Conversations,
-    meta: { requiresAuth: true },
+    meta: { requiresAuth: false },
   },
   {
     path: '/login',
@@ -99,19 +99,19 @@ const routes: RouteRecordRaw[] = [
     path: '/profile/:username',
     name: 'Profile',
     component: Profile,
-    meta: { requiresAuth: false },
+    meta: { requiresAuth: true },
   },
   {
     path: '/profile/:username/followers',
     name: 'FollowerList',
     component: FollowerList,
-    meta: { requiresAuth: false },
+    meta: { requiresAuth: true },
   },
   {
     path: '/profile/:username/following',
     name: 'FollowingList',
     component: FollowingList,
-    meta: { requiresAuth: false },
+    meta: { requiresAuth: true },
   },
   {
     path: '/profile/edit',
