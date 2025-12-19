@@ -1,186 +1,83 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { css } from 'styled-system/css'
-import AppHeader from '../components/common/AppHeader.vue'
-import AppFooter from '../components/common/AppFooter.vue'
+import { css } from '../../styled-system/css'
+import AppHeader from '@/components/common/AppHeader.vue'
+import AppFooter from '@/components/common/AppFooter.vue'
+import { getConversations, type ConversationSummary } from '@/services/conversationApi'
 
 const router = useRouter()
-const selectedMoods = ref<string[]>([])
+const conversations = ref<ConversationSummary[]>([])
+const loading = ref(true)
+const error = ref<string | null>(null)
 const searchQuery = ref('')
-const showForkModal = ref(false)
+const selectedGenre = ref('All Genres')
+const sortOption = ref('Latest')
 
-interface Character {
-  id: number
-  name: string
-  book: string
-  [key: string]: unknown
-}
+const genres = ['All Genres', 'Romance', 'Classic', 'Genre', 'Adventure', 'Dystopian']
+const sortOptions = ['Latest', 'Recommended', 'Popular']
 
-const selectedCharacter = ref<Character | null>(null)
-
-const moods = ['Romantic', 'Humorous', 'Analytical', 'Philosophical', 'Inspirational']
-
-const characters = ref([
-  {
-    id: 1,
-    name: 'Elizabeth Bennet',
-    book: 'Pride and Prejudice',
-    bookId: 1,
-    author: 'Jane Austen',
-    description: 'The spirited and intelligent second daughter of the Bennet family',
-    tags: ['Charming', 'Witty', 'Smart'],
-    conversations: 1524,
-    image: '/characters/elizabeth.jpg',
-  },
-  {
-    id: 2,
-    name: 'Jay Gatsby',
-    book: 'The Great Gatsby',
-    bookId: 2,
-    author: 'F. Scott Fitzgerald',
-    description: 'A mysterious millionaire with a vision and an obsession',
-    tags: ['Mysterious', 'Romantic', 'Ambitious'],
-    conversations: 892,
-    image: '/characters/gatsby.jpg',
-  },
-  {
-    id: 3,
-    name: 'Captain Ahab',
-    book: 'Moby Dick',
-    bookId: 3,
-    author: 'Herman Melville',
-    description: 'The monomaniacal captain of the whaling ship Pequod',
-    tags: ['Determined', 'Dark mood', 'Vengeful'],
-    conversations: 456,
-    image: '/characters/ahab.jpg',
-  },
-  {
-    id: 4,
-    name: 'Heathcliff',
-    book: 'Wuthering Heights',
-    bookId: 4,
-    author: 'Emily Brontë',
-    description: 'A man haunted by a turbulent childhood and lost love',
-    tags: ['Passionate', 'Brooding', 'Complex'],
-    conversations: 723,
-    image: '/characters/heathcliff.jpg',
-  },
-  {
-    id: 5,
-    name: 'Winston Smith',
-    book: 'Nineteen Eighty-Four',
-    bookId: 5,
-    author: 'George Orwell',
-    description: 'A man secretly rebelling in the face of the Party who longs for truth',
-    tags: ['Defiant', 'Thoughtful', 'Fearful'],
-    conversations: 634,
-    image: '/characters/winston.jpg',
-  },
-  {
-    id: 6,
-    name: 'Jane Eyre',
-    book: 'Jane Eyre',
-    bookId: 6,
-    author: 'Charlotte Brontë',
-    description: 'An orphan who longs for social acceptance and seeks her own sense of morality',
-    tags: ['Principled', 'Eccentric', 'Independent'],
-    conversations: 891,
-    image: '/characters/jane.jpg',
-  },
-  {
-    id: 7,
-    name: 'Mr Fitzwilliam Darcy',
-    book: 'Pride and Prejudice',
-    bookId: 1,
-    author: 'Jane Austen',
-    description: 'A wealthy gentleman and proud and distant at first before he becomes an ally',
-    tags: ['Proud', 'Generous', 'Honorable'],
-    conversations: 1327,
-    image: '/characters/darcy.jpg',
-  },
-  {
-    id: 8,
-    name: 'Nick Carraway',
-    book: 'The Great Gatsby',
-    bookId: 2,
-    author: 'F. Scott Fitzgerald',
-    description: "Upper-class Yale grad who observes and narrates the fallacy's tragedy",
-    tags: ['Observant', 'Honest', 'Thoughtful'],
-    conversations: 543,
-    image: '/characters/nick.jpg',
-  },
-  {
-    id: 9,
-    name: 'Catherine Earnshaw',
-    book: 'Wuthering Heights',
-    bookId: 4,
-    author: 'Emily Brontë',
-    description: 'A high-spirited woman torn between her upbringing and social status',
-    tags: ['Wild', 'Passionate', 'Conflicted'],
-    conversations: 612,
-    image: '/characters/catherine.jpg',
-  },
-])
-
-const toggleMood = (mood: string): void => {
-  const index = selectedMoods.value.indexOf(mood)
-  if (index > -1) {
-    selectedMoods.value.splice(index, 1)
-  } else {
-    selectedMoods.value.push(mood)
+onMounted(async () => {
+  try {
+    loading.value = true
+    // Fetch ALL public conversations
+    const data = await getConversations({ filter: 'public', size: 50 })
+    conversations.value = data
+  } catch (err) {
+    console.error('Failed to load conversations:', err)
+    error.value = 'Failed to load conversations.'
+  } finally {
+    loading.value = false
   }
-}
-
-const clearFilters = (): void => {
-  selectedMoods.value = []
-  searchQuery.value = ''
-}
-
-const goToBookDetail = (bookId: number): void => {
-  router.push({ name: 'BookDetail', params: { id: bookId.toString() } })
-}
-
-const openForkModal = (character: Character): void => {
-  selectedCharacter.value = character
-  showForkModal.value = true
-}
-
-const closeForkModal = (): void => {
-  showForkModal.value = false
-  selectedCharacter.value = null
-}
-
-const startForkChat = (): void => {
-  console.log('Starting fork chat with character:', selectedCharacter.value)
-  // TODO: Implement fork chat logic
-  closeForkModal()
-}
-
-const filteredCharacters = computed(() => {
-  return characters.value.filter((character) => {
-    // 검색어 필터링
-    const matchesSearch =
-      searchQuery.value === '' ||
-      character.name.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
-      character.book.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
-      character.author.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
-      character.description.toLowerCase().includes(searchQuery.value.toLowerCase())
-
-    // 무드 필터링 (선택된 무드가 없으면 모두 표시)
-    const matchesMood =
-      selectedMoods.value.length === 0 ||
-      selectedMoods.value.some((mood) =>
-        character.tags.some((tag) => tag.toLowerCase().includes(mood.toLowerCase()))
-      )
-
-    return matchesSearch && matchesMood
-  })
 })
+
+const filteredConversations = computed(() => {
+  let result = conversations.value
+
+  // Search filter
+  if (searchQuery.value) {
+    const query = searchQuery.value.toLowerCase()
+    result = result.filter(
+      (c) =>
+        c.title.toLowerCase().includes(query) ||
+        c.bookTitle?.toLowerCase().includes(query) ||
+        c.bookAuthor?.toLowerCase().includes(query)
+    )
+  }
+
+  // Genre filter (Mock implementation - assumes genre is in tags or book metadata which we might not have fully)
+  // For now, just return all if 'All Genres'
+  if (selectedGenre.value !== 'All Genres') {
+    // If we had genre data, we would filter here.
+    // For demo purposes, we'll just show all or maybe filter by random assignment if needed,
+    // but better to just show all to avoid empty states.
+  }
+
+  return result
+})
+
+const navigateToConversation = (id: string): void => {
+  router.push(`/conversations/${id}`)
+}
+
+const navigateToBook = (e: Event, bookTitle?: string): void => {
+  e.stopPropagation()
+  // In a real app, we'd navigate to book detail.
+  // Since we don't have book ID easily here without joining, we'll just go to books page.
+  router.push('/books')
+}
+
+// Helper to get random tags for UI fidelity (since backend doesn't provide them yet)
+const getTags = (conv: ConversationSummary) => {
+  const baseTags = ['Character', 'Situation']
+  if (conv.bookTitle?.includes('Pride')) return [...baseTags, 'Romance', 'Classic']
+  if (conv.bookTitle?.includes('1984')) return [...baseTags, 'Dystopian', 'Political']
+  return [...baseTags, 'Event']
+}
 </script>
 
 <template>
-  <div :class="css({ minH: '100vh', display: 'flex', flexDirection: 'column', bg: 'gray.50' })">
+  <div :class="css({ minH: '100vh', display: 'flex', flexDirection: 'column', bg: 'white' })">
     <AppHeader />
     <div :class="css({ h: '20' })" />
 
@@ -196,129 +93,95 @@ const filteredCharacters = computed(() => {
         })
       "
     >
-      <!-- Header -->
-      <div :class="css({ mb: '8' })">
-        <h1
-          :class="
-            css({
-              fontSize: { base: '2rem', md: '2.5rem' },
-              fontWeight: 'bold',
-              color: 'gray.900',
-              mb: '2',
-            })
-          "
-        >
-          All Characters
-        </h1>
-        <p :class="css({ fontSize: '1rem', color: 'gray.600' })">
-          {{ filteredCharacters.length }} conversations available
-        </p>
-      </div>
-
-      <!-- Search Bar -->
-      <div :class="css({ mb: '6' })">
-        <div :class="css({ position: 'relative', maxW: '600px' })">
-          <input
-            v-model="searchQuery"
-            type="text"
-            placeholder="Search by character, book, or author..."
-            :class="
-              css({
-                w: 'full',
-                px: '4',
-                py: '3',
-                pl: '12',
-                bg: 'white',
-                border: '1px solid',
-                borderColor: 'gray.300',
-                borderRadius: '0.75rem',
-                fontSize: '1rem',
-                outline: 'none',
-                transition: 'all 0.2s',
-                _focus: {
-                  borderColor: 'green.500',
-                  boxShadow: '0 0 0 3px rgba(34, 197, 94, 0.1)',
-                },
-              })
-            "
-          />
-          <span
-            :class="
-              css({
-                position: 'absolute',
-                left: '4',
-                top: '50%',
-                transform: 'translateY(-50%)',
-                fontSize: '1.25rem',
-              })
-            "
-          >
-            🔍
-          </span>
-        </div>
-      </div>
-
-      <!-- Filters -->
-      <div :class="css({ mb: '8' })">
-        <div
-          :class="
-            css({ display: 'flex', alignItems: 'center', gap: '3', mb: '4', flexWrap: 'wrap' })
-          "
-        >
-          <span :class="css({ fontSize: '1rem', fontWeight: '500', color: 'gray.700' })">
-            🎭 Mood Filters:
-          </span>
-          <button
-            v-for="mood in moods"
-            :key="mood"
-            :class="
-              css({
-                px: '4',
-                py: '1.5',
-                bg: selectedMoods.includes(mood) ? 'green.500' : 'white',
-                color: selectedMoods.includes(mood) ? 'white' : 'gray.700',
-                border: '1px solid',
-                borderColor: selectedMoods.includes(mood) ? 'green.500' : 'gray.300',
-                borderRadius: '9999px',
-                fontSize: '0.875rem',
-                fontWeight: '500',
-                cursor: 'pointer',
-                transition: 'all 0.2s',
-                _hover: {
-                  bg: selectedMoods.includes(mood) ? 'green.600' : 'gray.50',
-                },
-              })
-            "
-            @click="toggleMood(mood)"
-          >
-            {{ mood }}
-          </button>
-          <button
-            v-if="selectedMoods.length > 0 || searchQuery"
-            :class="
-              css({
-                px: '4',
-                py: '1.5',
-                bg: 'gray.200',
-                color: 'gray.700',
-                border: 'none',
-                borderRadius: '9999px',
-                fontSize: '0.875rem',
-                fontWeight: '500',
-                cursor: 'pointer',
-                transition: 'all 0.2s',
-                _hover: { bg: 'gray.300' },
-              })
-            "
-            @click="clearFilters"
-          >
-            Clear All
-          </button>
-        </div>
-      </div>
-
-      <!-- Characters Grid -->
+      <!-- Filters & Sort -->
       <div
+        :class="
+          css({
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            mb: '8',
+            flexWrap: 'wrap',
+            gap: '4',
+          })
+        "
+      >
+        <div :class="css({ display: 'flex', gap: '2', flexWrap: 'wrap' })">
+          <button
+            v-for="genre in genres"
+            :key="genre"
+            @click="selectedGenre = genre"
+            :class="
+              css({
+                px: '4',
+                py: '1.5',
+                borderRadius: 'full',
+                fontSize: '0.875rem',
+                fontWeight: '500',
+                cursor: 'pointer',
+                transition: 'all 0.2s',
+                bg: selectedGenre === genre ? 'green.600' : 'gray.100',
+                color: selectedGenre === genre ? 'white' : 'gray.700',
+                _hover: {
+                  bg: selectedGenre === genre ? 'green.700' : 'gray.200',
+                },
+              })
+            "
+          >
+            {{ genre }}
+          </button>
+        </div>
+
+        <div :class="css({ display: 'flex', bg: 'gray.100', borderRadius: 'md', p: '1' })">
+          <button
+            v-for="option in sortOptions"
+            :key="option"
+            @click="sortOption = option"
+            :class="
+              css({
+                px: '3',
+                py: '1',
+                borderRadius: 'sm',
+                fontSize: '0.75rem',
+                fontWeight: '500',
+                cursor: 'pointer',
+                transition: 'all 0.2s',
+                bg: sortOption === option ? 'green.600' : 'transparent',
+                color: sortOption === option ? 'white' : 'gray.500',
+              })
+            "
+          >
+            {{ option }}
+          </button>
+        </div>
+      </div>
+
+      <!-- Count -->
+      <div :class="css({ mb: '6', fontSize: '0.875rem', color: 'gray.500' })">
+        {{ filteredConversations.length }} conversations available
+      </div>
+
+      <!-- Loading State -->
+      <div v-if="loading" :class="css({ textAlign: 'center', py: '12' })">
+        Loading conversations...
+      </div>
+
+      <!-- Error State -->
+      <div v-else-if="error" :class="css({ textAlign: 'center', py: '12', color: 'red.500' })">
+        {{ error }}
+      </div>
+
+      <!-- Empty State -->
+      <div
+        v-else-if="filteredConversations.length === 0"
+        :class="css({ textAlign: 'center', py: '12', color: 'gray.500' })"
+      >
+        No conversations found.
+      </div>
+
+      <!-- Conversations Grid -->
+      <div
+        v-else
         :class="
           css({
             display: 'grid',
@@ -328,59 +191,77 @@ const filteredCharacters = computed(() => {
         "
       >
         <div
-          v-for="character in filteredCharacters"
-          :key="character.id"
+          v-for="conv in filteredConversations"
+          :key="conv.id"
           :class="
             css({
               bg: 'white',
-              borderRadius: '0.75rem',
+              borderRadius: 'xl',
+              border: '1px solid',
+              borderColor: 'gray.200',
               p: '6',
-              boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)',
               transition: 'all 0.2s',
               _hover: {
-                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-                transform: 'translateY(-2px)',
+                borderColor: 'green.500',
+                boxShadow: 'md',
               },
             })
           "
         >
-          <!-- Character Avatar -->
-          <div :class="css({ display: 'flex', alignItems: 'flex-start', gap: '4', mb: '4' })">
+          <!-- Card Header -->
+          <div :class="css({ display: 'flex', gap: '4', mb: '4' })">
+            <!-- Avatar -->
             <div
               :class="
                 css({
-                  w: '16',
-                  h: '16',
+                  w: '12',
+                  h: '12',
                   flexShrink: 0,
                   borderRadius: 'full',
+                  overflow: 'hidden',
                   bg: 'gray.200',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '2rem',
                 })
               "
             >
-              👤
+              <img
+                v-if="conv.bookCoverUrl"
+                :src="conv.bookCoverUrl"
+                :alt="conv.title"
+                :class="css({ w: 'full', h: 'full', objectFit: 'cover' })"
+              />
+              <div
+                v-else
+                :class="
+                  css({
+                    w: 'full',
+                    h: 'full',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '1.5rem',
+                  })
+                "
+              >
+                👤
+              </div>
             </div>
-            <div :class="css({ flex: 1 })">
+
+            <!-- Title & Subtitle -->
+            <div :class="css({ flex: 1, minW: 0 })">
               <h3
                 :class="
                   css({
                     fontSize: '1.125rem',
                     fontWeight: 'bold',
                     color: 'gray.900',
-                    mb: '1',
+                    lineClamp: '1',
                   })
                 "
               >
-                {{ character.name }}
+                {{ conv.title }}
               </h3>
-              <p :class="css({ fontSize: '0.875rem', color: 'gray.600', mb: '0.5' })">
-                {{ character.book }}
-              </p>
-              <p :class="css({ fontSize: '0.75rem', color: 'gray.500' })">
-                by {{ character.author }}
+              <p :class="css({ fontSize: '0.75rem', color: 'gray.500', lineClamp: '1' })">
+                {{ conv.bookTitle || 'Unknown Book' }} by {{ conv.bookAuthor || 'Unknown Author' }}
               </p>
             </div>
           </div>
@@ -391,27 +272,30 @@ const filteredCharacters = computed(() => {
               css({
                 fontSize: '0.875rem',
                 color: 'gray.600',
-                lineHeight: '1.6',
                 mb: '4',
+                lineClamp: '3',
+                h: '4.5em', // Fixed height for alignment
               })
             "
           >
-            {{ character.description }}
+            {{ conv.scenarioDescription || 'No description available for this conversation.' }}
           </p>
 
           <!-- Tags -->
-          <div :class="css({ display: 'flex', gap: '2', flexWrap: 'wrap', mb: '4' })">
+          <div :class="css({ display: 'flex', gap: '2', mb: '4', flexWrap: 'wrap' })">
             <span
-              v-for="tag in character.tags"
+              v-for="tag in getTags(conv)"
               :key="tag"
               :class="
                 css({
-                  px: '3',
-                  py: '1',
+                  px: '2',
+                  py: '0.5',
                   bg: 'gray.100',
-                  color: 'gray.700',
-                  fontSize: '0.75rem',
-                  borderRadius: '9999px',
+                  color: 'gray.600',
+                  borderRadius: 'md',
+                  fontSize: '0.625rem',
+                  fontWeight: '600',
+                  textTransform: 'uppercase',
                 })
               "
             >
@@ -419,409 +303,71 @@ const filteredCharacters = computed(() => {
             </span>
           </div>
 
-          <!-- Conversations Count -->
-          <p
+          <!-- Stats -->
+          <div
             :class="
               css({
+                display: 'flex',
+                alignItems: 'center',
+                gap: '2',
+                mb: '4',
                 fontSize: '0.75rem',
                 color: 'gray.500',
-                mb: '4',
               })
             "
           >
-            💬 {{ character.conversations.toLocaleString() }} conversations
-          </p>
+            <span>💬 {{ conv.messageCount || 0 }} conversations</span>
+          </div>
 
-          <!-- Action Buttons -->
+          <!-- Actions -->
           <div :class="css({ display: 'flex', gap: '2' })">
             <button
+              @click="navigateToConversation(conv.id)"
               :class="
                 css({
                   flex: 1,
-                  px: '4',
-                  py: '2',
-                  bg: 'green.500',
+                  bg: 'green.600',
                   color: 'white',
-                  border: 'none',
-                  borderRadius: '0.5rem',
+                  py: '2',
+                  borderRadius: 'md',
                   fontSize: '0.875rem',
                   fontWeight: '600',
                   cursor: 'pointer',
-                  transition: 'all 0.2s',
+                  transition: 'bg 0.2s',
+                  _hover: { bg: 'green.700' },
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   gap: '2',
-                  _hover: { bg: 'green.600' },
                 })
               "
-              @click="openForkModal(character)"
             >
-              🔀 Fork Chat
+              <span>💬</span> Start Chat
             </button>
             <button
+              @click="(e) => navigateToBook(e, conv.bookTitle)"
               :class="
                 css({
-                  px: '4',
-                  py: '2',
-                  bg: 'white',
-                  color: 'gray.700',
+                  px: '3',
                   border: '1px solid',
                   borderColor: 'gray.300',
-                  borderRadius: '0.5rem',
-                  fontSize: '0.875rem',
-                  fontWeight: '600',
+                  borderRadius: 'md',
                   cursor: 'pointer',
                   transition: 'all 0.2s',
+                  _hover: { bg: 'gray.50' },
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  _hover: { bg: 'gray.50' },
                 })
               "
-              @click="goToBookDetail(character.bookId)"
+              title="Go to Book"
             >
-              📚
+              📖
             </button>
           </div>
         </div>
       </div>
     </main>
-
-    <!-- Fork Chat Modal -->
-    <div
-      v-if="showForkModal"
-      :class="
-        css({
-          position: 'fixed',
-          inset: 0,
-          bg: 'rgba(0, 0, 0, 0.5)',
-          display: 'flex',
-          alignItems: 'flex-start',
-          justifyContent: 'center',
-          zIndex: 50,
-          px: '4',
-          pt: '24',
-          overflowY: 'auto',
-        })
-      "
-      @click="closeForkModal"
-    >
-      <div
-        :class="
-          css({
-            bg: 'white',
-            borderRadius: '1rem',
-            p: '5',
-            maxW: 'xl',
-            w: '85%',
-            overflowY: 'hidden',
-          })
-        "
-        @click.stop
-      >
-        <!-- Modal Header -->
-        <div :class="css({ mb: '5' })">
-          <h2
-            :class="
-              css({
-                fontSize: '1.375rem',
-                fontWeight: 'bold',
-                color: 'gray.900',
-                mb: '2',
-              })
-            "
-          >
-            Fork Scenario
-          </h2>
-          <p :class="css({ fontSize: '0.875rem', color: 'gray.600' })">
-            Review the original scenario settings (Read-only)
-          </p>
-        </div>
-
-        <!-- Character Info -->
-        <div
-          v-if="selectedCharacter"
-          :class="
-            css({
-              bg: 'gray.50',
-              borderRadius: '0.5rem',
-              p: '3',
-              mb: '4',
-            })
-          "
-        >
-          <div :class="css({ display: 'flex', alignItems: 'center', gap: '3', mb: '3' })">
-            <div
-              :class="
-                css({
-                  w: '12',
-                  h: '12',
-                  borderRadius: 'full',
-                  bg: 'gray.200',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '1.5rem',
-                })
-              "
-            >
-              👤
-            </div>
-            <div>
-              <h3 :class="css({ fontSize: '1.125rem', fontWeight: 'bold', color: 'gray.900' })">
-                {{ selectedCharacter.name }}
-              </h3>
-              <p :class="css({ fontSize: '0.875rem', color: 'gray.600' })">
-                {{ selectedCharacter.book }}
-              </p>
-            </div>
-          </div>
-          <p :class="css({ fontSize: '0.875rem', color: 'gray.700', lineHeight: '1.6' })">
-            {{ selectedCharacter.description }}
-          </p>
-        </div>
-
-        <!-- Fork Changes -->
-        <div :class="css({ mb: '5' })">
-          <h3
-            :class="
-              css({
-                fontSize: '1rem',
-                fontWeight: '600',
-                color: 'gray.900',
-                mb: '3',
-              })
-            "
-          >
-            What will change in this fork?
-          </h3>
-
-          <!-- Character Property Changes -->
-          <div
-            :class="
-              css({
-                bg: 'gray.50',
-                border: '2px solid',
-                borderColor: 'gray.300',
-                borderRadius: '0.5rem',
-                p: '3',
-                mb: '3',
-              })
-            "
-          >
-            <h4
-              :class="
-                css({
-                  fontSize: '0.75rem',
-                  fontWeight: '600',
-                  color: 'gray.600',
-                  mb: '2',
-                  textTransform: 'uppercase',
-                  letterSpacing: 'wide',
-                })
-              "
-            >
-              Character Property
-            </h4>
-            <div
-              :class="
-                css({
-                  bg: 'white',
-                  px: '3',
-                  py: '2.5',
-                  border: '1px solid',
-                  borderColor: 'gray.200',
-                  borderRadius: '0.5rem',
-                  fontSize: '0.875rem',
-                  color: 'gray.700',
-                  minH: '16',
-                })
-              "
-            >
-              Not specified
-            </div>
-          </div>
-
-          <!-- Event Alterations Changes -->
-          <div
-            :class="
-              css({
-                bg: 'gray.50',
-                border: '2px solid',
-                borderColor: 'gray.300',
-                borderRadius: '0.5rem',
-                p: '3',
-                mb: '3',
-              })
-            "
-          >
-            <h4
-              :class="
-                css({
-                  fontSize: '0.75rem',
-                  fontWeight: '600',
-                  color: 'gray.600',
-                  mb: '2',
-                  textTransform: 'uppercase',
-                  letterSpacing: 'wide',
-                })
-              "
-            >
-              Event Alterations
-            </h4>
-            <div
-              :class="
-                css({
-                  bg: 'white',
-                  px: '3',
-                  py: '2.5',
-                  border: '1px solid',
-                  borderColor: 'gray.200',
-                  borderRadius: '0.5rem',
-                  fontSize: '0.875rem',
-                  color: 'gray.700',
-                  minH: '20',
-                })
-              "
-            >
-              Not specified
-            </div>
-          </div>
-
-          <!-- Setting Modifications Changes -->
-          <div
-            :class="
-              css({
-                bg: 'gray.50',
-                border: '2px solid',
-                borderColor: 'gray.300',
-                borderRadius: '0.5rem',
-                p: '3',
-              })
-            "
-          >
-            <h4
-              :class="
-                css({
-                  fontSize: '0.75rem',
-                  fontWeight: '600',
-                  color: 'gray.600',
-                  mb: '2',
-                  textTransform: 'uppercase',
-                  letterSpacing: 'wide',
-                })
-              "
-            >
-              Setting Modifications
-            </h4>
-            <div
-              :class="
-                css({
-                  bg: 'white',
-                  px: '3',
-                  py: '2.5',
-                  border: '1px solid',
-                  borderColor: 'gray.200',
-                  borderRadius: '0.5rem',
-                  fontSize: '0.875rem',
-                  color: 'gray.700',
-                  minH: '20',
-                })
-              "
-            >
-              Not specified
-            </div>
-          </div>
-        </div>
-
-        <!-- Description -->
-        <div :class="css({ mb: '5', display: 'none' })">
-          <label
-            for="fork-description"
-            :class="
-              css({
-                display: 'block',
-                fontSize: '0.8125rem',
-                fontWeight: '500',
-                color: 'gray.700',
-                mb: '2',
-              })
-            "
-          >
-            Fork Description (Optional)
-          </label>
-          <textarea
-            id="fork-description"
-            :class="
-              css({
-                w: 'full',
-                px: '3',
-                py: '2',
-                border: '1px solid',
-                borderColor: 'gray.300',
-                borderRadius: '0.5rem',
-                fontSize: '0.875rem',
-                minH: '20',
-                outline: 'none',
-                _focus: {
-                  borderColor: 'green.500',
-                  boxShadow: '0 0 0 3px rgba(34, 197, 94, 0.1)',
-                },
-              })
-            "
-            placeholder="Describe your fork or add notes..."
-          />
-        </div>
-
-        <!-- Action Buttons -->
-        <div :class="css({ display: 'flex', gap: '3' })">
-          <button
-            :class="
-              css({
-                flex: 1,
-                px: '4',
-                py: '2.5',
-                bg: 'green.500',
-                color: 'white',
-                border: 'none',
-                borderRadius: '0.5rem',
-                fontSize: '0.875rem',
-                fontWeight: '600',
-                cursor: 'pointer',
-                transition: 'all 0.2s',
-                _hover: { bg: 'green.600' },
-              })
-            "
-            @click="startForkChat"
-          >
-            🍴 Create Fork
-          </button>
-          <button
-            :class="
-              css({
-                flex: 1,
-                px: '4',
-                py: '2.5',
-                bg: 'white',
-                color: 'gray.700',
-                border: '1px solid',
-                borderColor: 'gray.300',
-                borderRadius: '0.5rem',
-                fontSize: '0.875rem',
-                fontWeight: '600',
-                cursor: 'pointer',
-                transition: 'all 0.2s',
-                _hover: { bg: 'gray.50' },
-              })
-            "
-            @click="closeForkModal"
-          >
-            Cancel
-          </button>
-        </div>
-      </div>
-    </div>
 
     <AppFooter />
   </div>
