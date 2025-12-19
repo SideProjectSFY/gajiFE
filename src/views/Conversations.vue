@@ -241,7 +241,7 @@ const filteredCharacters = computed(() => {
                 },
               })
             "
-          >
+          />
           <span
             :class="
               css({
@@ -514,7 +514,7 @@ const filteredCharacters = computed(() => {
             borderRadius: '1rem',
             p: '5',
             maxW: 'xl',
-            w: 'full',
+            w: '85%',
             overflowY: 'hidden',
           })
         "
@@ -532,10 +532,10 @@ const filteredCharacters = computed(() => {
               })
             "
           >
-            Fork Conversation
+            Fork Scenario
           </h2>
           <p :class="css({ fontSize: '0.875rem', color: 'gray.600' })">
-            Review the parent scenario settings before forking
+            Review the original scenario settings (Read-only)
           </p>
         </div>
 
@@ -601,9 +601,9 @@ const filteredCharacters = computed(() => {
           <div
             :class="
               css({
-                bg: 'white',
-                border: '1px solid',
-                borderColor: 'gray.200',
+                bg: 'gray.50',
+                border: '2px solid',
+                borderColor: 'gray.300',
                 borderRadius: '0.5rem',
                 p: '3',
                 mb: '3',
@@ -611,110 +611,132 @@ const filteredCharacters = computed(() => {
             "
           >
             <h4
-              :class="css({ fontSize: '0.9375rem', fontWeight: '600', color: 'gray.900', mb: '2' })"
+              :class="
+                css({
+                  fontSize: '0.75rem',
+                  fontWeight: '600',
+                  color: 'gray.600',
+                  mb: '2',
+                  textTransform: 'uppercase',
+                  letterSpacing: 'wide',
+                })
+              "
             >
               Character Property
             </h4>
-            <textarea
+            <div
               :class="
                 css({
-                  w: 'full',
+                  bg: 'white',
                   px: '3',
-                  py: '2',
+                  py: '2.5',
                   border: '1px solid',
-                  borderColor: 'gray.300',
+                  borderColor: 'gray.200',
                   borderRadius: '0.5rem',
                   fontSize: '0.875rem',
+                  color: 'gray.700',
                   minH: '16',
-                  outline: 'none',
-                  _focus: {
-                    borderColor: 'green.500',
-                    boxShadow: '0 0 0 3px rgba(34, 197, 94, 0.1)',
-                  },
                 })
               "
-              placeholder="e.g., Change from reserved to outgoing"
-            />
+            >
+              Not specified
+            </div>
           </div>
 
           <!-- Event Alterations Changes -->
           <div
             :class="
               css({
-                bg: 'white',
-                border: '1px solid',
-                borderColor: 'gray.200',
+                bg: 'gray.50',
+                border: '2px solid',
+                borderColor: 'gray.300',
                 borderRadius: '0.5rem',
-                p: '4',
+                p: '3',
                 mb: '3',
               })
             "
           >
-            <h4 :class="css({ fontSize: '1rem', fontWeight: '600', color: 'gray.900', mb: '3' })">
-              Event Alterations
-            </h4>
-            <textarea
+            <h4
               :class="
                 css({
-                  w: 'full',
-                  px: '3',
-                  py: '2',
-                  border: '1px solid',
-                  borderColor: 'gray.300',
-                  borderRadius: '0.5rem',
-                  fontSize: '0.875rem',
-                  minH: '20',
-                  outline: 'none',
-                  _focus: {
-                    borderColor: 'green.500',
-                    boxShadow: '0 0 0 3px rgba(34, 197, 94, 0.1)',
-                  },
+                  fontSize: '0.75rem',
+                  fontWeight: '600',
+                  color: 'gray.600',
+                  mb: '2',
+                  textTransform: 'uppercase',
+                  letterSpacing: 'wide',
                 })
               "
-              placeholder="e.g., Character survives the confrontation"
-            />
+            >
+              Event Alterations
+            </h4>
+            <div
+              :class="
+                css({
+                  bg: 'white',
+                  px: '3',
+                  py: '2.5',
+                  border: '1px solid',
+                  borderColor: 'gray.200',
+                  borderRadius: '0.5rem',
+                  fontSize: '0.875rem',
+                  color: 'gray.700',
+                  minH: '20',
+                })
+              "
+            >
+              Not specified
+            </div>
           </div>
 
           <!-- Setting Modifications Changes -->
           <div
             :class="
               css({
-                bg: 'white',
-                border: '1px solid',
-                borderColor: 'gray.200',
+                bg: 'gray.50',
+                border: '2px solid',
+                borderColor: 'gray.300',
                 borderRadius: '0.5rem',
-                p: '4',
+                p: '3',
               })
             "
           >
-            <h4 :class="css({ fontSize: '1rem', fontWeight: '600', color: 'gray.900', mb: '3' })">
-              Setting Modifications
-            </h4>
-            <textarea
+            <h4
               :class="
                 css({
-                  w: 'full',
-                  px: '3',
-                  py: '2',
-                  border: '1px solid',
-                  borderColor: 'gray.300',
-                  borderRadius: '0.5rem',
-                  fontSize: '0.875rem',
-                  minH: '20',
-                  outline: 'none',
-                  _focus: {
-                    borderColor: 'green.500',
-                    boxShadow: '0 0 0 3px rgba(34, 197, 94, 0.1)',
-                  },
+                  fontSize: '0.75rem',
+                  fontWeight: '600',
+                  color: 'gray.600',
+                  mb: '2',
+                  textTransform: 'uppercase',
+                  letterSpacing: 'wide',
                 })
               "
-              placeholder="e.g., Story takes place in modern times"
-            />
+            >
+              Setting Modifications
+            </h4>
+            <div
+              :class="
+                css({
+                  bg: 'white',
+                  px: '3',
+                  py: '2.5',
+                  border: '1px solid',
+                  borderColor: 'gray.200',
+                  borderRadius: '0.5rem',
+                  fontSize: '0.875rem',
+                  color: 'gray.700',
+                  minH: '20',
+                })
+              "
+            >
+              Not specified
+            </div>
           </div>
         </div>
 
         <!-- Description -->
-        <div :class="css({ mb: '5' })">
+        <div :class="css({ mb: '5', display: 'none' })">
           <label
             for="fork-description"
             :class="
@@ -773,7 +795,7 @@ const filteredCharacters = computed(() => {
             "
             @click="startForkChat"
           >
-            Start Fork
+            🍴 Create Fork
           </button>
           <button
             :class="
