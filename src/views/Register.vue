@@ -226,7 +226,7 @@ onMounted(() => {
       <div style="width: 100%; max-width: 420px">
         <!-- Logo -->
         <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 2rem">
-          <span style="font-size: 1.5rem">�</span>
+          <span style="font-size: 1.5rem">🪾</span>
           <span style="font-size: 1.25rem; font-weight: bold; color: #1f2937">Gaji</span>
         </div>
 
