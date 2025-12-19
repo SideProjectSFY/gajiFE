@@ -136,9 +136,7 @@ onMounted(() => {
         <h1 style="font-size: 1.75rem; font-weight: bold; margin-bottom: 0.5rem; color: #111827">
           Continue exploring story branches
         </h1>
-        <p style="color: #6b7280; margin-bottom: 2rem; font-size: 0.875rem">
-          Email or Username
-        </p>
+        <p style="color: #6b7280; margin-bottom: 2rem; font-size: 0.875rem">Email or Username</p>
 
         <form
           style="display: flex; flex-direction: column; gap: 1.25rem"
@@ -181,7 +179,7 @@ onMounted(() => {
                 transition: 'border-color 0.2s, box-shadow 0.2s',
               }"
               @blur="handleEmailBlur"
-            >
+            />
             <span
               v-if="errors.email && touched.email"
               id="email-error"
@@ -228,11 +226,12 @@ onMounted(() => {
                 transition: 'border-color 0.2s, box-shadow 0.2s',
               }"
               @blur="handlePasswordBlur"
-            >
+            />
             <span
               v-if="errors.password && touched.password"
               id="password-error"
               role="alert"
+              data-testid="password-error"
               style="color: #ef4444; font-size: 0.75rem; display: block; margin-top: 0.25rem"
             >
               {{ errors.password }}
@@ -241,15 +240,8 @@ onMounted(() => {
 
           <!-- Remember Me -->
           <div style="display: flex; align-items: center; gap: 0.5rem">
-            <input
-              id="remember"
-              v-model="form.rememberMe"
-              type="checkbox"
-            >
-            <label
-              for="remember"
-              style="font-size: 0.875rem; color: #374151"
-            >Remember me</label>
+            <input id="remember" v-model="form.rememberMe" type="checkbox" />
+            <label for="remember" style="font-size: 0.875rem; color: #374151">Remember me</label>
           </div>
 
           <!-- Submit Button -->
