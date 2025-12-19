@@ -8,39 +8,95 @@ import { useAnalytics } from '@/composables/useAnalytics'
 import { useAuthStore } from '@/stores/auth'
 import { bookApi } from '@/services/bookApi'
 import { userApi } from '@/services/userApi'
+import { getConversations } from '@/services/conversationApi'
 
 const route = useRoute()
 const router = useRouter()
 const { trackProfileViewed } = useAnalytics()
 const authStore = useAuthStore()
 
-// Mock user profile data
+// User profile data
 const userProfile = ref({
-  username: route.params.username || 'johndoe',
-  bio: 'Book lover and avid reader. Exploring alternative storylines in classic literature.',
+  id: '',
+  username: '',
+  bio: '',
   avatarUrl: '👤',
-  joinedAt: 'January 2024',
+  joinedAt: '',
 })
 
-// GA4: 프로필 조회 추적
-onMounted(() => {
+// GA4: 프로필 조회 추적 & Data Fetching
+onMounted(async () => {
   const username = Array.isArray(route.params.username)
     ? route.params.username[0]
     : route.params.username || 'johndoe'
+
   const isOwnProfile = authStore.user?.username === username
   trackProfileViewed(username, isOwnProfile)
+
+  try {
+    // 1. Fetch User Profile
+    const user = await userApi.getUserProfile(username)
+    userProfile.value = {
+      id: user.id,
+      username: user.username,
+      bio: user.bio || 'No bio available.',
+      avatarUrl: user.avatarUrl || '👤',
+      joinedAt: 'January 2024', // Placeholder
+    }
+
+    // 2. Fetch Lists using userId
+    const userId = user.id
+
+    // Liked Books
+    const booksResponse = await bookApi.getLikedBooks(userId)
+    allLikedBooks.value = booksResponse.content.map((b: any) => ({
+      id: b.id,
+      title: b.title,
+      author: b.author,
+      cover: b.coverUrl || '📚',
+    }))
+    likedBooks.value = allLikedBooks.value.slice(0, 3)
+
+    // Following
+    const following = await userApi.getFollowing(userId)
+    allFollowing.value = following.map((u: any) => ({
+      id: u.id,
+      username: u.username,
+      avatar: u.avatarUrl || '👤',
+    }))
+
+    // Followers
+    const followers = await userApi.getFollowers(userId)
+    allFollowers.value = followers.map((u: any) => ({
+      id: u.id,
+      username: u.username,
+      avatar: u.avatarUrl || '👤',
+    }))
+
+    // My Conversations
+    const conversations = await getConversations({ userId })
+    allMyConversations.value = conversations.map((c: any) => ({
+      id: c.id,
+      title: c.title,
+      book: 'Unknown Book', // Placeholder
+      character: 'Unknown', // Placeholder
+      preview: 'No preview', // Placeholder
+      likeCount: c.likeCount || 0,
+      timestamp: c.createdAt ? new Date(c.createdAt).toLocaleDateString() : '',
+      cover: '📘',
+    }))
+    myConversations.value = allMyConversations.value.slice(0, 3)
+  } catch (error) {
+    console.error('Failed to load profile data:', error)
+  }
 })
 
-// Mock liked books
+// Liked books
 const likedBooks = ref<
   Array<{ id: string | number; title: string; author: string; cover: string }>
->([
-  { id: '1', title: 'The Great Gatsby', author: 'F. Scott Fitzgerald', cover: '📚' },
-  { id: '2', title: 'Pride and Prejudice', author: 'Jane Austen', cover: '📕' },
-  { id: '3', title: '1984', author: 'George Orwell', cover: '📘' },
-])
+>([])
 
-// Mock my conversations
+// My conversations
 const myConversations = ref<
   Array<{
     id: string | number
@@ -52,38 +108,7 @@ const myConversations = ref<
     timestamp: string
     cover: string
   }>
->([
-  {
-    id: '1',
-    title: "Exploring Gatsby's Symbolism",
-    book: 'The Great Gatsby',
-    character: 'Gatsby',
-    preview: 'Oh, Ross Gannaway, our stories are sure to be finer compared...',
-    likeCount: 45,
-    timestamp: '5 days ago',
-    cover: '📚',
-  },
-  {
-    id: '2',
-    title: "Darcy's Pride Discussion",
-    book: 'Pride and Prejudice',
-    character: 'Mr. Darcy',
-    preview: 'My pride has been my constant companion...',
-    likeCount: 32,
-    timestamp: '2 hours ago',
-    cover: '📕',
-  },
-  {
-    id: '3',
-    title: "Darcy's Pride Discussion",
-    book: 'Pride and Prejudice',
-    character: 'Elizabeth',
-    preview: 'My pride has been my constant companion...',
-    likeCount: 28,
-    timestamp: '1 hours ago',
-    cover: '📕',
-  },
-])
+>([])
 
 // Modal states
 const showLikedBooksModal = ref(false)
@@ -102,35 +127,14 @@ const followersPage = ref(1)
 const myConversationsPage = ref(1)
 const itemsPerPage = 12
 
-// Mock data for modals (더 많은 데이터)
+// Data for modals
 const allLikedBooks = ref<
   Array<{ id: string | number; title: string; author: string; cover: string }>
->([
-  ...likedBooks.value,
-  { id: '4', title: 'To Kill a Mockingbird', author: 'Harper Lee', cover: '📗' },
-  { id: '5', title: 'The Catcher in the Rye', author: 'J.D. Salinger', cover: '📙' },
-  { id: '6', title: 'Animal Farm', author: 'George Orwell', cover: '📔' },
-  { id: '7', title: 'Lord of the Flies', author: 'William Golding', cover: '📓' },
-  { id: '8', title: 'Brave New World', author: 'Aldous Huxley', cover: '📕' },
-  { id: '9', title: 'Jane Eyre', author: 'Charlotte Brontë', cover: '📘' },
-  { id: '10', title: 'Wuthering Heights', author: 'Emily Brontë', cover: '📚' },
-])
+>([])
 
-const allFollowing = ref<Array<{ id: string; username: string; avatar: string }>>([
-  ...Array.from({ length: 20 }, (_, i) => ({
-    id: `user${i + 1}`,
-    username: `user${i + 1}`,
-    avatar: '👤',
-  })),
-])
+const allFollowing = ref<Array<{ id: string; username: string; avatar: string }>>([])
 
-const allFollowers = ref<Array<{ id: string; username: string; avatar: string }>>([
-  ...Array.from({ length: 15 }, (_, i) => ({
-    id: `follower${i + 1}`,
-    username: `follower${i + 1}`,
-    avatar: '👤',
-  })),
-])
+const allFollowers = ref<Array<{ id: string; username: string; avatar: string }>>([])
 
 const allMyConversations = ref<
   Array<{
@@ -143,19 +147,7 @@ const allMyConversations = ref<
     timestamp: string
     cover: string
   }>
->([
-  ...myConversations.value,
-  {
-    id: '4',
-    title: 'Another Discussion',
-    book: '1984',
-    character: 'Winston',
-    preview: 'Big Brother is watching...',
-    likeCount: 20,
-    timestamp: '3 days ago',
-    cover: '📘',
-  },
-])
+>([])
 
 const goToConversation = (id: string | number): void => {
   router.push(`/conversations/${id}`)
