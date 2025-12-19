@@ -32,20 +32,29 @@ export const userApi = {
   },
 
   /**
-   * Get followers list
+   * Get user profile by username
    * @param username Username
    */
-  async getFollowers(username: string): Promise<User[]> {
-    const response = await axios.get<User[]>(`${API_BASE_URL}/api/v1/users/${username}/followers`)
+  async getUserProfile(username: string): Promise<User> {
+    const response = await axios.get<User>(`${API_BASE_URL}/api/v1/users/${username}`)
+    return response.data
+  },
+
+  /**
+   * Get followers list
+   * @param userId User ID
+   */
+  async getFollowers(userId: string): Promise<User[]> {
+    const response = await axios.get<User[]>(`${API_BASE_URL}/api/v1/users/${userId}/followers`)
     return response.data
   },
 
   /**
    * Get following list
-   * @param username Username
+   * @param userId User ID
    */
-  async getFollowing(username: string): Promise<User[]> {
-    const response = await axios.get<User[]>(`${API_BASE_URL}/api/v1/users/${username}/following`)
+  async getFollowing(userId: string): Promise<User[]> {
+    const response = await axios.get<User[]>(`${API_BASE_URL}/api/v1/users/${userId}/following`)
     return response.data
   },
 }
