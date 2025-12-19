@@ -11,6 +11,11 @@ export interface ConversationSummary {
   hasBeenForked: boolean
   parentId?: string
   messageCount?: number
+  likeCount?: number
+  bookTitle?: string
+  bookAuthor?: string
+  bookCoverUrl?: string
+  scenarioDescription?: string
 }
 
 export interface ConversationDetail {
@@ -168,8 +173,15 @@ export async function getForkRelationship(
  * Get conversation by ID with messages
  * GET /api/v1/conversations/:id
  */
-export async function getConversation(conversationId: string): Promise<ConversationDetail> {
-  const response = await api.get<ConversationDetail>(`/conversations/${conversationId}`)
+export const getConversations = async (
+  params: { userId?: string; filter?: string; page?: number; size?: number } = {}
+): Promise<ConversationSummary[]> => {
+  const response = await api.get('/conversations', { params })
+  return response.data
+}
+
+export const getConversation = async (id: string): Promise<ConversationDetail> => {
+  const response = await api.get<ConversationDetail>(`/conversations/${id}`)
   return response.data
 }
 
