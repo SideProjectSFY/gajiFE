@@ -341,40 +341,25 @@ const styles = {
 
 <template>
   <!-- Loading state -->
-  <output
-    v-if="isLoading"
-    :class="styles.loadingState"
-    aria-live="polite"
-  >
+  <output v-if="isLoading" :class="styles.loadingState" aria-live="polite">
     <span aria-hidden="true">⏳</span>
     <span>{{ messages.loading }}</span>
   </output>
 
   <!-- Error state -->
-  <div
-    v-else-if="hasError"
-    :class="styles.errorState"
-    role="alert"
-    aria-live="assertive"
-  >
+  <div v-else-if="hasError" :class="styles.errorState" role="alert" aria-live="assertive">
     <span aria-hidden="true">⚠️</span>
     <span>{{ messages.error }}</span>
   </div>
 
   <!-- Normal state -->
-  <nav
-    v-else-if="forkRelationship"
-    :class="styles.widget"
-    :aria-label="messages.navigationLabel"
-  >
+  <nav v-else-if="forkRelationship" :class="styles.widget" :aria-label="messages.navigationLabel">
     <!-- Forked conversation: Show parent link -->
     <template v-if="isFork && hasParent">
-      <span
-        :class="styles.icon"
-        aria-hidden="true"
-      >🌿</span>
+      <span :class="styles.icon" aria-hidden="true">🌿</span>
       <span>{{ messages.forkedFrom }}</span>
       <a
+        data-testid="parent-conversation-link"
         :class="styles.parentLink"
         tabindex="0"
         role="link"
@@ -388,14 +373,8 @@ const styles = {
 
     <!-- Root conversation with child: Show "Forks (1)" dropdown -->
     <template v-if="isRoot && hasChild">
-      <span
-        :class="styles.separator"
-        aria-hidden="true"
-      >•</span>
-      <div
-        ref="dropdownRef"
-        :class="styles.dropdownContainer"
-      >
+      <span :class="styles.separator" aria-hidden="true">•</span>
+      <div ref="dropdownRef" :class="styles.dropdownContainer">
         <button
           ref="dropdownButtonRef"
           :class="styles.dropdownButton"
@@ -405,10 +384,9 @@ const styles = {
           @click="toggleDropdown"
         >
           <span>{{ messages.forks }} (1)</span>
-          <span
-            :class="[styles.chevron, showForkDropdown && styles.chevronOpen]"
-            aria-hidden="true"
-          >▼</span>
+          <span :class="[styles.chevron, showForkDropdown && styles.chevronOpen]" aria-hidden="true"
+            >▼</span
+          >
         </button>
 
         <!-- Dropdown menu -->
