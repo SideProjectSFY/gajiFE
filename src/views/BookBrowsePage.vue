@@ -84,9 +84,11 @@ import BookGrid from '@/components/book/BookGrid.vue'
 import PaginationControls from '@/components/book/PaginationControls.vue'
 import { bookApi } from '@/services/bookApi'
 import type { Book, BookSortOption } from '@/types/book'
+import { useAuthStore } from '@/stores/auth'
 
 const router = useRouter()
 const route = useRoute()
+const authStore = useAuthStore()
 
 // Genre options matching the design
 const genres = [
@@ -217,6 +219,11 @@ const handleBookClick = (book: Book): void => {
 }
 
 const handleLike = async (bookId: string, isLiked: boolean): Promise<void> => {
+  if (!authStore.isAuthenticated) {
+    router.push('/login')
+    return
+  }
+
   try {
     if (isLiked) {
       await bookApi.likeBook(bookId)
