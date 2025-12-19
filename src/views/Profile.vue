@@ -40,7 +40,7 @@ onMounted(async () => {
       id: user.id,
       username: user.username,
       bio: user.bio || 'No bio available.',
-      avatarUrl: user.avatarUrl || '👤',
+      avatarUrl: '👤',
       joinedAt: 'January 2024', // Placeholder
     }
 
@@ -62,7 +62,7 @@ onMounted(async () => {
     allFollowing.value = following.map((u: any) => ({
       id: u.id,
       username: u.username,
-      avatar: u.avatarUrl || '👤',
+      avatar: '👤',
     }))
 
     // Followers
@@ -70,7 +70,7 @@ onMounted(async () => {
     allFollowers.value = followers.map((u: any) => ({
       id: u.id,
       username: u.username,
-      avatar: u.avatarUrl || '👤',
+      avatar: '👤',
     }))
 
     // My Conversations
