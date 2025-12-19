@@ -185,7 +185,8 @@ const styles = {
     width: '100%',
     maxWidth: '600px',
     maxHeight: '90vh',
-    overflowY: 'auto',
+    display: 'flex',
+    flexDirection: 'column',
     boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
   }),
   modalFullscreen: css({
@@ -203,6 +204,7 @@ const styles = {
     padding: '1rem 1.5rem',
     borderBottom: '1px solid',
     borderColor: 'neutral.200',
+    flexShrink: 0,
   }),
   headerTitle: css({
     fontSize: '1.125rem',
@@ -225,6 +227,20 @@ const styles = {
   }),
   content: css({
     padding: '1.5rem',
+    overflowY: 'auto',
+    flex: 1,
+  }),
+  footer: css({
+    padding: '1rem 1.5rem',
+    borderTop: '1px solid',
+    borderColor: 'neutral.200',
+    flexShrink: 0,
+    backgroundColor: 'white',
+    borderBottomLeftRadius: 'lg',
+    borderBottomRightRadius: 'lg',
+    '@media (max-width: 767px)': {
+      borderRadius: 0,
+    },
   }),
   form: css({
     display: 'flex',
@@ -319,7 +335,6 @@ const styles = {
     display: 'flex',
     justifyContent: 'flex-end',
     gap: '0.75rem',
-    marginTop: '0.5rem',
     '@media (max-width: 767px)': {
       flexDirection: 'column-reverse',
     },
@@ -545,29 +560,32 @@ const styles = {
               </svg>
               {{ errorMessage }}
             </div>
-
-            <!-- Submit Buttons -->
-            <div :class="styles.actions">
-              <button
-                type="button"
-                data-testid="cancel-button"
-                :class="[styles.button, styles.buttonSecondary]"
-                :disabled="isSubmitting"
-                @click="handleCancel"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                data-testid="submit-button"
-                :class="[styles.button, styles.buttonPrimary]"
-                :disabled="!isFormValid || isSubmitting"
-              >
-                <span v-if="isSubmitting" :class="styles.spinner" />
-                <span v-else>Create Scenario</span>
-              </button>
-            </div>
           </form>
+        </div>
+
+        <!-- Footer -->
+        <div :class="styles.footer">
+          <div :class="styles.actions">
+            <button
+              type="button"
+              data-testid="cancel-button"
+              :class="[styles.button, styles.buttonSecondary]"
+              :disabled="isSubmitting"
+              @click="handleCancel"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              data-testid="submit-button"
+              :class="[styles.button, styles.buttonPrimary]"
+              :disabled="!isFormValid || isSubmitting"
+              @click="handleSubmit"
+            >
+              <span v-if="isSubmitting" :class="styles.spinner" />
+              <span v-else>Create Scenario</span>
+            </button>
+          </div>
         </div>
       </div>
     </div>
