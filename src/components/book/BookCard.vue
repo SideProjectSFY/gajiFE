@@ -17,17 +17,9 @@
           :alt="`${book.title} book cover`"
           class="book-card__image"
           loading="lazy"
-        >
-        <div
-          v-else
-          class="book-card__placeholder"
-          aria-label="No cover image available"
-        >
-          <i
-            class="pi pi-book"
-            style="font-size: 3rem; color: #ccc"
-            aria-hidden="true"
-          />
+        />
+        <div v-else class="book-card__placeholder" aria-label="No cover image available">
+          <i class="pi pi-book" style="font-size: 3rem; color: #ccc" aria-hidden="true" />
         </div>
       </div>
 
@@ -40,29 +32,17 @@
         </p>
 
         <div class="book-card__meta">
-          <span
-            class="book-card__genre"
-            :aria-label="`Genre: ${book.genre}`"
-          >{{
+          <span class="book-card__genre" :aria-label="`Genre: ${book.genre}`">{{
             book.genre
           }}</span>
-          <div
-            class="book-card__stats"
-            aria-label="Book statistics"
-          >
+          <div class="book-card__stats" aria-label="Book statistics">
             <span class="stat">
-              <i
-                class="pi pi-list"
-                aria-hidden="true"
-              />
+              <i class="pi pi-list" aria-hidden="true" />
               <span class="sr-only">Scenarios:</span>
               {{ book.scenarioCount }} scenarios
             </span>
             <span class="stat">
-              <i
-                class="pi pi-comments"
-                aria-hidden="true"
-              />
+              <i class="pi pi-comments" aria-hidden="true" />
               <span class="sr-only">Conversations:</span>
               {{ book.conversationCount }} conversations
             </span>
@@ -72,10 +52,7 @@
     </div>
 
     <!-- Action Buttons: 외부에 배치하여 중첩 버튼 문제 해결 -->
-    <div
-      class="book-card__actions"
-      data-test="book-card-actions"
-    >
+    <div class="book-card__actions" data-test="book-card-actions">
       <button
         class="action-button"
         :class="{ active: isLiked, loading: isLiking }"
@@ -89,35 +66,17 @@
           :class="isLiked ? 'pi pi-heart-fill' : 'pi pi-heart'"
           aria-hidden="true"
         />
-        <i
-          v-else
-          class="pi pi-spin pi-spinner"
-          aria-hidden="true"
-        />
+        <i v-else class="pi pi-spin pi-spinner" aria-hidden="true" />
         <span>{{ isLiked ? 'Unlike' : 'Like' }}</span>
       </button>
 
       <button
-        class="action-button"
-        :class="{ active: isBookmarked, loading: isBookmarking }"
-        :disabled="isBookmarking"
-        :aria-label="
-          isBookmarked ? `Remove ${book.title} from bookmarks` : `Bookmark ${book.title}`
-        "
-        :aria-pressed="isBookmarked"
-        @click="handleBookmark"
+        class="action-button view-book"
+        :aria-label="`View details for ${book.title}`"
+        @click="handleClick"
       >
-        <i
-          v-if="!isBookmarking"
-          :class="isBookmarked ? 'pi pi-bookmark-fill' : 'pi pi-bookmark'"
-          aria-hidden="true"
-        />
-        <i
-          v-else
-          class="pi pi-spin pi-spinner"
-          aria-hidden="true"
-        />
-        <span>{{ isBookmarked ? 'Remove' : 'Bookmark' }}</span>
+        <i class="pi pi-eye" aria-hidden="true" />
+        <span>View Book</span>
       </button>
     </div>
   </article>
@@ -130,25 +89,20 @@ import type { Book } from '@/types/book'
 interface Props {
   book: Book
   initialLiked?: boolean
-  initialBookmarked?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
   initialLiked: false,
-  initialBookmarked: false,
 })
 
 const emit = defineEmits<{
   click: [book: Book]
   like: [bookId: string, isLiked: boolean]
-  bookmark: [bookId: string, isBookmarked: boolean]
 }>()
 
 // State
 const isLiked = ref(props.initialLiked)
-const isBookmarked = ref(props.initialBookmarked)
 const isLiking = ref(false)
-const isBookmarking = ref(false)
 
 const handleClick = (): void => {
   emit('click', props.book)
@@ -175,30 +129,6 @@ const handleLike = async (): Promise<void> => {
     console.error('Failed to update like status:', error)
   } finally {
     isLiking.value = false
-  }
-}
-
-const handleBookmark = async (): Promise<void> => {
-  if (isBookmarking.value) return
-
-  isBookmarking.value = true
-  const newBookmarkedState = !isBookmarked.value
-
-  try {
-    // Optimistic update
-    isBookmarked.value = newBookmarkedState
-
-    // Emit event for parent to handle API call
-    emit('bookmark', props.book.id, newBookmarkedState)
-
-    // Simulate API delay
-    await new Promise((resolve) => setTimeout(resolve, 300))
-  } catch (error) {
-    // Revert on error
-    isBookmarked.value = !newBookmarkedState
-    console.error('Failed to update bookmark status:', error)
-  } finally {
-    isBookmarking.value = false
   }
 }
 </script>
@@ -394,6 +324,23 @@ const handleBookmark = async (): Promise<void> => {
   border-color: #dc2626;
   color: #dc2626;
   background: #fee2e2;
+}
+
+.action-button.view-book {
+  background: #4caf50;
+  color: white;
+  border: 2px solid #4caf50;
+}
+
+.action-button.view-book:hover:not(:disabled) {
+  background: #45a049;
+  border-color: #45a049;
+  color: white;
+  transform: translateY(-1px);
+}
+
+.action-button.view-book i {
+  color: white;
 }
 
 .action-button.loading {
