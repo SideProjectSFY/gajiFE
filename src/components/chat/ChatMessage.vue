@@ -15,6 +15,7 @@ const props = withDefaults(defineProps<Props>(), {
 })
 
 const isUser = computed(() => props.message.role === 'user')
+const isSystem = computed(() => props.message.role === 'system')
 const showCopyFeedback = ref(false)
 
 // Clipboard functionality
@@ -79,6 +80,14 @@ const styles = {
     color: 'neutral.900',
     borderBottomLeftRadius: '0.25rem',
   }),
+  systemBubble: css({
+    backgroundColor: 'gray.100',
+    color: 'gray.700',
+    borderRadius: '0.5rem',
+    border: '1px solid',
+    borderColor: 'gray.300',
+    fontStyle: 'italic',
+  }),
   content: css({
     fontSize: '0.95rem',
     lineHeight: '1.6',
@@ -141,22 +150,35 @@ const styles = {
 
 <template>
   <div
-    :class="[styles.messageWrapper, isUser ? styles.userWrapper : styles.assistantWrapper]"
+    :class="[
+      styles.messageWrapper,
+      isSystem ? '' : isUser ? styles.userWrapper : styles.assistantWrapper,
+    ]"
     :data-role="message.role"
-    :data-testid="`message-${message.role}`"
-    :aria-label="`${isUser ? '내 메시지' : 'AI 응답'}: ${message.content}`"
+    data-testid="message-item"
+    :aria-label="`${isSystem ? '시스템 메시지' : isUser ? '내 메시지' : 'AI 응답'}: ${message.content}`"
   >
     <div :class="styles.bubbleContainer">
       <!-- Copy feedback toast -->
-      <output
-        v-if="showCopyFeedback"
-        :class="styles.copyFeedback"
-        aria-live="polite"
-      >
+      <output v-if="showCopyFeedback" :class="styles.copyFeedback" aria-live="polite">
         복사됨!
       </output>
 
-      <div :class="[styles.bubble, isUser ? styles.userBubble : styles.assistantBubble]">
+      <div
+        :class="[
+          styles.bubble,
+          isSystem ? styles.systemBubble : isUser ? styles.userBubble : styles.assistantBubble,
+        ]"
+        :data-testid="
+          isSystem
+            ? 'system-message'
+            : message.role === 'assistant'
+              ? 'assistant-message'
+              : message.role === 'user'
+                ? 'user-message'
+                : `message-${message.role}`
+        "
+      >
         <div :class="styles.content">
           {{ message.content }}
         </div>
