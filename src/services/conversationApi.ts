@@ -15,6 +15,7 @@ export interface ConversationSummary {
   bookTitle?: string
   bookAuthor?: string
   bookCoverUrl?: string
+  bookId?: string
   scenarioDescription?: string
 }
 
@@ -174,7 +175,15 @@ export async function getForkRelationship(
  * GET /api/v1/conversations/:id
  */
 export const getConversations = async (
-  params: { userId?: string; filter?: string; page?: number; size?: number } = {}
+  params: {
+    userId?: string
+    filter?: string
+    search?: string
+    genre?: string
+    sort?: string
+    page?: number
+    size?: number
+  } = {}
 ): Promise<ConversationSummary[]> => {
   const response = await api.get('/conversations', { params })
   return response.data
