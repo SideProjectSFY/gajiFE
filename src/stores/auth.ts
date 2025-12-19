@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import api from '@/services/api'
+import { setCookie, getCookie, deleteCookie } from '@/utils/cookies'
 
 interface User {
   id: string
@@ -14,7 +15,9 @@ interface AuthState {
 }
 
 interface AuthResponse {
-  user: User
+  userId: string
+  username: string
+  email: string
   accessToken: string
   refreshToken: string
 }
@@ -22,6 +25,14 @@ interface AuthResponse {
 interface AuthResult {
   success: boolean
   message?: string
+}
+
+const COOKIE_KEYS = {
+  ACCESS_TOKEN: 'accessToken',
+  REFRESH_TOKEN: 'refreshToken',
+  USER_ID: 'gaji_user_id',
+  USERNAME: 'gaji_username',
+  USER_EMAIL: 'gaji_user_email',
 }
 
 export const useAuthStore = defineStore('auth', {
@@ -37,6 +48,57 @@ export const useAuthStore = defineStore('auth', {
   },
 
   actions: {
+    // Initialize auth state from cookies
+    initializeFromCookies(): void {
+      const accessToken = getCookie(COOKIE_KEYS.ACCESS_TOKEN)
+      const refreshToken = getCookie(COOKIE_KEYS.REFRESH_TOKEN)
+      const userId = getCookie(COOKIE_KEYS.USER_ID)
+      const username = getCookie(COOKIE_KEYS.USERNAME)
+      const email = getCookie(COOKIE_KEYS.USER_EMAIL)
+
+      if (accessToken && userId && username && email) {
+        this.accessToken = accessToken
+        this.refreshToken = refreshToken
+        this.user = {
+          id: userId,
+          username: username,
+          email: email,
+        }
+      }
+    },
+
+    // Save auth data to cookies
+    saveAuthToCookies(data: AuthResponse, rememberMe: boolean = false): void {
+      const days = rememberMe ? 7 : 1 // 7 days if remember me, otherwise 1 day
+
+      setCookie(COOKIE_KEYS.ACCESS_TOKEN, data.accessToken, { days })
+      setCookie(COOKIE_KEYS.REFRESH_TOKEN, data.refreshToken, { days })
+      setCookie(COOKIE_KEYS.USER_ID, data.userId, { days })
+      setCookie(COOKIE_KEYS.USERNAME, data.username, { days })
+      setCookie(COOKIE_KEYS.USER_EMAIL, data.email, { days })
+
+      this.accessToken = data.accessToken
+      this.refreshToken = data.refreshToken
+      this.user = {
+        id: data.userId,
+        username: data.username,
+        email: data.email,
+      }
+    },
+
+    // Clear auth data from cookies
+    clearAuthCookies(): void {
+      deleteCookie(COOKIE_KEYS.ACCESS_TOKEN)
+      deleteCookie(COOKIE_KEYS.REFRESH_TOKEN)
+      deleteCookie(COOKIE_KEYS.USER_ID)
+      deleteCookie(COOKIE_KEYS.USERNAME)
+      deleteCookie(COOKIE_KEYS.USER_EMAIL)
+
+      this.user = null
+      this.accessToken = null
+      this.refreshToken = null
+    },
+
     async register(username: string, email: string, password: string): Promise<AuthResult> {
       try {
         const response = await api.post<AuthResponse>('/auth/register', {
@@ -45,9 +107,7 @@ export const useAuthStore = defineStore('auth', {
           password,
         })
 
-        this.user = response.data.user
-        this.accessToken = response.data.accessToken
-        this.refreshToken = response.data.refreshToken
+        this.saveAuthToCookies(response.data, false)
 
         return { success: true }
       } catch (error: unknown) {
@@ -67,9 +127,7 @@ export const useAuthStore = defineStore('auth', {
           rememberMe,
         })
 
-        this.user = response.data.user
-        this.accessToken = response.data.accessToken
-        this.refreshToken = response.data.refreshToken
+        this.saveAuthToCookies(response.data, rememberMe)
 
         return { success: true }
       } catch (error: unknown) {
@@ -92,9 +150,11 @@ export const useAuthStore = defineStore('auth', {
         })
 
         this.accessToken = response.data.accessToken
+        setCookie(COOKIE_KEYS.ACCESS_TOKEN, response.data.accessToken, { days: 1 })
+
         return true
       } catch (error) {
-        this.logout()
+        this.clearAuthCookies()
         return false
       }
     },
@@ -107,9 +167,7 @@ export const useAuthStore = defineStore('auth', {
       } catch (error) {
         console.error('Logout failed:', error)
       } finally {
-        this.user = null
-        this.accessToken = null
-        this.refreshToken = null
+        this.clearAuthCookies()
       }
     },
   },
