@@ -119,7 +119,7 @@ const handleMenuKeydown = (event: KeyboardEvent): void => {
         "
         @click="goToHome"
       >
-        <span :class="css({ fontSize: '1.5rem' })">🌱</span>
+        <img src="/Logo.svg" alt="Gaji Logo" :class="css({ width: '2rem', height: '2rem' })" />
         <span :class="css({ fontSize: '1.5rem', fontWeight: 'bold', color: 'green.500' })"
           >Gaji</span
         >
@@ -286,16 +286,17 @@ const handleMenuKeydown = (event: KeyboardEvent): void => {
           <button
             :class="
               css({
-                bg: 'none',
+                bg: isActive('/profile') ? 'green.50' : 'none',
                 border: 'none',
                 cursor: 'pointer',
                 fontSize: '1rem',
                 fontWeight: '500',
-                color: 'gray.700',
+                color: isActive('/profile') ? 'green.600' : 'gray.700',
                 px: '4',
                 py: '2',
-                transition: 'color 0.2s',
-                _hover: { color: 'green.500' },
+                borderRadius: '0.375rem',
+                transition: 'all 0.2s',
+                _hover: { color: 'green.500', bg: 'green.50' },
               })
             "
             aria-label="Go to your profile"
@@ -540,16 +541,18 @@ const handleMenuKeydown = (event: KeyboardEvent): void => {
             <button
               :class="
                 css({
-                  bg: 'none',
+                  bg: isActive('/profile') ? 'green.50' : 'none',
                   border: 'none',
                   cursor: 'pointer',
                   fontSize: '1rem',
                   fontWeight: '500',
-                  color: 'gray.700',
+                  color: isActive('/profile') ? 'green.600' : 'gray.700',
                   py: '2',
+                  px: isActive('/profile') ? '4' : '0',
+                  borderRadius: '0.375rem',
                   textAlign: 'left',
-                  transition: 'color 0.2s',
-                  _hover: { color: 'green.500' },
+                  transition: 'all 0.2s',
+                  _hover: { color: 'green.500', bg: 'green.50', px: '4' },
                 })
               "
               @click="goToProfile"
