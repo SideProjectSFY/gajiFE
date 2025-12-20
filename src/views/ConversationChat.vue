@@ -12,7 +12,13 @@ import ConversationsSidebar from '../components/chat/ConversationsSidebar.vue'
 import ForkNavigationWidget from '../components/chat/ForkNavigationWidget.vue'
 import { useAnalytics } from '@/composables/useAnalytics'
 import type { Message } from '@/stores/conversation'
-import { getConversation, getForkRelationship } from '@/services/conversationApi'
+import {
+  getConversation,
+  getForkRelationship,
+  likeConversation,
+  unlikeConversation,
+  checkConversationLiked,
+} from '@/services/conversationApi'
 import { scenarioApi } from '@/services/scenarioApi'
 import type { CreateScenarioResponse } from '@/types'
 import type { ForkRelationship } from '../components/chat/ForkNavigationWidget.vue'
@@ -25,6 +31,7 @@ const { trackConversationStarted, trackMessageSent } = useAnalytics()
 const isLoading = ref(true)
 const isTyping = ref(false)
 const showSidebar = ref(false)
+const isLiked = ref(false)
 
 // Scenario info from API
 const scenarioInfo = ref<CreateScenarioResponse | null>(null)
@@ -116,6 +123,21 @@ const goBackToList = () => {
   router.push('/conversations')
 }
 
+const toggleLike = async () => {
+  const conversationId = route.params.id as string
+  try {
+    if (isLiked.value) {
+      await unlikeConversation(conversationId)
+      isLiked.value = false
+    } else {
+      await likeConversation(conversationId)
+      isLiked.value = true
+    }
+  } catch (error) {
+    console.error('Failed to toggle like:', error)
+  }
+}
+
 // Load conversation data
 const loadConversation = async (conversationId: string) => {
   isLoading.value = true
@@ -126,6 +148,9 @@ const loadConversation = async (conversationId: string) => {
     conversationDepth.value = conversation.depth
     isRootConversation.value = conversation.isRoot
     hasBeenForked.value = conversation.hasBeenForked
+
+    // Check if liked
+    isLiked.value = await checkConversationLiked(conversationId)
 
     // Fetch scenario data
     scenarioInfo.value = await scenarioApi.getScenario(conversation.scenarioId)
@@ -317,9 +342,42 @@ watch(
           >
             📚 {{ scenarioInfo.title }}
           </h2>
-          <p :class="css({ fontSize: '0.875rem', color: 'gray.600', textAlign: 'center' })">
+          <p
+            :class="css({ fontSize: '0.875rem', color: 'gray.600', textAlign: 'center', mb: '4' })"
+          >
             {{ scenarioInfo.bookTitle }}
           </p>
+
+          <button
+            @click="toggleLike"
+            :class="
+              css({
+                w: 'full',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '2',
+                py: '2',
+                px: '4',
+                borderRadius: '0.5rem',
+                border: '1px solid',
+                borderColor: isLiked ? 'red.200' : 'gray.200',
+                bg: isLiked ? 'red.50' : 'white',
+                color: isLiked ? 'red.600' : 'gray.600',
+                cursor: 'pointer',
+                transition: 'all 0.2s',
+                _hover: {
+                  bg: isLiked ? 'red.100' : 'gray.50',
+                  borderColor: isLiked ? 'red.300' : 'gray.300',
+                },
+              })
+            "
+          >
+            <span>{{ isLiked ? '❤️' : '🤍' }}</span>
+            <span :class="css({ fontSize: '0.875rem', fontWeight: '600' })">
+              {{ isLiked ? 'Liked' : 'Like' }}
+            </span>
+          </button>
         </div>
 
         <!-- Scenario Details -->
