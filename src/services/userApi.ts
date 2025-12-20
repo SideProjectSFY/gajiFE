@@ -55,4 +55,14 @@ export const userApi = {
     const response = await api.get<any>(`/users/${userId}/following`)
     return response.data.content
   },
+
+  /**
+   * Update user profile
+   * @param userId User ID
+   * @param data Profile update data
+   */
+  async updateProfile(userId: string, data: { bio?: string }): Promise<User> {
+    const response = await api.put<User>(`/users/${userId}`, data)
+    return response.data
+  },
 }
