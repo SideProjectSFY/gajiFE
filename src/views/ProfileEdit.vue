@@ -95,7 +95,7 @@ const handleSubmit = async () => {
       authStore.user.username = response.data.username
       ;(authStore.user as { bio?: string }).bio = response.data.bio
       if (response.data.avatarUrl) {
-        ;(authStore.user as { avatarUrl?: string }).avatarUrl = response.data.avatarUrl
+        (authStore.user as { avatarUrl?: string }).avatarUrl = response.data.avatarUrl
       }
     }
 
@@ -267,42 +267,63 @@ const styles = {
 <template>
   <div :class="styles.container">
     <div :class="styles.card">
-      <h1 :class="styles.heading">Edit Profile</h1>
+      <h1 :class="styles.heading">
+        Edit Profile
+      </h1>
 
       <form @submit.prevent="handleSubmit">
         <div :class="styles.avatarSection">
-          <div :class="styles.avatarLarge">👤</div>
+          <div :class="styles.avatarLarge">
+            👤
+          </div>
           <div :class="styles.avatarUpload">
-            <label for="avatar" :class="styles.fileInput"> Choose Image </label>
+            <label
+              for="avatar"
+              :class="styles.fileInput"
+            > Choose Image </label>
             <input
               id="avatar"
               type="file"
               accept="image/jpeg,image/png"
               style="display: none"
               @change="handleAvatarChange"
-            />
-            <p :class="styles.hint">JPG or PNG, max 5MB</p>
+            >
+            <p :class="styles.hint">
+              JPG or PNG, max 5MB
+            </p>
           </div>
         </div>
 
-        <div v-if="errors.general" :class="styles.errorMessage">
+        <div
+          v-if="errors.general"
+          :class="styles.errorMessage"
+        >
           {{ errors.general }}
         </div>
 
         <div :class="styles.formGroup">
-          <label for="username" :class="styles.label">Username</label>
+          <label
+            for="username"
+            :class="styles.label"
+          >Username</label>
           <input
             id="username"
             v-model="form.username"
             type="text"
             required
             :class="[styles.input, errors.username && styles.inputError]"
-          />
-          <span v-if="errors.username" :class="styles.errorMessage">{{ errors.username }}</span>
+          >
+          <span
+            v-if="errors.username"
+            :class="styles.errorMessage"
+          >{{ errors.username }}</span>
         </div>
 
         <div :class="styles.formGroup">
-          <label for="bio" :class="styles.label">Bio</label>
+          <label
+            for="bio"
+            :class="styles.label"
+          >Bio</label>
           <textarea
             id="bio"
             v-model="form.bio"
@@ -311,14 +332,23 @@ const styles = {
             placeholder="Tell us about yourself..."
             :class="styles.textarea"
           />
-          <p :class="styles.charCount">{{ form.bio.length }} / 200</p>
+          <p :class="styles.charCount">
+            {{ form.bio.length }} / 200
+          </p>
         </div>
 
         <div :class="styles.formActions">
-          <button type="submit" :disabled="isSaving" :class="styles.btnPrimary">
+          <button
+            type="submit"
+            :disabled="isSaving"
+            :class="styles.btnPrimary"
+          >
             {{ isSaving ? 'Saving...' : 'Save Changes' }}
           </button>
-          <router-link :to="`/profile/${profile?.username || ''}`" :class="styles.btnSecondary">
+          <router-link
+            :to="`/profile/${profile?.username || ''}`"
+            :class="styles.btnSecondary"
+          >
             Cancel
           </router-link>
         </div>
