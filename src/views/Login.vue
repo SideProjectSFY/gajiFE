@@ -2,11 +2,15 @@
 <script setup lang="ts">
 import { reactive, ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { useAnalytics } from '@/composables/useAnalytics'
+import LogoSvg from '@/assets/Logo.svg'
+import LanguageSwitcher from '@/components/common/LanguageSwitcher.vue'
 
 const router = useRouter()
 const route = useRoute()
+const { t } = useI18n()
 const authStore = useAuthStore()
 const { trackLogin } = useAnalytics()
 
@@ -34,9 +38,9 @@ const isFormValid = computed(() => form.email && form.password)
 const validateEmail = (): void => {
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
   if (!form.email) {
-    errors.email = 'Email is required'
+    errors.email = 'login.errors.emailRequired'
   } else if (!emailRegex.test(form.email)) {
-    errors.email = 'Please enter a valid email address'
+    errors.email = 'login.errors.emailInvalid'
   } else {
     errors.email = ''
   }
@@ -44,9 +48,9 @@ const validateEmail = (): void => {
 
 const validatePassword = (): void => {
   if (!form.password) {
-    errors.password = 'Password is required'
+    errors.password = 'login.errors.passwordRequired'
   } else if (form.password.length < 8) {
-    errors.password = 'Password must be at least 8 characters'
+    errors.password = 'login.errors.passwordLength'
   } else {
     errors.password = ''
   }
@@ -83,7 +87,7 @@ const handleLogin = async () => {
     const redirect = (route.query.redirect as string) || '/'
     router.push(redirect)
   } else {
-    errors.password = result.message || 'Login failed'
+    errors.password = result.message || 'login.errors.loginFailed'
   }
 }
 
@@ -107,10 +111,10 @@ onMounted(() => {
     >
       <div style="text-align: center; color: white">
         <div style="font-size: 2rem; font-weight: bold; margin-bottom: 1rem">
-          Every story has infinite branches to explore
+          {{ t('login.brandTitle') }}
         </div>
         <div style="font-size: 1rem; opacity: 0.9; font-style: italic">
-          Discover endless possibilities
+          {{ t('login.brandSubtitle') }}
         </div>
       </div>
     </div>
@@ -124,19 +128,27 @@ onMounted(() => {
         justify-content: center;
         padding: 3rem;
         background-color: #f9fafb;
+        position: relative;
       "
     >
+      <!-- Language Switcher -->
+      <div style="position: absolute; top: 1.5rem; right: 1.5rem">
+        <LanguageSwitcher />
+      </div>
+
       <div style="width: 100%; max-width: 420px">
         <!-- Logo -->
         <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 2rem">
-          <img src="/Logo.svg" alt="Gaji Logo" style="width: 2rem; height: 2rem" />
+          <LogoSvg style="width: 2rem; height: 2rem; fill: #1f7d51" />
           <span style="font-size: 1.25rem; font-weight: bold; color: #1f2937">Gaji</span>
         </div>
 
         <h1 style="font-size: 1.75rem; font-weight: bold; margin-bottom: 0.5rem; color: #111827">
-          Continue exploring story branches
+          {{ t('login.title') }}
         </h1>
-        <p style="color: #6b7280; margin-bottom: 2rem; font-size: 0.875rem">Email or Username</p>
+        <p style="color: #6b7280; margin-bottom: 2rem; font-size: 0.875rem">
+          {{ t('login.subtitle') }}
+        </p>
 
         <form
           style="display: flex; flex-direction: column; gap: 1.25rem"
@@ -154,14 +166,14 @@ onMounted(() => {
                 margin-bottom: 0.5rem;
               "
             >
-              Email or Username
+              {{ t('login.emailLabel') }}
             </label>
             <input
               id="email"
               ref="emailInputRef"
               v-model="form.email"
               type="text"
-              placeholder="Enter your email or username"
+              :placeholder="t('login.emailPlaceholder')"
               required
               maxlength="255"
               autocomplete="email"
@@ -186,7 +198,7 @@ onMounted(() => {
               role="alert"
               style="color: #ef4444; font-size: 0.75rem; display: block; margin-top: 0.25rem"
             >
-              {{ errors.email }}
+              {{ t(errors.email) }}
             </span>
           </div>
 
@@ -202,13 +214,13 @@ onMounted(() => {
                 margin-bottom: 0.5rem;
               "
             >
-              Password
+              {{ t('login.passwordLabel') }}
             </label>
             <input
               id="password"
               v-model="form.password"
               type="password"
-              placeholder="Enter your password"
+              :placeholder="t('login.passwordPlaceholder')"
               required
               autocomplete="current-password"
               data-testid="password-input"
@@ -234,14 +246,16 @@ onMounted(() => {
               data-testid="password-error"
               style="color: #ef4444; font-size: 0.75rem; display: block; margin-top: 0.25rem"
             >
-              {{ errors.password }}
+              {{ t(errors.password) }}
             </span>
           </div>
 
           <!-- Remember Me -->
           <div style="display: flex; align-items: center; gap: 0.5rem">
             <input id="remember" v-model="form.rememberMe" type="checkbox" />
-            <label for="remember" style="font-size: 0.875rem; color: #374151">Remember me</label>
+            <label for="remember" style="font-size: 0.875rem; color: #374151">{{
+              t('login.rememberMe')
+            }}</label>
           </div>
 
           <!-- Submit Button -->
@@ -262,7 +276,7 @@ onMounted(() => {
               opacity: isLoading || !isFormValid ? 0.6 : 1,
             }"
           >
-            {{ isLoading ? 'Logging in...' : 'Login' }}
+            {{ isLoading ? t('login.submitting') : t('login.submit') }}
           </button>
         </form>
 
@@ -287,18 +301,18 @@ onMounted(() => {
               color: #6b7280;
             "
           >
-            or
+            {{ t('login.or') }}
           </span>
         </div>
 
         <!-- Footer -->
         <p style="text-align: center; margin-top: 1.5rem; font-size: 0.875rem; color: #6b7280">
-          New to Gaji?
+          {{ t('login.newToGaji') }}
           <router-link
             to="/register"
             style="color: #16a34a; text-decoration: none; font-weight: 600"
           >
-            Create account
+            {{ t('login.createAccount') }}
           </router-link>
         </p>
       </div>
