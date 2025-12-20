@@ -1,7 +1,10 @@
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n'
 import { css } from 'styled-system/css'
 import AppHeader from '../components/common/AppHeader.vue'
 import AppFooter from '../components/common/AppFooter.vue'
+
+const { t } = useI18n()
 </script>
 
 <template>
@@ -21,47 +24,6 @@ import AppFooter from '../components/common/AppFooter.vue'
         })
       "
     >
-      <!-- Breadcrumb -->
-      <nav
-        :class="css({ maxW: '1200px', w: 'full', mb: '8' })"
-        aria-label="Breadcrumb"
-      >
-        <ol
-          :class="
-            css({
-              display: 'flex',
-              alignItems: 'center',
-              gap: '2',
-              fontSize: '0.875rem',
-              color: 'gray.600',
-              listStyle: 'none',
-              margin: 0,
-              padding: 0,
-            })
-          "
-        >
-          <li>
-            <router-link
-              to="/"
-              :class="
-                css({ color: 'gray.600', textDecoration: 'none', _hover: { color: 'green.500' } })
-              "
-            >
-              Home
-            </router-link>
-          </li>
-          <li aria-hidden="true">
-            ›
-          </li>
-          <li
-            aria-current="page"
-            :class="css({ color: 'green.600', fontWeight: '500' })"
-          >
-            About
-          </li>
-        </ol>
-      </nav>
-
       <div :class="css({ maxW: '1200px', w: 'full' })">
         <!-- Hero Section -->
         <div :class="css({ textAlign: 'center', mb: '12' })">
@@ -75,7 +37,7 @@ import AppFooter from '../components/common/AppFooter.vue'
               })
             "
           >
-            About Gaji
+            {{ t('about.title') }}
           </h1>
 
           <!-- What is Gaji Section -->
@@ -86,8 +48,7 @@ import AppFooter from '../components/common/AppFooter.vue'
                 borderRadius: '1rem',
                 p: { base: '6', md: '8' },
                 mb: '8',
-                border: '1px solid',
-                borderColor: 'green.200',
+                border: '2px solid #1f7d51',
               })
             "
           >
@@ -101,7 +62,7 @@ import AppFooter from '../components/common/AppFooter.vue'
                 })
               "
             >
-              What does "Gaji" mean? 🌿
+              {{ t('about.whatIsGaji.title') }}
             </h2>
             <p
               :class="
@@ -113,13 +74,8 @@ import AppFooter from '../components/common/AppFooter.vue'
                   mx: 'auto',
                 })
               "
-            >
-              "Gaji" (가지) is the Korean word for <strong>"branch"</strong>. Just as a tree grows
-              many branches, each story can branch into countless directions based on your choices
-              and conversations. Our platform embodies this concept, allowing you to create unique
-              narrative branches as you interact with literary characters, explore different
-              scenarios, and discover new perspectives within classic stories.
-            </p>
+              v-html="t('about.whatIsGaji.description')"
+            />
           </div>
 
           <p
@@ -133,8 +89,7 @@ import AppFooter from '../components/common/AppFooter.vue'
               })
             "
           >
-            Bridging the gap between classic literature and modern technology, Gaji brings beloved
-            characters to life through AI-powered conversations.
+            {{ t('about.subtitle') }}
           </p>
         </div>
 
@@ -150,7 +105,7 @@ import AppFooter from '../components/common/AppFooter.vue'
               })
             "
           >
-            Our Mission
+            {{ t('about.mission.title') }}
           </h2>
           <p
             :class="
@@ -164,8 +119,7 @@ import AppFooter from '../components/common/AppFooter.vue'
               })
             "
           >
-            To make classic literature accessible, engaging, and interactive for modern readers
-            through innovative AI technology.
+            {{ t('about.mission.description') }}
           </p>
 
           <!-- Mission Cards -->
@@ -190,19 +144,16 @@ import AppFooter from '../components/common/AppFooter.vue'
                 })
               "
             >
-              <div :class="css({ fontSize: '3rem', mb: '4' })">
-                📚
-              </div>
+              <div :class="css({ fontSize: '3rem', mb: '4' })">📚</div>
               <h3
                 :class="
                   css({ fontSize: '1.25rem', fontWeight: 'bold', color: 'gray.900', mb: '3' })
                 "
               >
-                Preserve Literature
+                {{ t('about.mission.preserve.title') }}
               </h3>
               <p :class="css({ fontSize: '0.875rem', color: 'gray.600', lineHeight: '1.6' })">
-                By making classic literature appealing to be experienced by new generations in ways
-                that resonate with modern audiences.
+                {{ t('about.mission.preserve.description') }}
               </p>
             </div>
 
@@ -217,19 +168,16 @@ import AppFooter from '../components/common/AppFooter.vue'
                 })
               "
             >
-              <div :class="css({ fontSize: '3rem', mb: '4' })">
-                👥
-              </div>
+              <div :class="css({ fontSize: '3rem', mb: '4' })">👥</div>
               <h3
                 :class="
                   css({ fontSize: '1.25rem', fontWeight: 'bold', color: 'gray.900', mb: '3' })
                 "
               >
-                Build Community
+                {{ t('about.mission.community.title') }}
               </h3>
               <p :class="css({ fontSize: '0.875rem', color: 'gray.600', lineHeight: '1.6' })">
-                Create a space for readers through shared conversations with characters, fostering
-                discussions about themes, motivations, and interpretations.
+                {{ t('about.mission.community.description') }}
               </p>
             </div>
 
@@ -244,19 +192,16 @@ import AppFooter from '../components/common/AppFooter.vue'
                 })
               "
             >
-              <div :class="css({ fontSize: '3rem', mb: '4' })">
-                💬
-              </div>
+              <div :class="css({ fontSize: '3rem', mb: '4' })">💬</div>
               <h3
                 :class="
                   css({ fontSize: '1.25rem', fontWeight: 'bold', color: 'gray.900', mb: '3' })
                 "
               >
-                Enhance Understanding
+                {{ t('about.mission.enhance.title') }}
               </h3>
               <p :class="css({ fontSize: '0.875rem', color: 'gray.600', lineHeight: '1.6' })">
-                Deepen comprehension by engaging directly with characters, exploring their
-                motivations, and asking questions about their worlds.
+                {{ t('about.mission.enhance.description') }}
               </p>
             </div>
 
@@ -271,19 +216,16 @@ import AppFooter from '../components/common/AppFooter.vue'
                 })
               "
             >
-              <div :class="css({ fontSize: '3rem', mb: '4' })">
-                💡
-              </div>
+              <div :class="css({ fontSize: '3rem', mb: '4' })">💡</div>
               <h3
                 :class="
                   css({ fontSize: '1.25rem', fontWeight: 'bold', color: 'gray.900', mb: '3' })
                 "
               >
-                Innovate Education
+                {{ t('about.mission.innovate.title') }}
               </h3>
               <p :class="css({ fontSize: '0.875rem', color: 'gray.600', lineHeight: '1.6' })">
-                Provide educators and students with powerful tools to explore literature in creative
-                and personalized ways that fosters deeper learning.
+                {{ t('about.mission.innovate.description') }}
               </p>
             </div>
           </div>
@@ -304,7 +246,7 @@ import AppFooter from '../components/common/AppFooter.vue'
               })
             "
           >
-            Get Started in 4 Simple Steps
+            {{ t('about.getStarted.title') }}
           </h2>
 
           <div :class="css({ display: 'flex', flexDirection: 'column', gap: '6' })">
@@ -333,11 +275,13 @@ import AppFooter from '../components/common/AppFooter.vue'
                     css({ fontSize: '1.125rem', fontWeight: 'bold', color: 'gray.900', mb: '2' })
                   "
                 >
-                  <span :class="css({ color: 'green.600' })">STEP 1</span> Search for a Character
+                  <span :class="css({ color: 'green.600' })">{{
+                    t('about.getStarted.step1.label')
+                  }}</span>
+                  {{ t('about.getStarted.step1.title') }}
                 </h3>
                 <p :class="css({ fontSize: '0.875rem', color: 'gray.600', lineHeight: '1.6' })">
-                  Use our search bar to find characters from your favorite books. We have hundreds
-                  of characters from classic literature ready to chat.
+                  {{ t('about.getStarted.step1.description') }}
                 </p>
               </div>
             </div>
@@ -367,11 +311,13 @@ import AppFooter from '../components/common/AppFooter.vue'
                     css({ fontSize: '1.125rem', fontWeight: 'bold', color: 'gray.900', mb: '2' })
                   "
                 >
-                  <span :class="css({ color: 'green.600' })">STEP 2</span> Start a Conversation
+                  <span :class="css({ color: 'green.600' })">{{
+                    t('about.getStarted.step2.label')
+                  }}</span>
+                  {{ t('about.getStarted.step2.title') }}
                 </h3>
                 <p :class="css({ fontSize: '0.875rem', color: 'gray.600', lineHeight: '1.6' })">
-                  Begin chatting with the character in real-time. Ask questions, explore their
-                  motivations, or discuss themes from their story.
+                  {{ t('about.getStarted.step2.description') }}
                 </p>
               </div>
             </div>
@@ -401,11 +347,13 @@ import AppFooter from '../components/common/AppFooter.vue'
                     css({ fontSize: '1.125rem', fontWeight: 'bold', color: 'gray.900', mb: '2' })
                   "
                 >
-                  <span :class="css({ color: 'green.600' })">STEP 3</span> Fork and Explore
+                  <span :class="css({ color: 'green.600' })">{{
+                    t('about.getStarted.step3.label')
+                  }}</span>
+                  {{ t('about.getStarted.step3.title') }}
                 </h3>
                 <p :class="css({ fontSize: '0.875rem', color: 'gray.600', lineHeight: '1.6' })">
-                  Create branches in your conversation to explore different topics. Each fork
-                  preserves the conversation history at that point.
+                  {{ t('about.getStarted.step3.description') }}
                 </p>
               </div>
             </div>
@@ -435,11 +383,13 @@ import AppFooter from '../components/common/AppFooter.vue'
                     css({ fontSize: '1.125rem', fontWeight: 'bold', color: 'gray.900', mb: '2' })
                   "
                 >
-                  <span :class="css({ color: 'green.600' })">STEP 4</span> Share Your Insights
+                  <span :class="css({ color: 'green.600' })">{{
+                    t('about.getStarted.step4.label')
+                  }}</span>
+                  {{ t('about.getStarted.step4.title') }}
                 </h3>
                 <p :class="css({ fontSize: '0.875rem', color: 'gray.600', lineHeight: '1.6' })">
-                  Share favorite conversations with friends, classmates, or book clubs. Export
-                  conversations for essays or study materials.
+                  {{ t('about.getStarted.step4.description') }}
                 </p>
               </div>
             </div>
