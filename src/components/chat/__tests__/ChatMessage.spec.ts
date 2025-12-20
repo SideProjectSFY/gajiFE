@@ -39,7 +39,7 @@ describe('ChatMessage', () => {
     })
 
     expect(wrapper.text()).toContain(mockUserMessage.content)
-    expect(wrapper.find('[data-testid="message-user"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="user-message"]').exists()).toBe(true)
   })
 
   it('renders assistant message correctly', () => {
@@ -50,7 +50,7 @@ describe('ChatMessage', () => {
     })
 
     expect(wrapper.text()).toContain(mockAssistantMessage.content)
-    expect(wrapper.find('[data-testid="message-assistant"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="assistant-message"]').exists()).toBe(true)
   })
 
   it('displays formatted timestamp', () => {
