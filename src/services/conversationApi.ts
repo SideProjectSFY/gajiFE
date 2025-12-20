@@ -297,11 +297,30 @@ export async function unlikeConversation(conversationId: string): Promise<void> 
  */
 export async function checkConversationLiked(conversationId: string): Promise<boolean> {
   try {
-    const response = await api.get<{ isLiked: boolean }>(`/conversations/${conversationId}/liked`)
-    return response.data.isLiked
-  } catch (error) {
+    console.log('[conversationApi] Checking liked status for conversation:', conversationId)
+    const response = await api.get<{ isLiked?: boolean; liked?: boolean }>(
+      `/conversations/${conversationId}/like`
+    )
+    console.log('[conversationApi] Like API response:', response.data)
+
+    // Backend returns 'liked' but frontend expects 'isLiked'
+    const isLiked = response.data.isLiked ?? response.data.liked ?? false
+
+    console.log('[conversationApi] isLiked value:', isLiked, 'Type:', typeof isLiked)
+    return isLiked
+  } catch (error: any) {
+    console.error('[conversationApi] Failed to check liked status:', error)
+    console.error('[conversationApi] Error response:', error.response?.data)
+    console.error('[conversationApi] Error status:', error.response?.status)
     return false
   }
+}
+
+/**
+ * Delete a conversation
+ */
+export async function deleteConversation(conversationId: string): Promise<void> {
+  await api.delete(`/conversations/${conversationId}`)
 }
 
 /**
