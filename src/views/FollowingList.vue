@@ -173,24 +173,48 @@ const styles = {
 <template>
   <div :class="styles.container">
     <div :class="styles.pageHeader">
-      <h1 :class="styles.title">{{ username }} is Following</h1>
-      <p :class="styles.subtitle">{{ totalFollowing }} following</p>
+      <h1 :class="styles.title">
+        {{ username }} is Following
+      </h1>
+      <p :class="styles.subtitle">
+        {{ totalFollowing }} following
+      </p>
     </div>
 
-    <div v-if="isLoading" :class="styles.loadingState">
+    <div
+      v-if="isLoading"
+      :class="styles.loadingState"
+    >
       <div>⏳</div>
       <p>Loading...</p>
     </div>
 
-    <div v-else-if="following.length === 0" :class="styles.emptyState">
-      <div :class="styles.emptyIcon">👤</div>
+    <div
+      v-else-if="following.length === 0"
+      :class="styles.emptyState"
+    >
+      <div :class="styles.emptyIcon">
+        👤
+      </div>
       <p>Not following anyone yet</p>
     </div>
 
-    <div v-else :class="styles.userList">
-      <div v-for="user in following" :key="user.id" :class="styles.userItem">
-        <router-link :to="`/profile/${user.username}`" :class="styles.userInfo">
-          <div :class="styles.avatar">👤</div>
+    <div
+      v-else
+      :class="styles.userList"
+    >
+      <div
+        v-for="user in following"
+        :key="user.id"
+        :class="styles.userItem"
+      >
+        <router-link
+          :to="`/profile/${user.username}`"
+          :class="styles.userInfo"
+        >
+          <div :class="styles.avatar">
+            👤
+          </div>
           <div>
             <h3 :class="styles.username">
               {{ user.username }}
@@ -209,7 +233,10 @@ const styles = {
       </div>
 
       <!-- Pagination -->
-      <div v-if="totalPages > 1" :class="styles.pagination">
+      <div
+        v-if="totalPages > 1"
+        :class="styles.pagination"
+      >
         <button
           :disabled="currentPage === 0"
           :class="styles.pageButton"
