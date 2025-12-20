@@ -3,6 +3,7 @@
 <script setup lang="ts">
 import { ref, nextTick, onMounted, watch, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { css } from '../../styled-system/css'
 import AppHeader from '../components/common/AppHeader.vue'
 import ChatMessage from '../components/chat/ChatMessage.vue'
@@ -25,6 +26,7 @@ import type { ForkRelationship } from '../components/chat/ForkNavigationWidget.v
 
 const router = useRouter()
 const route = useRoute()
+const { t } = useI18n()
 const { trackConversationStarted, trackMessageSent } = useAnalytics()
 
 // Loading states
@@ -129,9 +131,11 @@ const toggleLike = async () => {
     if (isLiked.value) {
       await unlikeConversation(conversationId)
       isLiked.value = false
+      console.log('[ConversationChat] Unliked conversation:', conversationId)
     } else {
       await likeConversation(conversationId)
       isLiked.value = true
+      console.log('[ConversationChat] Liked conversation:', conversationId)
     }
   } catch (error) {
     console.error('Failed to toggle like:', error)
@@ -149,8 +153,15 @@ const loadConversation = async (conversationId: string) => {
     isRootConversation.value = conversation.isRoot
     hasBeenForked.value = conversation.hasBeenForked
 
-    // Check if liked
-    isLiked.value = await checkConversationLiked(conversationId)
+    // Check if liked - CRITICAL: Always fetch fresh like status
+    const likedStatus = await checkConversationLiked(conversationId)
+    isLiked.value = likedStatus
+    console.log(
+      '[ConversationChat] Loaded like status:',
+      likedStatus,
+      'for conversation:',
+      conversationId
+    )
 
     // Fetch scenario data
     scenarioInfo.value = await scenarioApi.getScenario(conversation.scenarioId)
@@ -272,7 +283,7 @@ watch(
             @click="goBackToList"
           >
             <span>←</span>
-            <span>Back to List</span>
+            <span>{{ t('chat.backToList') }}</span>
           </button>
           <button
             :class="
@@ -291,7 +302,7 @@ watch(
                 _hover: { bg: 'gray.100', color: 'gray.800' },
               })
             "
-            aria-label="대화 목록 열기"
+            :aria-label="t('chat.openConversationList')"
             data-testid="sidebar-toggle"
             @click="showSidebar = true"
           >
@@ -349,7 +360,6 @@ watch(
           </p>
 
           <button
-            @click="toggleLike"
             :class="
               css({
                 w: 'full',
@@ -372,10 +382,11 @@ watch(
                 },
               })
             "
+            @click="toggleLike"
           >
             <span>{{ isLiked ? '❤️' : '🤍' }}</span>
             <span :class="css({ fontSize: '0.875rem', fontWeight: '600' })">
-              {{ isLiked ? 'Liked' : 'Like' }}
+              {{ isLiked ? t('chat.liked') : t('chat.like') }}
             </span>
           </button>
         </div>
@@ -402,7 +413,7 @@ watch(
                 })
               "
             >
-              Title
+              {{ t('chat.title') }}
             </h3>
             <p :class="css({ fontSize: '0.875rem', color: 'gray.700' })">
               {{ scenarioInfo.title }}
@@ -420,7 +431,7 @@ watch(
                 })
               "
             >
-              What If...
+              {{ t('chat.whatIf') }}
             </h3>
             <p :class="css({ fontSize: '0.875rem', color: 'gray.700', lineHeight: '1.6' })">
               {{ scenarioInfo.whatIfQuestion }}
@@ -438,7 +449,7 @@ watch(
                 })
               "
             >
-              Forked From
+              {{ t('chat.forkedFrom') }}
             </h3>
             <div
               :data-is-root="String(isRootConversation)"
@@ -489,7 +500,7 @@ watch(
               "
             >
               <p :class="css({ fontSize: '0.875rem', color: 'yellow.800', textAlign: 'center' })">
-                ⚠️ 이미 분기된 대화입니다
+                ⚠️ {{ t('chat.alreadyForked') }}
               </p>
             </div>
             <div
@@ -507,7 +518,7 @@ watch(
               "
             >
               <p :class="css({ fontSize: '0.875rem', color: 'purple.800', textAlign: 'center' })">
-                🔀 분기된 대화 (깊이: {{ conversationDepth }})
+                🔀 {{ t('chat.forkedConversation', { depth: conversationDepth }) }}
               </p>
             </div>
           </div>
@@ -551,7 +562,7 @@ watch(
             v-else
             :class="css({ fontSize: '0.875rem', color: 'purple.800', textAlign: 'center' })"
           >
-            🔀 Forked Conversation (Depth: {{ conversationDepth }})
+            🔀 {{ t('chat.forkedConversation', { depth: conversationDepth }) }}
           </div>
         </div>
 
@@ -569,7 +580,7 @@ watch(
             })
           "
           data-testid="messages-container"
-          aria-label="대화 메시지 목록"
+          :aria-label="t('chat.messageList')"
         >
           <div :class="css({ maxW: '900px', mx: 'auto' })">
             <!-- Loading State -->
@@ -601,7 +612,7 @@ watch(
                   })
                 "
               />
-              <p>메시지를 불러오는 중...</p>
+              <p>{{ t('chat.loadingMessages') }}</p>
             </div>
 
             <!-- Empty State -->
@@ -622,9 +633,11 @@ watch(
               data-testid="empty-state"
             >
               <span :class="css({ fontSize: '3rem' })">💬</span>
-              <p :class="css({ fontSize: '1rem' })">대화를 시작해보세요</p>
+              <p :class="css({ fontSize: '1rem' })">
+                {{ t('chat.startConversation') }}
+              </p>
               <p :class="css({ fontSize: '0.875rem', color: 'gray.400' })">
-                캐릭터에게 무엇이든 물어보세요
+                {{ t('chat.askAnything') }}
               </p>
             </div>
 
