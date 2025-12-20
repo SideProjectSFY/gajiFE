@@ -71,7 +71,7 @@ const styles = {
     boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)',
   }),
   userBubble: css({
-    backgroundColor: 'blue.500',
+    backgroundColor: '#1F7D51',
     color: 'white',
     borderBottomRightRadius: '0.25rem',
   }),
