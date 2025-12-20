@@ -1,8 +1,22 @@
 <template>
-  <div class="book-browse-layout">
+  <div :class="css({ minH: '100vh', display: 'flex', flexDirection: 'column', bg: 'white' })">
     <AppHeader />
+    <div :class="css({ h: '20' })" />
 
-    <main class="book-browse-page" role="main" aria-label="Browse Books">
+    <main
+      :class="
+        css({
+          flex: 1,
+          maxW: '1200px',
+          w: 'full',
+          mx: 'auto',
+          px: { base: '4', md: '8' },
+          py: '8',
+        })
+      "
+      role="main"
+      aria-label="Browse Books"
+    >
       <!-- Filter and Sort Section -->
       <div
         :class="
@@ -20,7 +34,6 @@
           <button
             v-for="genre in genres"
             :key="genre.value"
-            @click="handleGenreFilter(genre.value)"
             :class="
               css({
                 px: '4',
@@ -37,6 +50,7 @@
                 },
               })
             "
+            @click="handleGenreFilter(genre.value)"
           >
             {{ genre.label }}
           </button>
@@ -46,7 +60,6 @@
           <button
             v-for="option in sortOptions"
             :key="option.value"
-            @click="handleSortChange(option.value)"
             :class="
               css({
                 px: '3',
@@ -60,6 +73,7 @@
                 color: currentFilters.sort === option.value ? 'white' : 'gray.500',
               })
             "
+            @click="handleSortChange(option.value)"
           >
             {{ option.label }}
           </button>
@@ -67,20 +81,39 @@
       </div>
 
       <!-- Results Count -->
-      <div v-if="!loading && !error" class="results-info">
-        <p class="results-count">
-          {{ totalElements }} book{{ totalElements !== 1 ? 's' : '' }} found
-        </p>
+      <div
+        v-if="!loading && !error"
+        :class="css({ mb: '6', fontSize: '0.875rem', color: 'gray.500' })"
+      >
+        {{ totalElements }}
+        {{ totalElements !== 1 ? t('books.count.available') : t('books.count.single') }}
       </div>
 
       <!-- Error State -->
-      <div v-if="error" class="error-container" role="alert" aria-live="polite">
+      <div
+        v-if="error"
+        class="error-container"
+        role="alert"
+        aria-live="polite"
+      >
         <div class="error-content">
-          <i class="pi pi-exclamation-triangle" aria-hidden="true" />
-          <p class="error-message">{{ error }}</p>
-          <button class="retry-button" aria-label="Retry loading books" @click="retryFetch">
-            <i class="pi pi-refresh" aria-hidden="true" />
-            Retry
+          <i
+            class="pi pi-exclamation-triangle"
+            aria-hidden="true"
+          />
+          <p class="error-message">
+            {{ error }}
+          </p>
+          <button
+            class="retry-button"
+            aria-label="Retry loading books"
+            @click="retryFetch"
+          >
+            <i
+              class="pi pi-refresh"
+              aria-hidden="true"
+            />
+            {{ t('books.error.retry') }}
           </button>
         </div>
       </div>
@@ -111,6 +144,7 @@
 <script setup lang="ts">
 import { ref, onMounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { css } from '../../styled-system/css'
 import AppHeader from '@/components/common/AppHeader.vue'
 import AppFooter from '@/components/common/AppFooter.vue'
@@ -123,24 +157,25 @@ import { useAuthStore } from '@/stores/auth'
 const router = useRouter()
 const route = useRoute()
 const authStore = useAuthStore()
+const { t } = useI18n()
 
 // Genre options matching the design
 const genres = [
-  { label: 'All Genres', value: '' },
-  { label: 'Romance', value: 'Romance' },
-  { label: 'Fantasy', value: 'Fantasy' },
-  { label: 'Mystery', value: 'Mystery' },
-  { label: 'Sci-Fi', value: 'Sci-Fi' },
-  { label: 'Horror', value: 'Horror' },
-  { label: 'Adventure', value: 'Adventure' },
-  { label: 'Historical', value: 'Historical' },
+  { label: t('books.filters.allGenres'), value: '' },
+  { label: t('books.filters.romance'), value: 'Romance' },
+  { label: t('books.filters.fantasy'), value: 'Fantasy' },
+  { label: t('books.filters.mystery'), value: 'Mystery' },
+  { label: t('books.filters.sciFi'), value: 'Sci-Fi' },
+  { label: t('books.filters.horror'), value: 'Horror' },
+  { label: t('books.filters.adventure'), value: 'Adventure' },
+  { label: t('books.filters.historical'), value: 'Historical' },
 ]
 
 // Sort options
 const sortOptions: { label: string; value: BookSortOption }[] = [
-  { label: 'Latest', value: 'latest' },
-  { label: 'Recommended', value: 'recommended' },
-  { label: 'Popular', value: 'popular' },
+  { label: t('books.sort.latest'), value: 'latest' },
+  { label: t('books.sort.recommended'), value: 'recommended' },
+  { label: t('books.sort.popular'), value: 'popular' },
 ]
 
 // State
@@ -160,7 +195,7 @@ const currentFilters = ref<{
   sort: 'latest',
 })
 
-const emptyMessage = ref('No books available yet. Check back soon!')
+const emptyMessage = ref(t('books.empty'))
 
 // Initialize from URL query params
 const initializeFromQuery = (): void => {
@@ -208,14 +243,14 @@ const fetchBooks = async (): Promise<void> => {
 
     // Update empty message based on filters
     if (currentFilters.value.genre) {
-      emptyMessage.value = `No books found for ${currentFilters.value.genre}. Try another filter.`
+      emptyMessage.value = t('books.emptyFiltered')
     } else {
-      emptyMessage.value = 'No books available yet. Check back soon!'
+      emptyMessage.value = t('books.empty')
     }
   } catch (err) {
     console.error('Failed to fetch books:', err)
     books.value = []
-    error.value = 'Failed to load books. Please try again.'
+    error.value = t('books.error.failed')
   } finally {
     loading.value = false
   }
@@ -304,148 +339,3 @@ watch(
   }
 )
 </script>
-
-<style scoped>
-.book-browse-layout {
-  display: flex;
-  flex-direction: column;
-  min-height: 100vh;
-}
-
-.book-browse-page {
-  flex: 1;
-  max-width: 1400px;
-  margin: 0 auto;
-  padding: 5rem 1rem 2rem;
-  min-height: 100vh;
-  background: #ffffff;
-}
-
-.page-header {
-  margin-bottom: 2rem;
-  text-align: center;
-  padding: 1rem;
-}
-
-.page-title {
-  font-size: 2.5rem;
-  font-weight: 700;
-  color: #1a1a1a;
-  margin: 0 0 0.5rem 0;
-}
-
-.page-subtitle {
-  font-size: 1.125rem;
-  color: #666;
-  margin: 0;
-}
-
-/* Filter Section styles removed as we use Panda CSS now */
-
-/* Results Info */
-.results-info {
-  margin-bottom: 1.5rem;
-  text-align: center;
-}
-
-.results-count {
-  font-size: 0.875rem;
-  color: #666;
-  margin: 0;
-}
-
-/* Error State */
-.error-container {
-  display: flex;
-  justify-content: center;
-  padding: 3rem 1rem;
-  background: white;
-  border-radius: 12px;
-  margin: 2rem 0;
-}
-
-.error-content {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 1rem;
-  text-align: center;
-  max-width: 400px;
-}
-
-.error-content .pi-exclamation-triangle {
-  font-size: 3rem;
-  color: #ef4444;
-}
-
-.error-message {
-  font-size: 1rem;
-  color: #666;
-  margin: 0;
-}
-
-.retry-button {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.75rem 1.5rem;
-  background: #4caf50;
-  color: white;
-  border: none;
-  border-radius: 8px;
-  font-size: 0.875rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.retry-button:hover {
-  background: #45a049;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 8px rgba(76, 175, 80, 0.2);
-}
-
-/* Responsive */
-@media (max-width: 768px) {
-  .book-browse-page {
-    padding: 4rem 0.5rem 1rem;
-  }
-
-  .page-title {
-    font-size: 2rem;
-  }
-
-  .page-subtitle {
-    font-size: 1rem;
-  }
-
-  .page-header {
-    margin-bottom: 1.5rem;
-  }
-
-  .filter-section {
-    padding: 1rem;
-    flex-direction: column;
-    align-items: stretch;
-    gap: 1rem;
-  }
-
-  .filter-chips {
-    gap: 0.5rem;
-    justify-content: flex-start;
-  }
-
-  .filter-chip {
-    padding: 0.375rem 1rem;
-    font-size: 0.8125rem;
-  }
-
-  .sort-controls {
-    justify-content: flex-end;
-  }
-
-  .error-container {
-    padding: 2rem 1rem;
-  }
-}
-</style>
