@@ -8,6 +8,7 @@ import router from './router'
 import App from './App.vue'
 import './styles/main.css'
 import { useAuthStore } from './stores/auth'
+import i18n from './i18n'
 
 // Google Analytics 4 초기화
 const GA4_MEASUREMENT_ID = import.meta.env.VITE_GA4_MEASUREMENT_ID
@@ -53,5 +54,6 @@ app.use(router)
 app.use(PrimeVue, { unstyled: true }) // Use unstyled mode to apply PandaCSS
 app.use(ToastService)
 app.use(ConfirmationService)
+app.use(i18n)
 
 app.mount('#app')
