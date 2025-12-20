@@ -44,9 +44,15 @@ export const bookApi = {
   /**
    * Get liked books
    * @param userId Optional User ID to fetch liked books for
+   * @param page Page number (0-indexed)
+   * @param size Page size
    */
-  async getLikedBooks(userId?: string): Promise<BooksResponse> {
-    const params: any = { size: 100 } // Fetch more for now
+  async getLikedBooks(
+    userId?: string,
+    page: number = 0,
+    size: number = 20
+  ): Promise<BooksResponse> {
+    const params: any = { page, size }
     if (userId) params.userId = userId
 
     const response = await api.get<BooksResponse>('/books/liked', {
