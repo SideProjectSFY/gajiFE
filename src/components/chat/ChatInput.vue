@@ -141,7 +141,10 @@ const styles = {
 </script>
 
 <template>
-  <div :class="styles.container" data-testid="chat-input-container">
+  <div
+    :class="styles.container"
+    data-testid="chat-input-container"
+  >
     <div :class="styles.inputWrapper">
       <textarea
         ref="textareaRef"
@@ -168,7 +171,11 @@ const styles = {
         data-testid="send-message-button"
         @click="sendMessage"
       >
-        <span v-if="loading" :class="styles.loadingSpinner" aria-hidden="true" />
+        <span
+          v-if="loading"
+          :class="styles.loadingSpinner"
+          aria-hidden="true"
+        />
         <span v-else>전송</span>
       </button>
     </div>
