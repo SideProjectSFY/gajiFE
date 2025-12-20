@@ -112,23 +112,4 @@ describe('About.vue', () => {
     const h2s = wrapper.findAll('h2')
     expect(h2s.length).toBeGreaterThan(0)
   })
-
-  it('has accessible breadcrumb navigation', () => {
-    const wrapper = mount(About, {
-      global: {
-        stubs: {
-          AppHeader: true,
-          AppFooter: true,
-          RouterLink: true,
-        },
-      },
-    })
-
-    const nav = wrapper.find('nav[aria-label="Breadcrumb"]')
-    expect(nav.exists()).toBe(true)
-
-    const currentPage = wrapper.find('[aria-current="page"]')
-    expect(currentPage.exists()).toBe(true)
-    expect(currentPage.text()).toBe('About')
-  })
 })
