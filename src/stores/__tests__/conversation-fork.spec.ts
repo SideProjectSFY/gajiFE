@@ -1,10 +1,15 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { setActivePinia, createPinia } from 'pinia'
 import { useConversationStore } from '../conversation'
-import axios from 'axios'
+import api from '@/services/api'
 
-vi.mock('axios')
-const mockedAxios = vi.mocked(axios, true)
+vi.mock('@/services/api', () => ({
+  default: {
+    get: vi.fn(),
+    post: vi.fn(),
+    delete: vi.fn(),
+  },
+}))
 
 describe('Conversation Store - Fork Functionality', () => {
   beforeEach(() => {
@@ -44,19 +49,13 @@ describe('Conversation Store - Fork Functionality', () => {
       })
       store.setCurrentConversation(store.conversations[0])
 
-      mockedAxios.post.mockResolvedValueOnce({ data: mockForkedConversation })
+      vi.mocked(api.post).mockResolvedValueOnce({ data: mockForkedConversation })
 
       const result = await store.forkConversation('conv-1', 'Test fork')
 
-      expect(mockedAxios.post).toHaveBeenCalledWith(
-        expect.stringContaining('/api/v1/conversations/conv-1/fork'),
-        { description: 'Test fork' },
-        expect.objectContaining({
-          headers: {
-            'X-User-Id': 'test-user-id',
-          },
-        })
-      )
+      expect(api.post).toHaveBeenCalledWith('/conversations/conv-1/fork', {
+        description: 'Test fork',
+      })
       expect(result).toEqual(mockForkedConversation)
     })
 
@@ -90,7 +89,7 @@ describe('Conversation Store - Fork Functionality', () => {
       store.conversations.push(parentConv)
       store.setCurrentConversation(parentConv)
 
-      mockedAxios.post.mockResolvedValueOnce({ data: mockForkedConversation })
+      vi.mocked(api.post).mockResolvedValueOnce({ data: mockForkedConversation })
 
       await store.forkConversation('conv-1')
 
@@ -126,7 +125,7 @@ describe('Conversation Store - Fork Functionality', () => {
         forkDepth: 0,
       })
 
-      mockedAxios.post.mockResolvedValueOnce({ data: mockForkedConversation })
+      vi.mocked(api.post).mockResolvedValueOnce({ data: mockForkedConversation })
 
       await store.forkConversation('conv-1')
 
@@ -150,7 +149,7 @@ describe('Conversation Store - Fork Functionality', () => {
       })
 
       const error = new Error('Fork failed')
-      mockedAxios.post.mockRejectedValueOnce(error)
+      vi.mocked(api.post).mockRejectedValueOnce(error)
 
       await expect(store.forkConversation('conv-1')).rejects.toThrow('Fork failed')
       expect(store.error).toBe('Fork failed')
@@ -183,7 +182,7 @@ describe('Conversation Store - Fork Functionality', () => {
         forkDepth: 0,
       })
 
-      mockedAxios.post.mockResolvedValueOnce({ data: mockForkedConversation })
+      vi.mocked(api.post).mockResolvedValueOnce({ data: mockForkedConversation })
 
       expect(store.loading).toBe(false)
       const promise = store.forkConversation('conv-1')
