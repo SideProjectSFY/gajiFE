@@ -136,11 +136,21 @@ const handleClose = () => {
 const handleSubmit = async () => {
   isSubmitting.value = true
   try {
-    const response = await api.post(`/scenarios/${props.parentScenario.id}/fork`, {
+    // Fork the scenario
+    const forkResponse = await api.post(`/scenarios/${props.parentScenario.id}/fork`, {
       title: `Fork of ${props.parentScenario.title}`,
     })
 
-    emit('forked', response.data)
+    const forkedScenario = forkResponse.data
+
+    // Create a new conversation with the forked scenario
+    const conversationResponse = await api.post('/conversations', {
+      scenarioId: forkedScenario.id,
+      title: forkedScenario.title,
+      isPublic: false,
+    })
+
+    emit('forked', conversationResponse.data)
     handleClose()
   } catch (error: any) {
     console.error('Failed to fork scenario:', error)
