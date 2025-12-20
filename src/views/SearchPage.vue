@@ -1,6 +1,6 @@
 <!-- eslint-disable @typescript-eslint/explicit-function-return-type -->
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, watch, onUnmounted } from 'vue'
 import { css } from 'styled-system/css'
 import { useRouter, useRoute } from 'vue-router'
 import AppHeader from '../components/common/AppHeader.vue'
@@ -12,10 +12,12 @@ import { userApi } from '@/services/userApi'
 import { useAuthStore } from '@/stores/auth'
 import api from '@/services/api'
 import { useToast } from '@/composables/useToast'
+import { useI18n } from 'vue-i18n'
 
 const router = useRouter()
 const route = useRoute()
 const authStore = useAuthStore()
+const { t } = useI18n()
 const { success, error: showErrorToast } = useToast()
 const { trackSearch } = useAnalytics()
 const searchQuery = ref('')
@@ -24,6 +26,15 @@ const isLoading = ref(false)
 const hasSearched = ref(false)
 const showForkModal = ref(false)
 const selectedScenario = ref<any>(null)
+
+// Pagination state for infinite scroll
+const currentBookPage = ref(0)
+const currentConversationPage = ref(0)
+const currentUserPage = ref(0)
+const isLoadingMore = ref(false)
+const hasMoreBooks = ref(true)
+const hasMoreConversations = ref(true)
+const hasMoreUsers = ref(true)
 
 interface SearchResult {
   id: string
@@ -43,17 +54,50 @@ const searchResults = ref<{
 
 const filteredResults = computed(() => {
   if (activeTab.value === 'all') {
+    return searchResults.value
+  }
+  if (activeTab.value === 'book') {
     return {
       books: searchResults.value.books,
+      conversations: [],
+      users: [],
+    }
+  }
+  if (activeTab.value === 'conversation') {
+    return {
+      books: [],
       conversations: searchResults.value.conversations,
+      users: [],
+    }
+  }
+  if (activeTab.value === 'user') {
+    return {
+      books: [],
+      conversations: [],
       users: searchResults.value.users,
     }
   }
   return {
-    books: activeTab.value === 'book' ? searchResults.value.books : [],
-    conversations: activeTab.value === 'conversation' ? searchResults.value.conversations : [],
-    users: activeTab.value === 'user' ? searchResults.value.users : [],
+    books: [],
+    conversations: [],
+    users: [],
   }
+})
+
+const hasMore = computed(() => {
+  if (activeTab.value === 'all') {
+    return hasMoreBooks.value || hasMoreConversations.value || hasMoreUsers.value
+  }
+  if (activeTab.value === 'book') {
+    return hasMoreBooks.value
+  }
+  if (activeTab.value === 'conversation') {
+    return hasMoreConversations.value
+  }
+  if (activeTab.value === 'user') {
+    return hasMoreUsers.value
+  }
+  return false
 })
 
 const totalCount = computed(() => {
@@ -74,8 +118,16 @@ const performSearch = async () => {
   isLoading.value = true
   hasSearched.value = true
 
+  // Reset pagination
+  currentBookPage.value = 0
+  currentConversationPage.value = 0
+  currentUserPage.value = 0
+  hasMoreBooks.value = true
+  hasMoreConversations.value = true
+  hasMoreUsers.value = true
+
   try {
-    const response = await searchApi.search(searchQuery.value.trim())
+    const response = await searchApi.search(searchQuery.value.trim(), 0, 6)
 
     // Fetch following list if user is logged in
     let followingIds = new Set<string>()
@@ -87,6 +139,11 @@ const performSearch = async () => {
         console.error('Failed to fetch following list', e)
       }
     }
+
+    // Update hasMore flags based on response
+    hasMoreBooks.value = response.books.length === 6
+    hasMoreConversations.value = response.conversations.length === 6
+    hasMoreUsers.value = response.users.length === 6
 
     searchResults.value = {
       books: response.books.map((book: any) => ({
@@ -139,7 +196,7 @@ const performSearch = async () => {
 
 const handleForkChat = async (scenarioId: string) => {
   if (!authStore.isAuthenticated) {
-    showErrorToast('Please login to fork a scenario')
+    showErrorToast(t('searchPage.loginToFork'))
     router.push('/login')
     return
   }
@@ -150,19 +207,19 @@ const handleForkChat = async (scenarioId: string) => {
     showForkModal.value = true
   } catch (err) {
     console.error('Failed to load scenario for forking:', err)
-    showErrorToast('Failed to load scenario details')
+    showErrorToast(t('searchPage.failedToLoadScenario'))
   }
 }
 
-const handleForked = (forkedScenario: { id: string }) => {
+const handleForked = (forkedConversation: { id: string }) => {
   showForkModal.value = false
-  success('🍴 Scenario forked! Redirecting...', 3000)
-  router.push(`/scenarios/${forkedScenario.id}`)
+  success(t('searchPage.scenarioForked'), 3000)
+  router.push(`/conversations/${forkedConversation.id}`)
 }
 
 const toggleFollow = async (user: any) => {
   if (!authStore.user) {
-    alert('Please login to follow users')
+    alert(t('searchPage.loginToFollow'))
     return
   }
 
@@ -189,6 +246,186 @@ const goToBookDetail = (bookId: string) => {
   router.push(`/books/${bookId}`)
 }
 
+// Infinite scroll handler
+const handleScroll = () => {
+  if (isLoadingMore.value || !hasMore.value) return
+
+  const scrollPosition = window.innerHeight + window.scrollY
+  const bottomPosition = document.documentElement.scrollHeight - 200
+
+  if (scrollPosition >= bottomPosition) {
+    loadMore()
+  }
+}
+
+const loadMore = async () => {
+  if (isLoadingMore.value || !hasMore.value) return
+
+  isLoadingMore.value = true
+
+  try {
+    if (activeTab.value === 'all') {
+      // Load more for all sections in parallel
+      const promises = []
+
+      if (hasMoreBooks.value) {
+        currentBookPage.value++
+        promises.push(searchApi.search(searchQuery.value.trim(), currentBookPage.value, 6))
+      }
+      if (hasMoreConversations.value) {
+        currentConversationPage.value++
+        promises.push(searchApi.search(searchQuery.value.trim(), currentConversationPage.value, 6))
+      }
+      if (hasMoreUsers.value) {
+        currentUserPage.value++
+        promises.push(searchApi.search(searchQuery.value.trim(), currentUserPage.value, 6))
+      }
+
+      const results = await Promise.all(promises)
+      let resultIndex = 0
+
+      if (hasMoreBooks.value && results[resultIndex]) {
+        const newBooks = results[resultIndex].books
+        hasMoreBooks.value = newBooks.length === 6
+        searchResults.value.books.push(
+          ...newBooks.map((book: any) => ({
+            id: book.id,
+            title: book.title,
+            subtitle: book.genre,
+            author: book.author,
+            description: `Scenarios: ${book.scenarioCount}, Conversations: ${book.conversationCount}`,
+            trait: book.genre,
+            coverImageUrl: book.coverImageUrl,
+          }))
+        )
+        resultIndex++
+      }
+
+      if (hasMoreConversations.value && results[resultIndex]) {
+        const newConversations = results[resultIndex].conversations
+        hasMoreConversations.value = newConversations.length === 6
+        searchResults.value.conversations.push(
+          ...newConversations
+            .filter((conv: any) => conv.isRoot === true)
+            .map((conv: any) => ({
+              id: conv.id,
+              scenarioId: conv.scenarioId,
+              title: conv.title || 'Untitled Conversation',
+              description: conv.scenarioDescription || conv.bookTitle || 'No description',
+              author: 'Unknown',
+              likes: conv.likeCount || 0,
+            }))
+        )
+        resultIndex++
+      }
+
+      if (hasMoreUsers.value && results[resultIndex]) {
+        const newUsers = results[resultIndex].users
+        hasMoreUsers.value = newUsers.length === 6
+
+        let followingIds = new Set<string>()
+        if (authStore.user?.id) {
+          try {
+            const following = await userApi.getFollowing(authStore.user.id)
+            following.forEach((u) => followingIds.add(u.id))
+          } catch (e) {
+            console.error('Failed to fetch following list', e)
+          }
+        }
+
+        searchResults.value.users.push(
+          ...newUsers
+            .filter((user: any) => user.id !== authStore.user?.id)
+            .map((user: any) => ({
+              id: user.id,
+              username: user.username,
+              displayName: user.username,
+              bio: user.bio,
+              avatarUrl: user.avatarUrl,
+              isFollowing: followingIds.has(user.id),
+            }))
+        )
+      }
+    } else if (activeTab.value === 'book' && hasMoreBooks.value) {
+      currentBookPage.value++
+      const response = await searchApi.search(searchQuery.value.trim(), currentBookPage.value, 6)
+      hasMoreBooks.value = response.books.length === 6
+      searchResults.value.books.push(
+        ...response.books.map((book: any) => ({
+          id: book.id,
+          title: book.title,
+          subtitle: book.genre,
+          author: book.author,
+          description: `Scenarios: ${book.scenarioCount}, Conversations: ${book.conversationCount}`,
+          trait: book.genre,
+          coverImageUrl: book.coverImageUrl,
+        }))
+      )
+    } else if (activeTab.value === 'conversation' && hasMoreConversations.value) {
+      currentConversationPage.value++
+      const response = await searchApi.search(
+        searchQuery.value.trim(),
+        currentConversationPage.value,
+        6
+      )
+      hasMoreConversations.value = response.conversations.length === 6
+      searchResults.value.conversations.push(
+        ...response.conversations
+          .filter((conv: any) => conv.isRoot === true)
+          .map((conv: any) => ({
+            id: conv.id,
+            scenarioId: conv.scenarioId,
+            title: conv.title || 'Untitled Conversation',
+            description: conv.scenarioDescription || conv.bookTitle || 'No description',
+            author: 'Unknown',
+            likes: conv.likeCount || 0,
+          }))
+      )
+    } else if (activeTab.value === 'user' && hasMoreUsers.value) {
+      currentUserPage.value++
+      const response = await searchApi.search(searchQuery.value.trim(), currentUserPage.value, 6)
+      hasMoreUsers.value = response.users.length === 6
+
+      let followingIds = new Set<string>()
+      if (authStore.user?.id) {
+        try {
+          const following = await userApi.getFollowing(authStore.user.id)
+          following.forEach((u) => followingIds.add(u.id))
+        } catch (e) {
+          console.error('Failed to fetch following list', e)
+        }
+      }
+
+      searchResults.value.users.push(
+        ...response.users
+          .filter((user: any) => user.id !== authStore.user?.id)
+          .map((user: any) => ({
+            id: user.id,
+            username: user.username,
+            displayName: user.username,
+            bio: user.bio,
+            avatarUrl: user.avatarUrl,
+            isFollowing: followingIds.has(user.id),
+          }))
+      )
+    }
+  } catch (error) {
+    console.error('Failed to load more results:', error)
+  } finally {
+    isLoadingMore.value = false
+  }
+}
+
+// Reset pagination when tab changes
+const resetPagination = () => {
+  currentBookPage.value = 0
+  currentConversationPage.value = 0
+  currentUserPage.value = 0
+  hasMoreBooks.value = true
+  hasMoreConversations.value = true
+  hasMoreUsers.value = true
+}
+
 watch(
   () => route.query.q,
   (newQuery) => {
@@ -199,13 +436,32 @@ watch(
   }
 )
 
+// When tab changes, just reset the view (results are already loaded)
+watch(activeTab, () => {
+  // No need to reload data, just let filteredResults compute handle the display
+})
+
 onMounted(() => {
+  // Check if user is logged in
+  if (!authStore.isAuthenticated) {
+    showErrorToast(t('searchPage.loginRequired'))
+    router.push('/login')
+    return
+  }
+
   // URL query parameter에서 검색어 가져오기
   const query = route.query.q as string
   if (query) {
     searchQuery.value = query
     performSearch()
   }
+
+  // Add scroll event listener for infinite scroll
+  window.addEventListener('scroll', handleScroll)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('scroll', handleScroll)
 })
 </script>
 
@@ -267,7 +523,7 @@ onMounted(() => {
             <input
               v-model="searchQuery"
               type="text"
-              placeholder="Search for books, characters, conversations..."
+              :placeholder="t('searchPage.searchPlaceholder')"
               :class="
                 css({
                   w: 'full',
@@ -306,6 +562,7 @@ onMounted(() => {
           "
         >
           <button
+            data-testid="tab-all"
             :class="
               css({
                 pb: '3',
@@ -324,9 +581,10 @@ onMounted(() => {
             "
             @click="activeTab = 'all'"
           >
-            All
+            {{ t('searchPage.tabs.all') }}
           </button>
           <button
+            data-testid="tab-book"
             :class="
               css({
                 pb: '3',
@@ -345,9 +603,10 @@ onMounted(() => {
             "
             @click="activeTab = 'book'"
           >
-            Book({{ bookCount }})
+            {{ t('searchPage.tabs.book') }}({{ bookCount }})
           </button>
           <button
+            data-testid="tab-conversation"
             :class="
               css({
                 pb: '3',
@@ -366,9 +625,10 @@ onMounted(() => {
             "
             @click="activeTab = 'conversation'"
           >
-            Conversation({{ conversationCount }}+)
+            {{ t('searchPage.tabs.conversation') }}({{ conversationCount }}+)
           </button>
           <button
+            data-testid="tab-user"
             :class="
               css({
                 pb: '3',
@@ -387,7 +647,7 @@ onMounted(() => {
             "
             @click="activeTab = 'user'"
           >
-            User({{ userCount }}+)
+            {{ t('searchPage.tabs.user') }}({{ userCount }}+)
           </button>
         </div>
 
@@ -410,7 +670,10 @@ onMounted(() => {
               })
             "
           >
-            Book <span :class="css({ color: 'gray.400', fontWeight: '400' })">Loading...</span>
+            {{ t('searchPage.sections.book') }}
+            <span :class="css({ color: 'gray.400', fontWeight: '400' })">{{
+              t('searchPage.loading')
+            }}</span>
           </h2>
 
           <div
@@ -525,6 +788,7 @@ onMounted(() => {
         <!-- Results Section -->
         <div
           v-else-if="totalCount > 0 && hasSearched"
+          data-testid="search-results"
           :class="
             css({
               p: '6',
@@ -543,7 +807,7 @@ onMounted(() => {
                 })
               "
             >
-              Book
+              {{ t('searchPage.sections.book') }}
               <span :class="css({ color: 'gray.400', fontWeight: '400' })">{{
                 filteredResults.books.length
               }}</span>
@@ -561,6 +825,7 @@ onMounted(() => {
               <div
                 v-for="book in filteredResults.books"
                 :key="book.id"
+                data-testid="book-item"
                 :class="
                   css({
                     bg: 'white',
@@ -704,7 +969,7 @@ onMounted(() => {
                 })
               "
             >
-              Conversation
+              {{ t('searchPage.sections.conversation') }}
               <span :class="css({ color: 'gray.400', fontWeight: '400' })">{{
                 filteredResults.conversations.length
               }}</span>
@@ -722,6 +987,7 @@ onMounted(() => {
               <div
                 v-for="conv in filteredResults.conversations"
                 :key="conv.id"
+                data-testid="conversation-item"
                 :class="
                   css({
                     bg: 'white',
@@ -825,7 +1091,7 @@ onMounted(() => {
                 })
               "
             >
-              User
+              {{ t('searchPage.sections.user') }}
               <span :class="css({ color: 'gray.400', fontWeight: '400' })">{{
                 filteredResults.users.length
               }}</span>
@@ -843,6 +1109,7 @@ onMounted(() => {
               <div
                 v-for="user in filteredResults.users"
                 :key="user.id"
+                data-testid="user-item"
                 :class="
                   css({
                     bg: 'white',
@@ -855,7 +1122,6 @@ onMounted(() => {
                 "
               >
                 <button
-                  @click.stop="toggleFollow(user)"
                   :class="
                     css({
                       position: 'absolute',
@@ -875,8 +1141,9 @@ onMounted(() => {
                       },
                     })
                   "
+                  @click.stop="toggleFollow(user)"
                 >
-                  {{ user.isFollowing ? 'Unfollow' : 'Follow' }}
+                  {{ user.isFollowing ? t('searchPage.unfollow') : t('searchPage.follow') }}
                 </button>
 
                 <div
@@ -1002,7 +1269,7 @@ onMounted(() => {
               })
             "
           >
-            No results found
+            {{ t('searchPage.noResults.title') }}
           </h3>
           <p
             :class="
@@ -1012,7 +1279,7 @@ onMounted(() => {
               })
             "
           >
-            Try searching with different keywords
+            {{ t('searchPage.noResults.description') }}
           </p>
         </div>
 
@@ -1051,7 +1318,7 @@ onMounted(() => {
               })
             "
           >
-            Start searching
+            {{ t('searchPage.initialState.title') }}
           </h3>
           <p
             :class="
@@ -1061,7 +1328,45 @@ onMounted(() => {
               })
             "
           >
-            Search for books, characters, or conversations
+            {{ t('searchPage.initialState.description') }}
+          </p>
+        </div>
+
+        <!-- Loading More Indicator -->
+        <div
+          v-if="isLoadingMore"
+          data-testid="loading-more"
+          :class="
+            css({
+              textAlign: 'center',
+              py: '8',
+            })
+          "
+        >
+          <div
+            :class="
+              css({
+                display: 'inline-block',
+                w: '8',
+                h: '8',
+                border: '3px solid',
+                borderColor: 'gray.200',
+                borderTopColor: 'green.600',
+                borderRadius: 'full',
+                animation: 'spin 1s linear infinite',
+              })
+            "
+          />
+          <p
+            :class="
+              css({
+                mt: '2',
+                fontSize: '0.875rem',
+                color: 'gray.500',
+              })
+            "
+          >
+            {{ t('searchPage.loading') }}
           </p>
         </div>
       </div>
@@ -1078,3 +1383,11 @@ onMounted(() => {
     <AppFooter />
   </div>
 </template>
+
+<style>
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+</style>
