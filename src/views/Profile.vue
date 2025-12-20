@@ -1,19 +1,23 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { css } from '../../styled-system/css'
 import AppHeader from '@/components/common/AppHeader.vue'
 import AppFooter from '@/components/common/AppFooter.vue'
 import { useAnalytics } from '@/composables/useAnalytics'
 import { useAuthStore } from '@/stores/auth'
+import { useToast } from '@/composables/useToast'
 import { bookApi } from '@/services/bookApi'
 import { userApi } from '@/services/userApi'
 import { getConversations } from '@/services/conversationApi'
 
 const route = useRoute()
 const router = useRouter()
+const { t } = useI18n()
 const { trackProfileViewed } = useAnalytics()
 const authStore = useAuthStore()
+const { success: showSuccessToast, error: showErrorToast } = useToast()
 
 // User profile data
 const userProfile = ref({
@@ -59,8 +63,9 @@ onMounted(async () => {
       }
     }
 
-    // Liked Books
-    const booksResponse = await bookApi.getLikedBooks(userId)
+    // Liked Books - fetch first page only
+    const booksResponse = await bookApi.getLikedBooks(userId, 0, itemsPerPage)
+    totalLikedBooks.value = booksResponse.totalElements || booksResponse.content.length
     allLikedBooks.value = booksResponse.content.map((b: any) => ({
       id: b.id,
       title: b.title,
@@ -70,7 +75,12 @@ onMounted(async () => {
     likedBooks.value = allLikedBooks.value.slice(0, 3)
 
     // Liked Conversations
-    const likedConversationsResponse = await getConversations({ userId, filter: 'liked' })
+    const likedConversationsResponse = await getConversations({
+      userId,
+      filter: 'liked',
+      size: 100,
+    })
+    totalLikedConversations.value = likedConversationsResponse.length
     allLikedConversations.value = likedConversationsResponse.map((c: any) => ({
       id: c.id,
       title: c.title,
@@ -85,6 +95,7 @@ onMounted(async () => {
 
     // Following
     const following = await userApi.getFollowing(userId)
+    totalFollowing.value = following.length
     allFollowing.value = following.map((u: any) => ({
       id: u.id,
       username: u.username,
@@ -93,6 +104,7 @@ onMounted(async () => {
 
     // Followers
     const followers = await userApi.getFollowers(userId)
+    totalFollowers.value = followers.length
     allFollowers.value = followers.map((u: any) => ({
       id: u.id,
       username: u.username,
@@ -100,7 +112,8 @@ onMounted(async () => {
     }))
 
     // My Conversations
-    const conversations = await getConversations({ userId })
+    const conversations = await getConversations({ userId, size: 100 })
+    totalMyConversations.value = conversations.length
     allMyConversations.value = conversations.map((c: any) => ({
       id: c.id,
       title: c.title,
@@ -156,6 +169,11 @@ const showLikedConversationsModal = ref(false)
 const showFollowingModal = ref(false)
 const showFollowersModal = ref(false)
 const showMyConversationsModal = ref(false)
+const showEditBioModal = ref(false)
+
+// Edit bio state
+const editingBio = ref('')
+const isSavingBio = ref(false)
 
 // Delete confirmation modal state
 const showDeleteConfirm = ref(false)
@@ -168,6 +186,20 @@ const followingPage = ref(1)
 const followersPage = ref(1)
 const myConversationsPage = ref(1)
 const itemsPerPage = 12
+
+// Loading states for pagination
+const isLoadingLikedBooks = ref(false)
+const isLoadingLikedConversations = ref(false)
+const isLoadingFollowing = ref(false)
+const isLoadingFollowers = ref(false)
+const isLoadingMyConversations = ref(false)
+
+// Total counts for pagination
+const totalLikedBooks = ref(0)
+const totalLikedConversations = ref(0)
+const totalFollowing = ref(0)
+const totalFollowers = ref(0)
+const totalMyConversations = ref(0)
 
 // Data for modals
 const allLikedBooks = ref<
@@ -238,7 +270,7 @@ const handleUnlikeBook = async (bookId: string | number): Promise<void> => {
 
 const toggleProfileFollow = async () => {
   if (!authStore.user) {
-    alert('Please login to follow users')
+    showErrorToast(t('profile.loginRequired'))
     return
   }
 
@@ -278,22 +310,38 @@ const handleUnfollowUser = async (userId: string): Promise<void> => {
   }
 }
 
-const confirmDelete = (): void => {
+const confirmDelete = async (): Promise<void> => {
   if (!deleteTarget.value) return
 
   const { type, id } = deleteTarget.value
 
-  if (type === 'likedBook') {
-    handleUnlikeBook(id)
-  } else if (type === 'following') {
-    handleUnfollowUser(String(id))
-  } else if (type === 'myConversation') {
-    const index = allMyConversations.value.findIndex((conv) => conv.id === id)
-    if (index > -1) allMyConversations.value.splice(index, 1)
+  try {
+    if (type === 'likedBook') {
+      await handleUnlikeBook(id)
+      showSuccessToast(t('profile.unlikeSuccess'))
+    } else if (type === 'following') {
+      await handleUnfollowUser(String(id))
+      showSuccessToast(t('profile.unfollowSuccess'))
+    } else if (type === 'myConversation') {
+      // Import deleteConversation API
+      const { deleteConversation } = await import('@/services/conversationApi')
+      await deleteConversation(String(id))
+      const index = allMyConversations.value.findIndex((conv) => conv.id === id)
+      if (index > -1) {
+        allMyConversations.value.splice(index, 1)
+        // Update displayed myConversations slice
+        myConversations.value = allMyConversations.value.slice(0, 3)
+      }
+      showSuccessToast(t('profile.deleteSuccess'))
+      console.log('[Profile] Deleted conversation:', id)
+    }
+  } catch (error) {
+    console.error('[Profile] Failed to delete:', error)
+    showErrorToast(t('profile.deleteFailed'))
+  } finally {
+    showDeleteConfirm.value = false
+    deleteTarget.value = null
   }
-
-  showDeleteConfirm.value = false
-  deleteTarget.value = null
 }
 
 const closeModal = (): void => {
@@ -323,6 +371,172 @@ const getPaginatedItems = (items: PaginatedItem[], page: number): PaginatedItem[
 
 const getTotalPages = (totalItems: number): number => {
   return Math.ceil(totalItems / itemsPerPage)
+}
+
+// Load more data from backend when page changes
+const loadLikedBooksPage = async (page: number) => {
+  if (isLoadingLikedBooks.value || page === likedBooksPage.value) return
+
+  isLoadingLikedBooks.value = true
+  try {
+    // Fetch data from backend with pagination
+    const response = await bookApi.getLikedBooks(userProfile.value.id, page - 1, itemsPerPage)
+    const newBooks = response.content.map((b: any) => ({
+      id: b.id,
+      title: b.title,
+      author: b.author,
+      cover: b.coverUrl || '📚',
+    }))
+
+    // Merge with existing data
+    const existingIds = new Set(allLikedBooks.value.map((b) => b.id))
+    const uniqueNewBooks = newBooks.filter((b: any) => !existingIds.has(b.id))
+    allLikedBooks.value = [...allLikedBooks.value, ...uniqueNewBooks]
+
+    totalLikedBooks.value = response.totalElements || response.content.length
+    likedBooksPage.value = page
+  } catch (error) {
+    console.error('Failed to load liked books:', error)
+  } finally {
+    isLoadingLikedBooks.value = false
+  }
+}
+
+const loadLikedConversationsPage = async (page: number) => {
+  if (isLoadingLikedConversations.value || page === likedConversationsPage.value) return
+
+  isLoadingLikedConversations.value = true
+  try {
+    const neededItems = page * itemsPerPage
+    if (allLikedConversations.value.length < neededItems) {
+      const conversations = await getConversations({
+        userId: userProfile.value.id,
+        filter: 'liked',
+        size: 100,
+      })
+      allLikedConversations.value = conversations.map((c: any) => ({
+        id: c.id,
+        title: c.title,
+        book: c.bookTitle || 'Unknown Book',
+        character: 'Unknown',
+        preview: c.scenarioDescription || 'No description',
+        likeCount: c.likeCount || 0,
+        timestamp: c.createdAt ? new Date(c.createdAt).toLocaleDateString() : '',
+        cover: '📘',
+      }))
+      totalLikedConversations.value = conversations.length
+    }
+    likedConversationsPage.value = page
+  } catch (error) {
+    console.error('Failed to load liked conversations:', error)
+  } finally {
+    isLoadingLikedConversations.value = false
+  }
+}
+
+const loadFollowingPage = async (page: number) => {
+  if (isLoadingFollowing.value || page === followingPage.value) return
+
+  isLoadingFollowing.value = true
+  try {
+    const neededItems = page * itemsPerPage
+    if (allFollowing.value.length < neededItems) {
+      const following = await userApi.getFollowing(userProfile.value.id)
+      allFollowing.value = following.map((u: any) => ({
+        id: u.id,
+        username: u.username,
+        avatar: '👤',
+      }))
+      totalFollowing.value = following.length
+    }
+    followingPage.value = page
+  } catch (error) {
+    console.error('Failed to load following:', error)
+  } finally {
+    isLoadingFollowing.value = false
+  }
+}
+
+const loadFollowersPage = async (page: number) => {
+  if (isLoadingFollowers.value || page === followersPage.value) return
+
+  isLoadingFollowers.value = true
+  try {
+    const neededItems = page * itemsPerPage
+    if (allFollowers.value.length < neededItems) {
+      const followers = await userApi.getFollowers(userProfile.value.id)
+      allFollowers.value = followers.map((u: any) => ({
+        id: u.id,
+        username: u.username,
+        avatar: '👤',
+      }))
+      totalFollowers.value = followers.length
+    }
+    followersPage.value = page
+  } catch (error) {
+    console.error('Failed to load followers:', error)
+  } finally {
+    isLoadingFollowers.value = false
+  }
+}
+
+const loadMyConversationsPage = async (page: number) => {
+  if (isLoadingMyConversations.value || page === myConversationsPage.value) return
+
+  isLoadingMyConversations.value = true
+  try {
+    const neededItems = page * itemsPerPage
+    if (allMyConversations.value.length < neededItems) {
+      const conversations = await getConversations({
+        userId: userProfile.value.id,
+        size: 100,
+      })
+      allMyConversations.value = conversations.map((c: any) => ({
+        id: c.id,
+        title: c.title,
+        book: 'Unknown Book',
+        character: 'Unknown',
+        preview: 'No preview',
+        likeCount: c.likeCount || 0,
+        timestamp: c.createdAt ? new Date(c.createdAt).toLocaleDateString() : '',
+        cover: '📘',
+      }))
+      totalMyConversations.value = conversations.length
+    }
+    myConversationsPage.value = page
+  } catch (error) {
+    console.error('Failed to load my conversations:', error)
+  } finally {
+    isLoadingMyConversations.value = false
+  }
+}
+
+const openEditBioModal = () => {
+  editingBio.value = userProfile.value.bio
+  showEditBioModal.value = true
+}
+
+const closeEditBioModal = () => {
+  showEditBioModal.value = false
+  editingBio.value = ''
+}
+
+const saveBio = async () => {
+  if (!authStore.user) return
+
+  try {
+    isSavingBio.value = true
+    // Use authStore.user.id to ensure it matches the X-User-Id header
+    await userApi.updateProfile(authStore.user.id, { bio: editingBio.value })
+    userProfile.value.bio = editingBio.value
+    showSuccessToast(t('profile.bioUpdateSuccess'))
+    closeEditBioModal()
+  } catch (error) {
+    console.error('Failed to update bio:', error)
+    showErrorToast(t('profile.bioUpdateFailed'))
+  } finally {
+    isSavingBio.value = false
+  }
 }
 </script>
 
@@ -374,7 +588,7 @@ const getTotalPages = (totalItems: number): number => {
               })
             "
           >
-            Profile
+            {{ t('nav.profile') }}
           </h2>
 
           <!-- Avatar -->
@@ -416,10 +630,35 @@ const getTotalPages = (totalItems: number): number => {
             </p>
           </div>
 
+          <!-- Edit Profile Button (only for own profile) -->
+          <button
+            v-if="authStore.user && authStore.user.username === userProfile.username"
+            :class="
+              css({
+                mt: '4',
+                px: '6',
+                py: '2',
+                borderRadius: 'full',
+                fontSize: '0.875rem',
+                fontWeight: '600',
+                cursor: 'pointer',
+                transition: 'all 0.2s',
+                bg: 'green.600',
+                color: 'white',
+                border: 'none',
+                _hover: {
+                  bg: 'green.700',
+                },
+              })
+            "
+            @click="openEditBioModal"
+          >
+            {{ t('profile.editProfile') }}
+          </button>
+
           <!-- Follow Button -->
           <button
             v-if="authStore.user && authStore.user.username !== userProfile.username"
-            @click="toggleProfileFollow"
             :class="
               css({
                 mt: '4',
@@ -437,8 +676,9 @@ const getTotalPages = (totalItems: number): number => {
                 },
               })
             "
+            @click="toggleProfileFollow"
           >
-            {{ isFollowing ? 'Unfollow' : 'Follow' }}
+            {{ isFollowing ? t('profile.unfollow') : t('profile.follow') }}
           </button>
         </section>
 
@@ -466,7 +706,7 @@ const getTotalPages = (totalItems: number): number => {
               "
             >
               <h2 :class="css({ fontSize: '1.25rem', fontWeight: 'bold', color: 'gray.900' })">
-                Like Book List
+                {{ t('profile.likedBooks') }}
               </h2>
               <button
                 :class="
@@ -485,7 +725,7 @@ const getTotalPages = (totalItems: number): number => {
                 "
                 @click="showLikedBooksModal = true"
               >
-                View All
+                {{ t('profile.viewAll') }}
               </button>
             </div>
             <div :class="css({ display: 'flex', gap: '4', overflowX: 'auto', pb: '2' })">
@@ -536,7 +776,7 @@ const getTotalPages = (totalItems: number): number => {
               "
             >
               <h2 :class="css({ fontSize: '1.25rem', fontWeight: 'bold', color: 'gray.900' })">
-                Like Conversation List
+                {{ t('profile.likedConversations') }}
               </h2>
               <button
                 :class="
@@ -555,7 +795,7 @@ const getTotalPages = (totalItems: number): number => {
                 "
                 @click="showLikedConversationsModal = true"
               >
-                View All
+                {{ t('profile.viewAll') }}
               </button>
             </div>
             <div :class="css({ display: 'flex', gap: '4', overflowX: 'auto', pb: '2' })">
@@ -620,7 +860,7 @@ const getTotalPages = (totalItems: number): number => {
               "
             >
               <h2 :class="css({ fontSize: '1.25rem', fontWeight: 'bold', color: 'gray.900' })">
-                Following List
+                {{ t('profile.following') }}
               </h2>
               <button
                 :class="
@@ -639,7 +879,7 @@ const getTotalPages = (totalItems: number): number => {
                 "
                 @click="showFollowingModal = true"
               >
-                View All
+                {{ t('profile.viewAll') }}
               </button>
             </div>
             <div :class="css({ display: 'flex', gap: '3', overflowX: 'auto', pb: '2' })">
@@ -690,7 +930,7 @@ const getTotalPages = (totalItems: number): number => {
               "
             >
               <h2 :class="css({ fontSize: '1.25rem', fontWeight: 'bold', color: 'gray.900' })">
-                Follower List
+                {{ t('profile.followers') }}
               </h2>
               <button
                 :class="
@@ -709,7 +949,7 @@ const getTotalPages = (totalItems: number): number => {
                 "
                 @click="showFollowersModal = true"
               >
-                View All
+                {{ t('profile.viewAll') }}
               </button>
             </div>
             <div :class="css({ display: 'flex', gap: '3', overflowX: 'auto', pb: '2' })">
@@ -757,7 +997,7 @@ const getTotalPages = (totalItems: number): number => {
           "
         >
           <h2 :class="css({ fontSize: '1.25rem', fontWeight: 'bold', color: 'gray.900' })">
-            My Conversations
+            {{ t('profile.myConversations') }}
           </h2>
           <button
             :class="
@@ -776,7 +1016,7 @@ const getTotalPages = (totalItems: number): number => {
             "
             @click="showMyConversationsModal = true"
           >
-            View All Conversations
+            {{ t('profile.viewAll') }}
           </button>
         </div>
 
@@ -1040,7 +1280,7 @@ const getTotalPages = (totalItems: number): number => {
                 _hover: { opacity: 0.8 },
               })
             "
-            @click="likedBooksPage = page"
+            @click="loadLikedBooksPage(page)"
           >
             {{ page }}
           </button>
@@ -1253,7 +1493,7 @@ const getTotalPages = (totalItems: number): number => {
                 _hover: { opacity: 0.8 },
               })
             "
-            @click="likedConversationsPage = page"
+            @click="loadLikedConversationsPage(page)"
           >
             {{ page }}
           </button>
@@ -1402,7 +1642,7 @@ const getTotalPages = (totalItems: number): number => {
                 _hover: { opacity: 0.8 },
               })
             "
-            @click="followingPage = page"
+            @click="loadFollowingPage(page)"
           >
             {{ page }}
           </button>
@@ -1454,7 +1694,7 @@ const getTotalPages = (totalItems: number): number => {
           "
         >
           <h3 :class="css({ fontSize: '1.5rem', fontWeight: 'bold', color: 'gray.900' })">
-            All Followers (Read-only)
+            All Followers
           </h3>
           <button
             :class="
@@ -1525,7 +1765,7 @@ const getTotalPages = (totalItems: number): number => {
                 _hover: { opacity: 0.8 },
               })
             "
-            @click="followersPage = page"
+            @click="loadFollowersPage(page)"
           >
             {{ page }}
           </button>
@@ -1577,7 +1817,7 @@ const getTotalPages = (totalItems: number): number => {
           "
         >
           <h3 :class="css({ fontSize: '1.5rem', fontWeight: 'bold', color: 'gray.900' })">
-            All My Conversations
+            {{ t('profile.allMyConversations') }}
           </h3>
           <button
             :class="
@@ -1763,7 +2003,7 @@ const getTotalPages = (totalItems: number): number => {
                 _hover: { opacity: 0.8 },
               })
             "
-            @click="myConversationsPage = page"
+            @click="loadMyConversationsPage(page)"
           >
             {{ page }}
           </button>
@@ -1813,19 +2053,19 @@ const getTotalPages = (totalItems: number): number => {
         >
           {{
             deleteTarget?.type === 'following'
-              ? 'Unfollow User'
+              ? t('profile.unfollowUser')
               : deleteTarget?.type === 'likedBook'
-                ? 'Unlike Book'
-                : 'Delete Confirmation'
+                ? t('profile.unlikeBook')
+                : t('profile.deleteConfirmation')
           }}
         </h3>
         <p :class="css({ fontSize: '0.875rem', color: 'gray.600', mb: '2', textAlign: 'center' })">
           {{
             deleteTarget?.type === 'following'
-              ? 'Are you sure you want to unfollow this user?'
+              ? t('profile.unfollowMessage')
               : deleteTarget?.type === 'likedBook'
-                ? 'Are you sure you want to unlike this book?'
-                : 'Are you sure you want to delete this item?'
+                ? t('profile.unlikeMessage')
+                : t('profile.deleteMessage')
           }}
         </p>
         <p
@@ -1860,7 +2100,7 @@ const getTotalPages = (totalItems: number): number => {
             "
             @click="cancelDelete"
           >
-            Cancel
+            {{ t('profile.cancel') }}
           </button>
           <button
             :class="
@@ -1879,7 +2119,162 @@ const getTotalPages = (totalItems: number): number => {
             "
             @click="confirmDelete"
           >
-            Delete
+            {{
+              deleteTarget?.type === 'following'
+                ? t('profile.unfollow')
+                : deleteTarget?.type === 'likedBook'
+                  ? t('profile.unlike')
+                  : t('profile.delete')
+            }}
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Edit Bio Modal -->
+    <div
+      v-if="showEditBioModal"
+      :class="
+        css({
+          position: 'fixed',
+          inset: '0',
+          bg: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000,
+          p: '4',
+        })
+      "
+      @click.self="closeEditBioModal"
+    >
+      <div
+        :class="
+          css({
+            bg: 'white',
+            borderRadius: '0.75rem',
+            maxW: '500px',
+            w: 'full',
+            p: '6',
+            boxShadow: '0 10px 25px rgba(0,0,0,0.2)',
+          })
+        "
+      >
+        <div
+          :class="
+            css({
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              mb: '4',
+            })
+          "
+        >
+          <h2 :class="css({ fontSize: '1.5rem', fontWeight: 'bold', color: 'gray.900' })">
+            {{ t('profile.editProfile') }}
+          </h2>
+          <button
+            :class="
+              css({
+                fontSize: '1.5rem',
+                color: 'gray.500',
+                cursor: 'pointer',
+                bg: 'transparent',
+                border: 'none',
+                _hover: { color: 'gray.700' },
+              })
+            "
+            aria-label="Close"
+            @click="closeEditBioModal"
+          >
+            ×
+          </button>
+        </div>
+
+        <div :class="css({ mb: '4' })">
+          <label
+            for="bio-textarea"
+            :class="
+              css({
+                display: 'block',
+                fontSize: '0.875rem',
+                fontWeight: '600',
+                color: 'gray.700',
+                mb: '2',
+              })
+            "
+          >
+            {{ t('profile.bio') }}
+          </label>
+          <textarea
+            id="bio-textarea"
+            v-model="editingBio"
+            :placeholder="t('profile.bioPlaceholder')"
+            :class="
+              css({
+                w: 'full',
+                px: '4',
+                py: '3',
+                border: '1px solid',
+                borderColor: 'gray.300',
+                borderRadius: '0.5rem',
+                fontSize: '0.875rem',
+                resize: 'vertical',
+                minH: '120px',
+                _focus: {
+                  outline: 'none',
+                  borderColor: 'green.500',
+                  boxShadow: '0 0 0 3px rgba(34, 197, 94, 0.1)',
+                },
+              })
+            "
+            maxlength="500"
+          />
+          <p :class="css({ fontSize: '0.75rem', color: 'gray.500', mt: '1', textAlign: 'right' })">
+            {{ editingBio.length }} / 500
+          </p>
+        </div>
+
+        <div :class="css({ display: 'flex', gap: '3', justifyContent: 'flex-end' })">
+          <button
+            :class="
+              css({
+                px: '4',
+                py: '2',
+                borderRadius: '0.5rem',
+                fontSize: '0.875rem',
+                fontWeight: '600',
+                cursor: 'pointer',
+                bg: 'gray.100',
+                color: 'gray.700',
+                border: 'none',
+                _hover: { bg: 'gray.200' },
+              })
+            "
+            @click="closeEditBioModal"
+          >
+            {{ t('profile.cancel') }}
+          </button>
+          <button
+            :disabled="isSavingBio"
+            :class="
+              css({
+                px: '4',
+                py: '2',
+                borderRadius: '0.5rem',
+                fontSize: '0.875rem',
+                fontWeight: '600',
+                cursor: isSavingBio ? 'not-allowed' : 'pointer',
+                bg: 'green.600',
+                color: 'white',
+                border: 'none',
+                opacity: isSavingBio ? 0.6 : 1,
+                _hover: { bg: isSavingBio ? 'green.600' : 'green.700' },
+              })
+            "
+            @click="saveBio"
+          >
+            {{ isSavingBio ? t('common.loading') : t('common.save') }}
           </button>
         </div>
       </div>
