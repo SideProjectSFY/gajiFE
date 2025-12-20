@@ -33,7 +33,7 @@ describe('ProfileEdit.vue', () => {
   })
 
   it('redirects to login if user not authenticated', () => {
-    const wrapper = mount(ProfileEdit)
+    const wrapper = mount(ProfileEdit, { global: { stubs: { RouterLink: true } } })
     expect(mockPush).toHaveBeenCalledWith('/login')
   })
 
@@ -47,7 +47,7 @@ describe('ProfileEdit.vue', () => {
     } as any
     authStore.accessToken = 'token'
 
-    const wrapper = mount(ProfileEdit)
+    const wrapper = mount(ProfileEdit, { global: { stubs: { RouterLink: true } } })
 
     // Check that form is populated with current data
     expect((wrapper.vm as any).form.username).toBe('testuser')
@@ -63,7 +63,7 @@ describe('ProfileEdit.vue', () => {
     } as any
     authStore.accessToken = 'token'
 
-    const wrapper = mount(ProfileEdit)
+    const wrapper = mount(ProfileEdit, { global: { stubs: { RouterLink: true } } })
 
     // Set short username
     ;(wrapper.vm as any).form.username = 'ab'
@@ -81,7 +81,7 @@ describe('ProfileEdit.vue', () => {
     } as any
     authStore.accessToken = 'token'
 
-    const wrapper = mount(ProfileEdit)
+    const wrapper = mount(ProfileEdit, { global: { stubs: { RouterLink: true } } })
 
     // Create invalid file (GIF)
     const invalidFile = new File(['content'], 'test.gif', { type: 'image/gif' })
@@ -105,7 +105,7 @@ describe('ProfileEdit.vue', () => {
     } as any
     authStore.accessToken = 'token'
 
-    const wrapper = mount(ProfileEdit)
+    const wrapper = mount(ProfileEdit, { global: { stubs: { RouterLink: true } } })
 
     // Create large file (>5MB)
     const largeFile = new File(['x'.repeat(6 * 1024 * 1024)], 'test.jpg', { type: 'image/jpeg' })
@@ -129,7 +129,7 @@ describe('ProfileEdit.vue', () => {
     } as any
     authStore.accessToken = 'token'
 
-    const wrapper = mount(ProfileEdit)
+    const wrapper = mount(ProfileEdit, { global: { stubs: { RouterLink: true } } })
 
     // Create valid file
     const validFile = new File(['content'], 'test.jpg', { type: 'image/jpeg' })
@@ -155,7 +155,7 @@ describe('ProfileEdit.vue', () => {
     } as any
     authStore.accessToken = 'token'
 
-    const wrapper = mount(ProfileEdit)
+    const wrapper = mount(ProfileEdit, { global: { stubs: { RouterLink: true } } })
 
     // Set bio with 200 characters (max)
     const bio200 = 'x'.repeat(200)
@@ -184,7 +184,7 @@ describe('ProfileEdit.vue', () => {
       },
     })
 
-    const wrapper = mount(ProfileEdit)
+    const wrapper = mount(ProfileEdit, { global: { stubs: { RouterLink: true } } })
 
     // Set avatar file
     const validFile = new File(['content'], 'test.jpg', { type: 'image/jpeg' })
@@ -226,7 +226,7 @@ describe('ProfileEdit.vue', () => {
       },
     })
 
-    const wrapper = mount(ProfileEdit)
+    const wrapper = mount(ProfileEdit, { global: { stubs: { RouterLink: true } } })
 
     // Set form data without avatar
     ;(wrapper.vm as any).form.username = 'newusername'
@@ -253,7 +253,7 @@ describe('ProfileEdit.vue', () => {
     const error = { response: { data: { message: 'Username already taken' } } }
     vi.mocked(api.put).mockRejectedValueOnce(error)
 
-    const wrapper = mount(ProfileEdit)
+    const wrapper = mount(ProfileEdit, { global: { stubs: { RouterLink: true } } })
 
     ;(wrapper.vm as any).form.username = 'existinguser'
     await (wrapper.vm as any).handleSubmit()
@@ -270,7 +270,7 @@ describe('ProfileEdit.vue', () => {
     } as any
     authStore.accessToken = 'token'
 
-    const wrapper = mount(ProfileEdit)
+    const wrapper = mount(ProfileEdit, { global: { stubs: { RouterLink: true } } })
 
     ;(wrapper.vm as any).form.bio = 'Test bio'
     await wrapper.vm.$nextTick()
@@ -292,7 +292,7 @@ describe('ProfileEdit.vue', () => {
       () => new Promise((resolve) => setTimeout(() => resolve({ data: {} }), 100))
     )
 
-    const wrapper = mount(ProfileEdit)
+    const wrapper = mount(ProfileEdit, { global: { stubs: { RouterLink: true } } })
 
     ;(wrapper.vm as any).form.username = 'testuser'
     const submitPromise = (wrapper.vm as any).handleSubmit()
