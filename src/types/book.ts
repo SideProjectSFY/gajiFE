@@ -12,6 +12,7 @@ export interface Book {
   scenarioCount: number
   conversationCount: number
   likeCount?: number // Optional: backend provides this
+  isLiked?: boolean
   // Optional fields not yet provided by backend:
   tags?: string[]
   year?: number
