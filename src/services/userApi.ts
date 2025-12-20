@@ -26,7 +26,7 @@ export const userApi = {
    * @param userId User ID to unfollow
    */
   async unfollowUser(userId: string): Promise<void> {
-    await api.delete(`/users/${userId}/follow`)
+    await api.delete(`/users/${userId}/unfollow`)
   },
 
   /**
@@ -43,8 +43,8 @@ export const userApi = {
    * @param userId User ID
    */
   async getFollowers(userId: string): Promise<User[]> {
-    const response = await api.get<User[]>(`/users/${userId}/followers`)
-    return response.data
+    const response = await api.get<any>(`/users/${userId}/followers`)
+    return response.data.content
   },
 
   /**
@@ -52,7 +52,7 @@ export const userApi = {
    * @param userId User ID
    */
   async getFollowing(userId: string): Promise<User[]> {
-    const response = await axios.get<User[]>(`${API_BASE_URL}/api/v1/users/${userId}/following`)
-    return response.data
+    const response = await api.get<any>(`/users/${userId}/following`)
+    return response.data.content
   },
 }
