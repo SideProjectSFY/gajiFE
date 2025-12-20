@@ -24,6 +24,8 @@ const userProfile = ref({
   joinedAt: '',
 })
 
+const isFollowing = ref(false)
+
 // GA4: 프로필 조회 추적 & Data Fetching
 onMounted(async () => {
   const username = Array.isArray(route.params.username)
@@ -47,6 +49,16 @@ onMounted(async () => {
     // 2. Fetch Lists using userId
     const userId = user.id
 
+    // Check if following
+    if (authStore.user && authStore.user.id !== userId) {
+      try {
+        const myFollowing = await userApi.getFollowing(authStore.user.id)
+        isFollowing.value = myFollowing.some((u: any) => u.id === userId)
+      } catch (e) {
+        console.error('Failed to check following status', e)
+      }
+    }
+
     // Liked Books
     const booksResponse = await bookApi.getLikedBooks(userId)
     allLikedBooks.value = booksResponse.content.map((b: any) => ({
@@ -56,6 +68,20 @@ onMounted(async () => {
       cover: b.coverUrl || '📚',
     }))
     likedBooks.value = allLikedBooks.value.slice(0, 3)
+
+    // Liked Conversations
+    const likedConversationsResponse = await getConversations({ userId, filter: 'liked' })
+    allLikedConversations.value = likedConversationsResponse.map((c: any) => ({
+      id: c.id,
+      title: c.title,
+      book: c.bookTitle || 'Unknown Book',
+      character: 'Unknown',
+      preview: c.scenarioDescription || 'No description',
+      likeCount: c.likeCount || 0,
+      timestamp: c.createdAt ? new Date(c.createdAt).toLocaleDateString() : '',
+      cover: '📘',
+    }))
+    likedConversations.value = allLikedConversations.value.slice(0, 3)
 
     // Following
     const following = await userApi.getFollowing(userId)
@@ -96,6 +122,20 @@ const likedBooks = ref<
   Array<{ id: string | number; title: string; author: string; cover: string }>
 >([])
 
+// Liked conversations
+const likedConversations = ref<
+  Array<{
+    id: string | number
+    title: string
+    book: string
+    character: string
+    preview: string
+    likeCount: number
+    timestamp: string
+    cover: string
+  }>
+>([])
+
 // My conversations
 const myConversations = ref<
   Array<{
@@ -112,6 +152,7 @@ const myConversations = ref<
 
 // Modal states
 const showLikedBooksModal = ref(false)
+const showLikedConversationsModal = ref(false)
 const showFollowingModal = ref(false)
 const showFollowersModal = ref(false)
 const showMyConversationsModal = ref(false)
@@ -122,6 +163,7 @@ const deleteTarget = ref<{ type: string; id: string | number; title?: string } |
 
 // Pagination states
 const likedBooksPage = ref(1)
+const likedConversationsPage = ref(1)
 const followingPage = ref(1)
 const followersPage = ref(1)
 const myConversationsPage = ref(1)
@@ -130,6 +172,19 @@ const itemsPerPage = 12
 // Data for modals
 const allLikedBooks = ref<
   Array<{ id: string | number; title: string; author: string; cover: string }>
+>([])
+
+const allLikedConversations = ref<
+  Array<{
+    id: string | number
+    title: string
+    book: string
+    character: string
+    preview: string
+    likeCount: number
+    timestamp: string
+    cover: string
+  }>
 >([])
 
 const allFollowing = ref<Array<{ id: string; username: string; avatar: string }>>([])
@@ -181,6 +236,26 @@ const handleUnlikeBook = async (bookId: string | number): Promise<void> => {
   }
 }
 
+const toggleProfileFollow = async () => {
+  if (!authStore.user) {
+    alert('Please login to follow users')
+    return
+  }
+
+  const userId = userProfile.value.id
+  try {
+    if (isFollowing.value) {
+      await userApi.unfollowUser(userId)
+      isFollowing.value = false
+    } else {
+      await userApi.followUser(userId)
+      isFollowing.value = true
+    }
+  } catch (error) {
+    console.error('Failed to toggle follow', error)
+  }
+}
+
 const handleFollowUser = async (userId: string): Promise<void> => {
   try {
     await userApi.followUser(userId)
@@ -223,6 +298,7 @@ const confirmDelete = (): void => {
 
 const closeModal = (): void => {
   showLikedBooksModal.value = false
+  showLikedConversationsModal.value = false
   showFollowingModal.value = false
   showFollowersModal.value = false
   showMyConversationsModal.value = false
@@ -339,6 +415,31 @@ const getTotalPages = (totalItems: number): number => {
               {{ userProfile.bio }}
             </p>
           </div>
+
+          <!-- Follow Button -->
+          <button
+            v-if="authStore.user && authStore.user.username !== userProfile.username"
+            @click="toggleProfileFollow"
+            :class="
+              css({
+                mt: '4',
+                px: '6',
+                py: '2',
+                borderRadius: 'full',
+                fontSize: '0.875rem',
+                fontWeight: '600',
+                cursor: 'pointer',
+                transition: 'all 0.2s',
+                bg: isFollowing ? 'gray.100' : 'green.600',
+                color: isFollowing ? 'gray.700' : 'white',
+                _hover: {
+                  bg: isFollowing ? 'gray.200' : 'green.700',
+                },
+              })
+            "
+          >
+            {{ isFollowing ? 'Unfollow' : 'Follow' }}
+          </button>
         </section>
 
         <!-- Like Lists Container -->
@@ -408,6 +509,90 @@ const getTotalPages = (totalItems: number): number => {
                 </div>
                 <p :class="css({ fontSize: '0.875rem', fontWeight: '600', color: 'gray.900' })">
                   {{ book.title }}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Like Conversation List -->
+          <div
+            :class="
+              css({
+                bg: 'white',
+                borderRadius: '0.75rem',
+                p: '6',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+              })
+            "
+          >
+            <div
+              :class="
+                css({
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  mb: '4',
+                })
+              "
+            >
+              <h2 :class="css({ fontSize: '1.25rem', fontWeight: 'bold', color: 'gray.900' })">
+                Like Conversation List
+              </h2>
+              <button
+                :class="
+                  css({
+                    px: '3',
+                    py: '1.5',
+                    bg: 'green.500',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '0.375rem',
+                    fontSize: '0.875rem',
+                    fontWeight: '500',
+                    cursor: 'pointer',
+                    _hover: { bg: 'green.600' },
+                  })
+                "
+                @click="showLikedConversationsModal = true"
+              >
+                View All
+              </button>
+            </div>
+            <div :class="css({ display: 'flex', gap: '4', overflowX: 'auto', pb: '2' })">
+              <div
+                v-for="conv in likedConversations"
+                :key="conv.id"
+                :class="
+                  css({
+                    minW: '48',
+                    bg: 'gray.100',
+                    borderRadius: '0.5rem',
+                    p: '4',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s',
+                    _hover: { bg: 'gray.200' },
+                  })
+                "
+                @click="goToConversation(conv.id)"
+              >
+                <div :class="css({ fontSize: '2rem', mb: '2', textAlign: 'center' })">
+                  {{ conv.cover }}
+                </div>
+                <p
+                  :class="
+                    css({
+                      fontSize: '0.875rem',
+                      fontWeight: '600',
+                      color: 'gray.900',
+                      mb: '1',
+                      lineClamp: 1,
+                    })
+                  "
+                >
+                  {{ conv.title }}
+                </p>
+                <p :class="css({ fontSize: '0.75rem', color: 'gray.600', lineClamp: 1 })">
+                  {{ conv.book }}
                 </p>
               </div>
             </div>
@@ -856,6 +1041,219 @@ const getTotalPages = (totalItems: number): number => {
               })
             "
             @click="likedBooksPage = page"
+          >
+            {{ page }}
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Liked Conversations Modal -->
+    <div
+      v-if="showLikedConversationsModal"
+      :class="
+        css({
+          position: 'fixed',
+          inset: '0',
+          bg: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: '50',
+        })
+      "
+      @click="closeModal"
+    >
+      <div
+        :class="
+          css({
+            bg: 'white',
+            borderRadius: '0.75rem',
+            w: 'full',
+            maxW: '6xl',
+            maxH: '90vh',
+            overflow: 'hidden',
+            display: 'flex',
+            flexDirection: 'column',
+          })
+        "
+        @click.stop
+      >
+        <div
+          :class="
+            css({
+              p: '6',
+              borderBottom: '1px solid',
+              borderColor: 'gray.200',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+            })
+          "
+        >
+          <h3 :class="css({ fontSize: '1.5rem', fontWeight: 'bold', color: 'gray.900' })">
+            All Liked Conversations
+          </h3>
+          <button
+            :class="
+              css({
+                fontSize: '1.5rem',
+                color: 'gray.500',
+                cursor: 'pointer',
+                bg: 'transparent',
+                border: 'none',
+                _hover: { color: 'gray.700' },
+              })
+            "
+            @click="showLikedConversationsModal = false"
+          >
+            ✕
+          </button>
+        </div>
+        <div :class="css({ flex: 1, overflowY: 'auto', p: '6' })">
+          <div :class="css({ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '4' })">
+            <div
+              v-for="conv in getPaginatedItems(allLikedConversations, likedConversationsPage)"
+              :key="conv.id"
+              :class="
+                css({
+                  position: 'relative',
+                  bg: 'white',
+                  border: '1px solid',
+                  borderColor: 'gray.200',
+                  borderRadius: '0.5rem',
+                  p: '4',
+                  cursor: 'pointer',
+                  _hover: { borderColor: 'green.500', boxShadow: '0 2px 8px rgba(34,197,94,0.1)' },
+                })
+              "
+              @click="goToConversation(conv.id)"
+            >
+              <div :class="css({ display: 'flex', gap: '3', mb: '3' })">
+                <div
+                  :class="
+                    css({
+                      w: '16',
+                      h: '20',
+                      bg: 'gray.200',
+                      borderRadius: '0.375rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '2rem',
+                      flexShrink: 0,
+                    })
+                  "
+                >
+                  {{ conv.cover }}
+                </div>
+                <div :class="css({ flex: 1, minW: 0 })">
+                  <div
+                    :class="
+                      css({
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '2',
+                        mb: '1',
+                      })
+                    "
+                  >
+                    <span
+                      :class="
+                        css({
+                          w: '2',
+                          h: '2',
+                          bg: 'green.500',
+                          borderRadius: 'full',
+                        })
+                      "
+                    />
+                    <span :class="css({ fontSize: '0.75rem', color: 'gray.600' })">{{
+                      conv.character
+                    }}</span>
+                  </div>
+                  <h3
+                    :class="
+                      css({
+                        fontSize: '1rem',
+                        fontWeight: '600',
+                        color: 'gray.900',
+                        mb: '1',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                      })
+                    "
+                  >
+                    {{ conv.title }}
+                  </h3>
+                  <p :class="css({ fontSize: '0.75rem', color: 'gray.600' })">
+                    {{ conv.book }}
+                  </p>
+                </div>
+              </div>
+
+              <p
+                :class="
+                  css({
+                    fontSize: '0.875rem',
+                    color: 'gray.700',
+                    lineHeight: '1.5',
+                    mb: '3',
+                    display: '-webkit-box',
+                    WebkitLineClamp: '2',
+                    WebkitBoxOrient: 'vertical',
+                    overflow: 'hidden',
+                  })
+                "
+              >
+                {{ conv.preview }}
+              </p>
+
+              <div
+                :class="
+                  css({ display: 'flex', justifyContent: 'space-between', alignItems: 'center' })
+                "
+              >
+                <span :class="css({ fontSize: '0.75rem', color: 'gray.500' })"
+                  >♥ {{ conv.likeCount }}</span
+                >
+                <span :class="css({ fontSize: '0.75rem', color: 'gray.500' })">{{
+                  conv.timestamp
+                }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div
+          :class="
+            css({
+              p: '4',
+              borderTop: '1px solid',
+              borderColor: 'gray.200',
+              display: 'flex',
+              justifyContent: 'center',
+              gap: '2',
+            })
+          "
+        >
+          <button
+            v-for="page in getTotalPages(allLikedConversations.length)"
+            :key="page"
+            :class="
+              css({
+                px: '3',
+                py: '1.5',
+                bg: likedConversationsPage === page ? 'green.500' : 'gray.200',
+                color: likedConversationsPage === page ? 'white' : 'gray.700',
+                border: 'none',
+                borderRadius: '0.375rem',
+                fontSize: '0.875rem',
+                cursor: 'pointer',
+                _hover: { opacity: 0.8 },
+              })
+            "
+            @click="likedConversationsPage = page"
           >
             {{ page }}
           </button>
