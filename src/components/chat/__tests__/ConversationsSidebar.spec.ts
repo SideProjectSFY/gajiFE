@@ -1,7 +1,7 @@
-import { describe, it, expect } from 'vitest'
-import { mount } from '@vue/test-utils'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { mount, flushPromises } from '@vue/test-utils'
 import { createRouter, createWebHistory } from 'vue-router'
-import ConversationsSidebar from '../ConversationsSidebar.vue'
+import { createPinia, setActivePinia } from 'pinia'
 
 // Mock router
 const router = createRouter({
@@ -18,11 +18,48 @@ const router = createRouter({
 })
 
 describe('ConversationsSidebar', () => {
+  let ConversationsSidebar: any
+
+  beforeEach(async () => {
+    vi.resetModules()
+    setActivePinia(createPinia())
+    vi.clearAllMocks()
+
+    // Mock services using doMock
+    vi.doMock('@/services/conversationApi', () => ({
+      listConversations: vi.fn().mockResolvedValue([
+        {
+          id: 'conv1',
+          scenarioId: 'scen1',
+          title: 'Test Conversation',
+          updatedAt: '2023-01-01T12:00:00Z',
+          messageCount: 5,
+          isRoot: true,
+        },
+      ]),
+    }))
+
+    vi.doMock('@/services/scenarioApi', () => ({
+      scenarioApi: {
+        getScenario: vi.fn().mockResolvedValue({
+          id: 'scen1',
+          title: 'Test Scenario',
+          whatIfQuestion: 'What if?',
+          bookTitle: 'Test Book',
+        }),
+      },
+    }))
+
+    // Import component dynamically after mocks are set
+    const module = await import('../ConversationsSidebar.vue')
+    ConversationsSidebar = module.default
+  })
+
   it('renders when visible', () => {
     const wrapper = mount(ConversationsSidebar, {
       props: { visible: true },
       global: {
-        plugins: [router],
+        plugins: [router, createPinia()],
         stubs: {
           Teleport: true,
         },
@@ -36,7 +73,7 @@ describe('ConversationsSidebar', () => {
     const wrapper = mount(ConversationsSidebar, {
       props: { visible: false },
       global: {
-        plugins: [router],
+        plugins: [router, createPinia()],
         stubs: {
           Teleport: true,
         },
@@ -75,8 +112,9 @@ describe('ConversationsSidebar', () => {
     })
 
     // Wait for loading to complete
-    await new Promise((resolve) => setTimeout(resolve, 400))
-    await wrapper.vm.$nextTick()
+    await flushPromises()
+    // Wait a bit more for any internal promises
+    await new Promise((resolve) => setTimeout(resolve, 100))
 
     // Should show conversation items after loading (using semantic <li> elements)
     const items = wrapper.findAll('li')
@@ -112,6 +150,7 @@ describe('ConversationsSidebar', () => {
     })
 
     // Wait for loading
+    await flushPromises()
     await new Promise((resolve) => setTimeout(resolve, 400))
     await wrapper.vm.$nextTick()
 
