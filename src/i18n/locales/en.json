@@ -1,0 +1,401 @@
+{
+  "nav": {
+    "about": "About",
+    "books": "Books",
+    "conversations": "Conversations",
+    "search": "Search",
+    "login": "Login",
+    "signup": "Sign Up",
+    "profile": "Profile",
+    "logout": "Logout"
+  },
+  "search": {
+    "placeholder": "Search books, conversations...",
+    "ariaLabel": "Search books, conversations",
+    "allBooks": "Search All of Books"
+  },
+  "notFound": {
+    "title": "Are you lost?",
+    "description": "The scenario you are looking for does not exist.<br />The branch of the story may have ended here, or it hasn't grown yet.",
+    "goHome": "Return to Main Story",
+    "findNewStory": "Find New Stories"
+  },
+  "language": {
+    "korean": "한국어",
+    "english": "English"
+  },
+  "home": {
+    "title": "Gaji",
+    "whatIsGaji": "What is \"Gaji\"?",
+    "hotTopics": "Hot Topics",
+    "topics": {
+      "newShortStory": "New Short Story by Favorite Author Released",
+      "winterChallenge": "#Winter Reading Challenge",
+      "readingExperience": "Interactive Reading Experience Service Launched",
+      "realityStories": "Stories Between Reality and Fantasy",
+      "copyrightNovel": "Copyright-Free Novel Collection",
+      "virtualReality": "Virtual and Real Stories"
+    }
+  },
+  "about": {
+    "breadcrumb": {
+      "home": "Home",
+      "about": "About"
+    },
+    "title": "About Gaji",
+    "whatIsGaji": {
+      "title": "What does \"Gaji\" mean? 🌿",
+      "description": "\"Gaji\" (가지) is the Korean word for <strong>\"branch\"</strong>. Just as a tree grows many branches, each story can branch into countless directions based on your choices and conversations. Our platform embodies this concept, allowing you to create unique narrative branches as you interact with literary characters, explore different scenarios, and discover new perspectives within classic stories."
+    },
+    "subtitle": "Bridging the gap between classic literature and modern technology, Gaji brings beloved characters to life through AI-powered conversations.",
+    "mission": {
+      "title": "Our Mission",
+      "description": "To make classic literature accessible, engaging, and interactive for modern readers through innovative AI technology.",
+      "preserve": {
+        "title": "Preserve Literature",
+        "description": "By making classic literature appealing to be experienced by new generations in ways that resonate with modern audiences."
+      },
+      "community": {
+        "title": "Build Community",
+        "description": "Create a space for readers through shared conversations with characters, fostering discussions about themes, motivations, and interpretations."
+      },
+      "enhance": {
+        "title": "Enhance Understanding",
+        "description": "Deepen comprehension by engaging directly with characters, exploring their motivations, and asking questions about their worlds."
+      },
+      "innovate": {
+        "title": "Innovate Education",
+        "description": "Provide educators and students with powerful tools to explore literature in creative and personalized ways that fosters deeper learning."
+      }
+    },
+    "getStarted": {
+      "title": "Get Started in 4 Simple Steps",
+      "step1": {
+        "label": "STEP 1",
+        "title": "Search for a Character",
+        "description": "Use our search bar to find characters from your favorite books. We have hundreds of characters from classic literature ready to chat."
+      },
+      "step2": {
+        "label": "STEP 2",
+        "title": "Start a Conversation",
+        "description": "Begin chatting with the character in real-time. Ask questions, explore their motivations, or discuss themes from their story."
+      },
+      "step3": {
+        "label": "STEP 3",
+        "title": "Fork and Explore",
+        "description": "Create branches in your conversation to explore different topics. Each fork preserves the conversation history at that point."
+      },
+      "step4": {
+        "label": "STEP 4",
+        "title": "Share Your Insights",
+        "description": "Share favorite conversations with friends, classmates, or book clubs. Export conversations for essays or study materials."
+      }
+    }
+  },
+  "books": {
+    "title": "Browse Books",
+    "filters": {
+      "allGenres": "All Genres",
+      "romance": "Romance",
+      "fantasy": "Fantasy",
+      "mystery": "Mystery",
+      "sciFi": "Sci-Fi",
+      "horror": "Horror",
+      "adventure": "Adventure",
+      "historical": "Historical"
+    },
+    "sort": {
+      "latest": "Latest",
+      "recommended": "Recommended",
+      "popular": "Popular"
+    },
+    "count": {
+      "available": "books available",
+      "single": "book available"
+    },
+    "error": {
+      "failed": "Failed to load books. Please try again.",
+      "retry": "Retry"
+    },
+    "empty": "No books available yet. Check back soon!",
+    "emptyFiltered": "No books found for that genre. Try another filter.",
+    "actions": {
+      "like": "Like",
+      "unlike": "Unlike",
+      "viewBook": "View Book"
+    },
+    "stats": {
+      "scenarios": "Scenarios",
+      "conversations": "Conversations",
+      "likes": "Likes"
+    },
+    "detail": {
+      "loading": "Loading book details...",
+      "failed": "Failed to load book details",
+      "overview": "Overview",
+      "description": "Description",
+      "published": "Published",
+      "bookDetails": "Book Details",
+      "searchCharacters": "Search Characters",
+      "allCharacters": "All Characters",
+      "selectCharacter": "Select a character to create a scenario",
+      "createScenario": "Create Scenario",
+      "create": "Create",
+      "browseScenarios": "Browse Scenarios",
+      "noScenarios": "No scenarios available",
+      "scenariosAvailable": "scenarios available",
+      "backToBookList": "Go to Book List",
+      "byAuthorGenre": "by {author} • {genre}",
+      "selectCharacterButton": "Select Character",
+      "createCharacterScenario": "Create {name}"
+    },
+    "scenario": {
+      "createTitle": "Create New Scenario",
+      "createSubtitle": "Configure scenario settings for your conversation",
+      "changesTitle": "What changes do you want to make?",
+      "characterProperty": "Character Property",
+      "eventAlterations": "Event Alterations",
+      "settingModifications": "Setting Modifications",
+      "validationError": "Please provide at least one scenario type with 10+ characters",
+      "descriptionLabel": "Scenario Description (Optional)",
+      "descriptionPlaceholder": "Describe your scenario or add notes..."
+    }
+  },
+  "comments": {
+    "title": "Comments",
+    "placeholder": "Share your thoughts about this book...",
+    "post": "Post Comment",
+    "posting": "Posting...",
+    "loading": "Loading comments...",
+    "empty": "No comments yet. Be the first to share your thoughts!",
+    "loadMore": "Load More Comments",
+    "deleteTitle": "Delete Comment",
+    "deleteConfirm": "Are you sure you want to delete this comment? This action cannot be undone.",
+    "time": {
+      "justNow": "just now",
+      "ago": "{time} ago",
+      "m": "m",
+      "h": "h",
+      "d": "d"
+    },
+    "toast": {
+      "loadFailed": "Failed to load comments",
+      "lengthError": "Comment must be between 1 and 1000 characters",
+      "postSuccess": "Comment posted successfully",
+      "postFailed": "Failed to post comment",
+      "updateSuccess": "Comment updated successfully",
+      "updateFailed": "Failed to update comment",
+      "deleteSuccess": "Comment deleted successfully",
+      "deleteFailed": "Failed to delete comment"
+    }
+  },
+  "conversations": {
+    "title": "Browse Conversations",
+    "filters": {
+      "allGenres": "All Genres",
+      "romance": "Romance",
+      "classic": "Classic",
+      "genre": "Genre",
+      "adventure": "Adventure",
+      "dystopian": "Dystopian"
+    },
+    "sort": {
+      "latest": "Latest",
+      "recommended": "Recommended",
+      "popular": "Popular"
+    },
+    "count": {
+      "available": "conversations available"
+    },
+    "loading": "Loading conversations...",
+    "error": "Failed to load conversations.",
+    "empty": "No conversations found.",
+    "by": "by",
+    "unknown": {
+      "book": "Unknown Book",
+      "author": "Unknown Author"
+    },
+    "noDescription": "No description available for this conversation.",
+    "messageCount": "conversations",
+    "actions": {
+      "forkChat": "Fork Chat",
+      "goToBook": "Go to Book"
+    },
+    "tags": {
+      "character": "Character",
+      "situation": "Situation",
+      "event": "Event",
+      "romance": "Romance",
+      "classic": "Classic",
+      "dystopian": "Dystopian",
+      "political": "Political"
+    }
+  },
+  "common": {
+    "loading": "Loading...",
+    "error": "Error",
+    "retry": "Retry",
+    "close": "Close",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "save": "Save",
+    "delete": "Delete",
+    "edit": "Edit"
+  },
+  "pagination": {
+    "showing": "Showing",
+    "of": "of",
+    "books": "books",
+    "prev": "Prev",
+    "next": "Next"
+  },
+  "profile": {
+    "joinedAt": "Joined",
+    "follow": "Follow",
+    "unfollow": "Unfollow",
+    "editProfile": "Edit Profile",
+    "bio": "Bio",
+    "bioPlaceholder": "Tell us about yourself...",
+    "followers": "Followers",
+    "following": "Following",
+    "likedBooks": "Liked Books",
+    "likedConversations": "Liked Conversations",
+    "myConversations": "My Conversations",
+    "viewAll": "View All",
+    "noBio": "No bio available.",
+    "noBooks": "No liked books yet",
+    "noConversations": "No conversations yet",
+    "noFollowers": "No followers yet",
+    "noFollowing": "Not following anyone yet",
+    "deleteConfirm": "Are you sure you want to delete this?",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "unlike": "Unlike",
+    "book": "Book",
+    "conversation": "Conversation",
+    "character": "Character",
+    "likes": "Likes",
+    "createdAt": "Created",
+    "allMyConversations": "All My Conversations",
+    "loginRequired": "Please login to follow users",
+    "deleteFailed": "Failed to delete. Please try again.",
+    "bioUpdateFailed": "Failed to update bio. Please try again.",
+    "deleteSuccess": "Successfully deleted",
+    "unlikeSuccess": "Successfully unliked",
+    "unfollowSuccess": "Successfully unfollowed",
+    "bioUpdateSuccess": "Profile updated successfully",
+    "deleteConfirmation": "Delete Confirmation",
+    "unfollowUser": "Unfollow User",
+    "unlikeBook": "Unlike Book",
+    "deleteMessage": "Are you sure you want to delete this item?",
+    "unfollowMessage": "Are you sure you want to unfollow this user?",
+    "unlikeMessage": "Are you sure you want to unlike this book?"
+  },
+  "chat": {
+    "backToList": "Back to List",
+    "openConversationList": "Open conversation list",
+    "title": "Title",
+    "whatIf": "What If...",
+    "forkedFrom": "Forked From",
+    "liked": "Liked",
+    "like": "Like",
+    "alreadyForked": "Already forked conversation",
+    "forkedConversation": "Forked Conversation (Depth: {depth})",
+    "loadingMessages": "Loading messages...",
+    "startConversation": "Start a conversation",
+    "askAnything": "Ask the character anything",
+    "messageList": "Conversation message list",
+    "clickToViewMessages": "Click to view messages",
+    "unknownBook": "Unknown Book"
+  },
+  "searchPage": {
+    "searchPlaceholder": "Search for books, characters, conversations...",
+    "loginRequired": "Please login to use the search feature",
+    "tabs": {
+      "all": "All",
+      "book": "Book",
+      "conversation": "Conversation",
+      "user": "User"
+    },
+    "sections": {
+      "book": "Book",
+      "conversation": "Conversation",
+      "user": "User"
+    },
+    "loading": "Loading...",
+    "loginToFork": "Please login to fork a scenario",
+    "failedToLoadScenario": "Failed to load scenario details",
+    "scenarioForked": "🍴 Scenario forked! Redirecting...",
+    "loginToFollow": "Please login to follow users",
+    "follow": "Follow",
+    "unfollow": "Unfollow",
+    "noResults": {
+      "title": "No results found",
+      "description": "Try searching with different keywords"
+    },
+    "initialState": {
+      "title": "Start searching",
+      "description": "Search for books, characters, or conversations"
+    }
+  },
+  "login": {
+    "title": "Continue exploring story branches",
+    "subtitle": "Email or Username",
+    "emailLabel": "Email or Username",
+    "emailPlaceholder": "Enter your email or username",
+    "passwordLabel": "Password",
+    "passwordPlaceholder": "Enter your password",
+    "rememberMe": "Remember me",
+    "submit": "Login",
+    "submitting": "Logging in...",
+    "or": "or",
+    "newToGaji": "New to Gaji?",
+    "createAccount": "Create account",
+    "brandTitle": "Every story has infinite branches to explore",
+    "brandSubtitle": "Discover endless possibilities",
+    "errors": {
+      "emailRequired": "Email is required",
+      "emailInvalid": "Please enter a valid email address",
+      "passwordRequired": "Password is required",
+      "passwordLength": "Password must be at least 8 characters",
+      "loginFailed": "Login failed"
+    }
+  },
+  "register": {
+    "title": "Create your account",
+    "subtitle": "Join the community of story explorers",
+    "usernameLabel": "Username",
+    "usernamePlaceholder": "Choose a username",
+    "emailLabel": "Email",
+    "emailPlaceholder": "Enter your email",
+    "passwordLabel": "Password",
+    "passwordPlaceholder": "Create a password",
+    "confirmPasswordLabel": "Confirm Password",
+    "confirmPasswordPlaceholder": "Confirm your password",
+    "agreeToTerms": "I agree to the Terms of Service and Privacy Policy",
+    "submit": "Create Account",
+    "submitting": "Creating Account...",
+    "alreadyHaveAccount": "Already have an account?",
+    "login": "Login",
+    "brandTitle": "Join the Gaji Community",
+    "brandSubtitle": "Create, share, and explore stories with others",
+    "errors": {
+      "usernameRequired": "Username is required",
+      "usernameLength": "Username must be at least 3 characters",
+      "usernameInvalid": "Username can only contain letters, numbers, and underscores",
+      "emailRequired": "Email is required",
+      "emailInvalid": "Please enter a valid email address",
+      "passwordRequired": "Password is required",
+      "passwordLength": "Password must be at least 8 characters",
+      "passwordComplexity": "Password must contain uppercase, lowercase, and number",
+      "passwordMismatch": "Passwords do not match",
+      "registrationFailed": "Registration failed"
+    },
+    "passwordStrengthLabel": "Password strength:",
+    "passwordStrength": {
+      "weak": "Weak",
+      "medium": "Medium",
+      "strong": "Strong"
+    }
+  }
+}
