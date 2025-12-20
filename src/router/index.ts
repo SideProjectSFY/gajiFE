@@ -14,9 +14,6 @@ import ConversationChat from '@/views/ConversationChat.vue'
 import Profile from '@/views/Profile.vue'
 import ProfileEdit from '@/views/ProfileEdit.vue'
 import NotFound from '@/views/NotFound.vue'
-import ScenarioBrowsePage from '@/views/ScenarioBrowsePage.vue'
-import ScenarioDetailPage from '@/views/ScenarioDetailPage.vue'
-import ScenarioTreeTestPage from '@/views/ScenarioTreeTestPage.vue'
 import FollowerList from '@/views/FollowerList.vue'
 import FollowingList from '@/views/FollowingList.vue'
 import LikedConversations from '@/views/LikedConversations.vue'
@@ -72,18 +69,6 @@ const routes: RouteRecordRaw[] = [
     meta: { requiresAuth: false },
   },
   {
-    path: '/scenarios/browse',
-    name: 'ScenarioBrowse',
-    component: ScenarioBrowsePage,
-    meta: { requiresAuth: false },
-  },
-  {
-    path: '/scenarios/:id',
-    name: 'ScenarioDetail',
-    component: ScenarioDetailPage,
-    meta: { requiresAuth: true },
-  },
-  {
     path: '/conversations/:id',
     name: 'ConversationChat',
     component: ConversationChat,
@@ -118,12 +103,6 @@ const routes: RouteRecordRaw[] = [
     name: 'ProfileEdit',
     component: ProfileEdit,
     meta: { requiresAuth: true },
-  },
-  {
-    path: '/test/scenario-tree',
-    name: 'ScenarioTreeTest',
-    component: ScenarioTreeTestPage,
-    meta: { requiresAuth: false },
   },
   {
     path: '/404',
