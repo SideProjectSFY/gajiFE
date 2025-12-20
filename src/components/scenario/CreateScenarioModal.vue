@@ -25,11 +25,15 @@
       <form :class="css({ spaceY: '5' })" @submit.prevent="handleSubmit">
         <!-- Character Properties -->
         <div :class="css(formGroup)">
-          <label :class="css(formLabel)">
-            Character Properties
-            <span :class="css(requiredMark)">*</span>
-          </label>
+          <div :class="css(validationRow)">
+            <label :class="css(formLabel)" for="character-changes">
+              Character Properties
+              <span :class="css(requiredMark)">*</span>
+            </label>
+            <span :class="css(charCount)">{{ formData.characterChanges.length }}/10</span>
+          </div>
           <textarea
+            id="character-changes"
             v-model="formData.characterChanges"
             :class="css(formTextarea)"
             rows="4"
@@ -40,11 +44,15 @@
 
         <!-- Event Alterations -->
         <div :class="css(formGroup)">
-          <label :class="css(formLabel)">
-            Event Alterations
-            <span :class="css(requiredMark)">*</span>
-          </label>
+          <div :class="css(validationRow)">
+            <label :class="css(formLabel)" for="event-alterations">
+              Event Alterations
+              <span :class="css(requiredMark)">*</span>
+            </label>
+            <span :class="css(charCount)">{{ formData.eventAlterations.length }}/10</span>
+          </div>
           <textarea
+            id="event-alterations"
             v-model="formData.eventAlterations"
             :class="css(formTextarea)"
             rows="4"
@@ -55,11 +63,15 @@
 
         <!-- Setting Modifications -->
         <div :class="css(formGroup)">
-          <label :class="css(formLabel)">
-            Setting Modifications
-            <span :class="css(requiredMark)">*</span>
-          </label>
+          <div :class="css(validationRow)">
+            <label :class="css(formLabel)" for="setting-modifications">
+              Setting Modifications
+              <span :class="css(requiredMark)">*</span>
+            </label>
+            <span :class="css(charCount)">{{ formData.settingModifications.length }}/10</span>
+          </div>
           <textarea
+            id="setting-modifications"
             v-model="formData.settingModifications"
             :class="css(formTextarea)"
             rows="4"
@@ -70,14 +82,28 @@
 
         <!-- Description -->
         <div :class="css(formGroup)">
-          <label :class="css(formLabel)">Description (optional)</label>
+          <label :class="css(formLabel)" for="description">Description (optional)</label>
           <textarea
+            id="description"
             v-model="formData.description"
             :class="css(formTextarea)"
             rows="3"
             placeholder="Add additional details about your scenario..."
             data-testid="description-input"
           />
+        </div>
+
+        <!-- Validation Message -->
+        <div
+          v-if="
+            !hasAtLeastOneValidType &&
+            (formData.characterChanges ||
+              formData.eventAlterations ||
+              formData.settingModifications)
+          "
+          :class="css(validationMessage)"
+        >
+          Please provide at least one scenario type with 10+ characters
         </div>
 
         <!-- Actions -->
@@ -127,7 +153,7 @@ const emit = defineEmits<Emits>()
 const router = useRouter()
 const { success, error: showError } = useToast()
 
-const MIN_CHARS = 0
+const MIN_CHARS = 10
 const isSubmitting = ref(false)
 
 const formData = ref<CreateScenarioForm>({
@@ -146,9 +172,9 @@ const isSettingModificationsValid = computed(() => true)
 
 const hasAtLeastOneValidType = computed(() => {
   return (
-    formData.value.characterChanges.trim().length > 0 ||
-    formData.value.eventAlterations.trim().length > 0 ||
-    formData.value.settingModifications.trim().length > 0
+    formData.value.characterChanges.trim().length >= MIN_CHARS ||
+    formData.value.eventAlterations.trim().length >= MIN_CHARS ||
+    formData.value.settingModifications.trim().length >= MIN_CHARS
   )
 })
 
