@@ -8,7 +8,7 @@ describe('ChatInput', () => {
 
     expect(wrapper.find('[data-testid="chat-input-container"]').exists()).toBe(true)
     expect(wrapper.find('[data-testid="message-input"]').exists()).toBe(true)
-    expect(wrapper.find('[data-testid="send-button"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="send-message-button"]').exists()).toBe(true)
   })
 
   it('emits send event with message content', async () => {
@@ -16,7 +16,7 @@ describe('ChatInput', () => {
     const textarea = wrapper.find('[data-testid="message-input"]')
 
     await textarea.setValue('Hello, world!')
-    await wrapper.find('[data-testid="send-button"]').trigger('click')
+    await wrapper.find('[data-testid="send-message-button"]').trigger('click')
 
     expect(wrapper.emitted('send')).toBeTruthy()
     expect(wrapper.emitted('send')?.[0]).toEqual(['Hello, world!'])
@@ -25,7 +25,7 @@ describe('ChatInput', () => {
   it('does not emit send for empty message', async () => {
     const wrapper = mount(ChatInput)
 
-    await wrapper.find('[data-testid="send-button"]').trigger('click')
+    await wrapper.find('[data-testid="send-message-button"]').trigger('click')
 
     expect(wrapper.emitted('send')).toBeFalsy()
   })
@@ -64,7 +64,7 @@ describe('ChatInput', () => {
       props: { loading: true },
     })
 
-    expect(wrapper.find('[data-testid="send-button"]').attributes('aria-busy')).toBe('true')
+    expect(wrapper.find('[data-testid="send-message-button"]').attributes('aria-busy')).toBe('true')
   })
 
   it('shows loading placeholder when loading', () => {
@@ -82,7 +82,7 @@ describe('ChatInput', () => {
     const textarea = wrapper.find('[data-testid="message-input"]')
     expect(textarea.attributes('aria-label')).toBeDefined()
 
-    const button = wrapper.find('[data-testid="send-button"]')
+    const button = wrapper.find('[data-testid="send-message-button"]')
     expect(button.attributes('aria-label')).toBeDefined()
   })
 })
