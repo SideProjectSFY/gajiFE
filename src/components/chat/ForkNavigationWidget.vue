@@ -356,7 +356,13 @@ const styles = {
   <nav v-else-if="forkRelationship" :class="styles.widget" :aria-label="messages.navigationLabel">
     <!-- Forked conversation: Show parent link -->
     <template v-if="isFork && hasParent">
-      <span :class="styles.icon" aria-hidden="true">🌿</span>
+      <img
+        src="/Logo.svg"
+        alt=""
+        :class="styles.icon"
+        aria-hidden="true"
+        style="width: 1em; height: 1em"
+      />
       <span>{{ messages.forkedFrom }}</span>
       <a
         data-testid="parent-conversation-link"
