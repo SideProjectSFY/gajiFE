@@ -27,11 +27,12 @@ export const commentApi = {
    * Get paginated comments for a book
    * @param bookId - Book UUID
    * @param page - Page number (0-indexed)
+   * @param size - Page size (default: 10)
    * @returns Page of comments sorted by newest first
    */
-  async getComments(bookId: string, page: number = 0): Promise<CommentPage> {
+  async getComments(bookId: string, page: number = 0, size: number = 10): Promise<CommentPage> {
     const response = await api.get<CommentPage>(`/books/${bookId}/comments`, {
-      params: { page },
+      params: { page, size },
     })
     return response.data
   },
