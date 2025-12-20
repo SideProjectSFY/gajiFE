@@ -26,8 +26,8 @@ describe('BookCard.vue', () => {
     expect(wrapper.find('.book-card__title').text()).toBe('Pride and Prejudice')
     expect(wrapper.find('.book-card__author').text()).toBe('Jane Austen')
     expect(wrapper.find('.book-card__genre').text()).toBe('Romance')
-    expect(wrapper.text()).toContain('24 scenarios')
-    expect(wrapper.text()).toContain('156 conversations')
+    expect(wrapper.text()).toContain('24 Scenarios')
+    expect(wrapper.text()).toContain('156 Conversations')
   })
 
   it('displays cover image when available', () => {
