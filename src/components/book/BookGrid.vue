@@ -24,6 +24,7 @@
         v-for="book in books"
         :key="book.id"
         :book="book"
+        :initial-liked="book.isLiked"
         @click="handleBookClick"
         @like="handleLike"
       />
