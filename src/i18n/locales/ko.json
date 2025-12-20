@@ -1,0 +1,401 @@
+{
+  "nav": {
+    "about": "소개",
+    "books": "책",
+    "conversations": "대화",
+    "search": "검색",
+    "login": "로그인",
+    "signup": "회원가입",
+    "profile": "프로필",
+    "logout": "로그아웃"
+  },
+  "search": {
+    "placeholder": "책, 대화 검색...",
+    "ariaLabel": "책, 대화 검색",
+    "allBooks": "모든 책 검색"
+  },
+  "notFound": {
+    "title": "길을 잃으셨나요?",
+    "description": "찾으시는 페이지는 존재하지 않는 시나리오입니다.<br />이야기의 가지가 여기서 끊겼거나, 아직 자라나지 않은 것 같아요.",
+    "goHome": "메인 스토리로 돌아가기",
+    "findNewStory": "새로운 이야기 찾기"
+  },
+  "language": {
+    "korean": "한국어",
+    "english": "English"
+  },
+  "home": {
+    "title": "Gaji",
+    "whatIsGaji": "\"Gaji\" 의미는?",
+    "hotTopics": "인기 토픽",
+    "topics": {
+      "newShortStory": "좋아하는 작가의 새로운 단편 작품 공개",
+      "winterChallenge": "#겨울과 너의 시작들 독서 챌린지",
+      "readingExperience": "작품이 선실에게 말하며 읽힌다 경험 서비스 시작",
+      "realityStories": "실재와 어이사를 오가는 이야기들",
+      "copyrightNovel": "저작권도 무슨 포리스 노벨 버전",
+      "virtualReality": "가상과 현실 오가 이야기"
+    }
+  },
+  "about": {
+    "breadcrumb": {
+      "home": "홈",
+      "about": "소개"
+    },
+    "title": "Gaji 소개",
+    "whatIsGaji": {
+      "title": "\"Gaji\"의 의미는? 🌿",
+      "description": "\"Gaji\" (가지)는 한국어로 <strong>\"가지\"</strong>를 의미합니다. 나무가 많은 가지를 뻗듯이, 각 이야기는 당신의 선택과 대화에 따라 무수히 많은 방향으로 갈라질 수 있습니다. 우리 플랫폼은 이 개념을 구현하여, 당신이 문학 작품 속 캐릭터와 상호작용하고, 다양한 시나리오를 탐험하며, 고전 이야기 속에서 새로운 관점을 발견할 수 있도록 합니다."
+    },
+    "subtitle": "고전 문학과 현대 기술의 간극을 메우며, Gaji는 AI 기반 대화를 통해 사랑받는 캐릭터들을 생생하게 되살립니다.",
+    "mission": {
+      "title": "우리의 미션",
+      "description": "혁신적인 AI 기술을 통해 고전 문학을 현대 독자들에게 접근 가능하고, 매력적이며, 상호작용 가능하게 만드는 것입니다.",
+      "preserve": {
+        "title": "문학 보존",
+        "description": "고전 문학을 현대 관객들에게 공감할 수 있는 방식으로 새로운 세대가 경험할 수 있도록 매력적으로 만듭니다."
+      },
+      "community": {
+        "title": "커뮤니티 구축",
+        "description": "캐릭터와의 공유된 대화를 통해 독자들을 위한 공간을 만들고, 주제, 동기, 해석에 대한 토론을 촉진합니다."
+      },
+      "enhance": {
+        "title": "이해 증진",
+        "description": "캐릭터와 직접 대화하고, 그들의 동기를 탐구하며, 그들의 세계에 대한 질문을 통해 이해를 깊게 합니다."
+      },
+      "innovate": {
+        "title": "교육 혁신",
+        "description": "교육자와 학생들에게 창의적이고 개인화된 방식으로 문학을 탐험할 수 있는 강력한 도구를 제공하여 더 깊은 학습을 촉진합니다."
+      }
+    },
+    "getStarted": {
+      "title": "4가지 간단한 단계로 시작하기",
+      "step1": {
+        "label": "1단계",
+        "title": "캐릭터 검색",
+        "description": "검색창을 사용하여 좋아하는 책의 캐릭터를 찾아보세요. 고전 문학에서 수백 명의 캐릭터가 채팅할 준비가 되어 있습니다."
+      },
+      "step2": {
+        "label": "2단계",
+        "title": "대화 시작",
+        "description": "실시간으로 캐릭터와 채팅을 시작하세요. 질문을 하거나, 그들의 동기를 탐구하거나, 이야기의 주제에 대해 토론하세요."
+      },
+      "step3": {
+        "label": "3단계",
+        "title": "포크 및 탐험",
+        "description": "대화에 가지를 만들어 다양한 주제를 탐험하세요. 각 포크는 그 시점의 대화 기록을 보존합니다."
+      },
+      "step4": {
+        "label": "4단계",
+        "title": "인사이트 공유",
+        "description": "친구, 반 친구, 독서 클럽과 좋아하는 대화를 공유하세요. 에세이나 학습 자료를 위해 대화를 내보내세요."
+      }
+    }
+  },
+  "books": {
+    "title": "책 둘러보기",
+    "filters": {
+      "allGenres": "모든 장르",
+      "romance": "로맨스",
+      "fantasy": "판타지",
+      "mystery": "미스터리",
+      "sciFi": "SF",
+      "horror": "호러",
+      "adventure": "모험",
+      "historical": "역사"
+    },
+    "sort": {
+      "latest": "최신순",
+      "recommended": "추천순",
+      "popular": "인기순"
+    },
+    "count": {
+      "available": "권의 책 이용 가능",
+      "single": "권의 책 이용 가능"
+    },
+    "error": {
+      "failed": "책을 불러오는데 실패했습니다. 다시 시도해주세요.",
+      "retry": "재시도"
+    },
+    "empty": "아직 이용 가능한 책이 없습니다. 곧 다시 확인해주세요!",
+    "emptyFiltered": "해당 장르의 책을 찾을 수 없습니다. 다른 필터를 시도해보세요.",
+    "actions": {
+      "like": "좋아요",
+      "unlike": "좋아요 취소",
+      "viewBook": "책 보기"
+    },
+    "stats": {
+      "scenarios": "시나리오",
+      "conversations": "대화",
+      "likes": "좋아요"
+    },
+    "detail": {
+      "loading": "책 세부 정보를 불러오는 중...",
+      "failed": "책 세부 정보를 불러오는데 실패했습니다",
+      "overview": "개요",
+      "description": "설명",
+      "published": "출판일",
+      "bookDetails": "책 세부 정보",
+      "searchCharacters": "캐릭터 검색",
+      "allCharacters": "모든 캐릭터",
+      "selectCharacter": "캐릭터를 선택하여 시나리오를 만드세요",
+      "createScenario": "시나리오 만들기",
+      "create": "만들기",
+      "browseScenarios": "시나리오 둘러보기",
+      "noScenarios": "사용 가능한 시나리오가 없습니다",
+      "scenariosAvailable": "개의 시나리오 이용 가능",
+      "backToBookList": "책 목록으로 돌아가기",
+      "byAuthorGenre": "{author} 지음 • {genre}",
+      "selectCharacterButton": "캐릭터 선택",
+      "createCharacterScenario": "{name} 시나리오 생성"
+    },
+    "scenario": {
+      "createTitle": "새 시나리오 만들기",
+      "createSubtitle": "대화를 위한 시나리오 설정을 구성하세요",
+      "changesTitle": "어떤 변화를 주고 싶으신가요?",
+      "characterProperty": "캐릭터 속성",
+      "eventAlterations": "사건 변경",
+      "settingModifications": "배경 수정",
+      "validationError": "최소 하나의 시나리오 유형에 10자 이상 입력해주세요",
+      "descriptionLabel": "시나리오 설명 (선택사항)",
+      "descriptionPlaceholder": "시나리오를 설명하거나 메모를 추가하세요..."
+    }
+  },
+  "comments": {
+    "title": "댓글",
+    "placeholder": "이 책에 대한 생각을 공유해주세요...",
+    "post": "댓글 작성",
+    "posting": "작성 중...",
+    "loading": "댓글을 불러오는 중...",
+    "empty": "아직 댓글이 없습니다. 첫 번째로 생각을 공유해보세요!",
+    "loadMore": "댓글 더 보기",
+    "deleteTitle": "댓글 삭제",
+    "deleteConfirm": "정말 이 댓글을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.",
+    "time": {
+      "justNow": "방금 전",
+      "ago": "{time} 전",
+      "m": "분",
+      "h": "시간",
+      "d": "일"
+    },
+    "toast": {
+      "loadFailed": "댓글을 불러오는데 실패했습니다",
+      "lengthError": "댓글은 1자 이상 1000자 이하여야 합니다",
+      "postSuccess": "댓글이 성공적으로 작성되었습니다",
+      "postFailed": "댓글 작성에 실패했습니다",
+      "updateSuccess": "댓글이 성공적으로 수정되었습니다",
+      "updateFailed": "댓글 수정에 실패했습니다",
+      "deleteSuccess": "댓글이 성공적으로 삭제되었습니다",
+      "deleteFailed": "댓글 삭제에 실패했습니다"
+    }
+  },
+  "conversations": {
+    "title": "대화 둘러보기",
+    "filters": {
+      "allGenres": "모든 장르",
+      "romance": "로맨스",
+      "classic": "고전",
+      "genre": "장르",
+      "adventure": "모험",
+      "dystopian": "디스토피아"
+    },
+    "sort": {
+      "latest": "최신순",
+      "recommended": "추천순",
+      "popular": "인기순"
+    },
+    "count": {
+      "available": "개의 대화 이용 가능"
+    },
+    "loading": "대화를 불러오는 중...",
+    "error": "대화를 불러오는데 실패했습니다.",
+    "empty": "대화를 찾을 수 없습니다.",
+    "by": "저자:",
+    "unknown": {
+      "book": "알 수 없는 책",
+      "author": "알 수 없는 저자"
+    },
+    "noDescription": "이 대화에 대한 설명이 없습니다.",
+    "messageCount": "대화",
+    "actions": {
+      "forkChat": "채팅 포크",
+      "goToBook": "책으로 이동"
+    },
+    "tags": {
+      "character": "캐릭터",
+      "situation": "상황",
+      "event": "이벤트",
+      "romance": "로맨스",
+      "classic": "고전",
+      "dystopian": "디스토피아",
+      "political": "정치"
+    }
+  },
+  "common": {
+    "loading": "로딩 중...",
+    "error": "오류",
+    "retry": "재시도",
+    "close": "닫기",
+    "cancel": "취소",
+    "confirm": "확인",
+    "save": "저장",
+    "delete": "삭제",
+    "edit": "수정"
+  },
+  "pagination": {
+    "showing": "표시 중",
+    "of": "중",
+    "books": "권의 책",
+    "prev": "이전",
+    "next": "다음"
+  },
+  "profile": {
+    "joinedAt": "가입일",
+    "follow": "팔로우",
+    "unfollow": "언팔로우",
+    "editProfile": "프로필 수정",
+    "bio": "소개",
+    "bioPlaceholder": "자기소개를 입력해주세요...",
+    "followers": "팔로워",
+    "following": "팔로잉",
+    "likedBooks": "좋아요한 책",
+    "likedConversations": "좋아요한 대화",
+    "myConversations": "내 대화",
+    "viewAll": "전체 보기",
+    "noBio": "소개가 없습니다.",
+    "noBooks": "좋아요한 책이 없습니다",
+    "noConversations": "대화가 없습니다",
+    "noFollowers": "팔로워가 없습니다",
+    "noFollowing": "팔로잉이 없습니다",
+    "deleteConfirm": "정말 삭제하시겠습니까?",
+    "cancel": "취소",
+    "delete": "삭제",
+    "unlike": "좋아요 취소",
+    "book": "책",
+    "conversation": "대화",
+    "character": "캐릭터",
+    "likes": "좋아요",
+    "createdAt": "생성일",
+    "allMyConversations": "모든 내 대화",
+    "loginRequired": "팔로우하려면 로그인이 필요합니다",
+    "deleteFailed": "삭제에 실패했습니다. 다시 시도해주세요.",
+    "bioUpdateFailed": "프로필 업데이트에 실패했습니다. 다시 시도해주세요.",
+    "deleteSuccess": "성공적으로 삭제되었습니다",
+    "unlikeSuccess": "좋아요가 취소되었습니다",
+    "unfollowSuccess": "언팔로우되었습니다",
+    "bioUpdateSuccess": "프로필이 업데이트되었습니다",
+    "deleteConfirmation": "삭제 확인",
+    "unfollowUser": "사용자 언팔로우",
+    "unlikeBook": "책 좋아요 취소",
+    "deleteMessage": "정말로 이 항목을 삭제하시겠습니까?",
+    "unfollowMessage": "정말로 이 사용자를 언팔로우하시겠습니까?",
+    "unlikeMessage": "정말로 이 책의 좋아요를 취소하시겠습니까?"
+  },
+  "chat": {
+    "backToList": "목록으로 돌아가기",
+    "openConversationList": "대화 목록 열기",
+    "title": "제목",
+    "whatIf": "What If...",
+    "forkedFrom": "분기된 원본",
+    "liked": "좋아요함",
+    "like": "좋아요",
+    "alreadyForked": "이미 분기된 대화입니다",
+    "forkedConversation": "분기된 대화 (깊이: {depth})",
+    "loadingMessages": "메시지를 불러오는 중...",
+    "startConversation": "대화를 시작해보세요",
+    "askAnything": "캐릭터에게 무엇이든 물어보세요",
+    "messageList": "대화 메시지 목록",
+    "clickToViewMessages": "클릭하여 메시지 보기",
+    "unknownBook": "알 수 없는 책"
+  },
+  "searchPage": {
+    "searchPlaceholder": "책, 캐릭터, 대화 검색...",
+    "loginRequired": "검색 기능을 사용하려면 로그인이 필요합니다",
+    "tabs": {
+      "all": "전체",
+      "book": "책",
+      "conversation": "대화",
+      "user": "사용자"
+    },
+    "sections": {
+      "book": "책",
+      "conversation": "대화",
+      "user": "사용자"
+    },
+    "loading": "로딩 중...",
+    "loginToFork": "시나리오를 포크하려면 로그인하세요",
+    "failedToLoadScenario": "시나리오 세부 정보를 불러오는데 실패했습니다",
+    "scenarioForked": "🍴 시나리오가 포크되었습니다! 리다이렉트 중...",
+    "loginToFollow": "사용자를 팔로우하려면 로그인하세요",
+    "follow": "팔로우",
+    "unfollow": "언팔로우",
+    "noResults": {
+      "title": "검색 결과가 없습니다",
+      "description": "다른 키워드로 검색해보세요"
+    },
+    "initialState": {
+      "title": "검색을 시작하세요",
+      "description": "책, 캐릭터 또는 대화를 검색하세요"
+    }
+  },
+  "login": {
+    "title": "이야기의 가지를 계속 탐험하세요",
+    "subtitle": "이메일 또는 사용자 이름",
+    "emailLabel": "이메일 또는 사용자 이름",
+    "emailPlaceholder": "이메일 또는 사용자 이름을 입력하세요",
+    "passwordLabel": "비밀번호",
+    "passwordPlaceholder": "비밀번호를 입력하세요",
+    "rememberMe": "로그인 유지",
+    "submit": "로그인",
+    "submitting": "로그인 중...",
+    "or": "또는",
+    "newToGaji": "Gaji가 처음이신가요?",
+    "createAccount": "계정 만들기",
+    "brandTitle": "모든 이야기에는 탐험할 수 있는 무한한 가지가 있습니다",
+    "brandSubtitle": "끝없는 가능성을 발견하세요",
+    "errors": {
+      "emailRequired": "이메일을 입력해주세요",
+      "emailInvalid": "유효한 이메일 주소를 입력해주세요",
+      "passwordRequired": "비밀번호를 입력해주세요",
+      "passwordLength": "비밀번호는 최소 8자 이상이어야 합니다",
+      "loginFailed": "로그인에 실패했습니다"
+    }
+  },
+  "register": {
+    "title": "계정 만들기",
+    "subtitle": "이야기 탐험가 커뮤니티에 참여하세요",
+    "usernameLabel": "사용자 이름",
+    "usernamePlaceholder": "사용자 이름을 선택하세요",
+    "emailLabel": "이메일",
+    "emailPlaceholder": "이메일을 입력하세요",
+    "passwordLabel": "비밀번호",
+    "passwordPlaceholder": "비밀번호를 생성하세요",
+    "confirmPasswordLabel": "비밀번호 확인",
+    "confirmPasswordPlaceholder": "비밀번호를 다시 입력하세요",
+    "agreeToTerms": "서비스 약관 및 개인정보 처리방침에 동의합니다",
+    "submit": "계정 만들기",
+    "submitting": "계정 생성 중...",
+    "alreadyHaveAccount": "이미 계정이 있으신가요?",
+    "login": "로그인",
+    "brandTitle": "Gaji 커뮤니티에 참여하세요",
+    "brandSubtitle": "다른 사람들과 이야기를 만들고, 공유하고, 탐험하세요",
+    "errors": {
+      "usernameRequired": "사용자 이름을 입력해주세요",
+      "usernameLength": "사용자 이름은 최소 3자 이상이어야 합니다",
+      "usernameInvalid": "사용자 이름은 문자, 숫자, 밑줄만 포함할 수 있습니다",
+      "emailRequired": "이메일을 입력해주세요",
+      "emailInvalid": "유효한 이메일 주소를 입력해주세요",
+      "passwordRequired": "비밀번호를 입력해주세요",
+      "passwordLength": "비밀번호는 최소 8자 이상이어야 합니다",
+      "passwordComplexity": "비밀번호는 대문자, 소문자, 숫자를 포함해야 합니다",
+      "passwordMismatch": "비밀번호가 일치하지 않습니다",
+      "registrationFailed": "회원가입에 실패했습니다"
+    },
+    "passwordStrengthLabel": "비밀번호 강도:",
+    "passwordStrength": {
+      "weak": "약함",
+      "medium": "보통",
+      "strong": "강함"
+    }
+  }
+}
