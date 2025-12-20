@@ -66,10 +66,7 @@ describe('Profile.vue Interactions', () => {
     await flushPromises()
 
     // 1. Open "All Following" modal
-    // Find the "Following List" section and click "View All"
-    // Since there are multiple "View All" buttons, we need to find the one for Following List
-    // We can look for the section header "Following List" and then find the button nearby
-    const followingSection = wrapper.findAll('h2').find((h) => h.text() === 'Following List')
+    const followingSection = wrapper.findAll('h2').find((h) => h.text() === 'Following')
     expect(followingSection).toBeDefined()
 
     // The button is a sibling or in the same container.
@@ -85,8 +82,8 @@ describe('Profile.vue Interactions', () => {
     // Let's look at the structure:
     // <div> <h2>Following List</h2> <button>View All</button> </div>
     const viewAllButtons = wrapper.findAll('button').filter((b) => b.text() === 'View All')
-    // Assuming the order: Like Book List, Following List, Follower List
-    await viewAllButtons[1].trigger('click')
+    // Assuming the order: Like Book List, Liked Conversations, Following List, Follower List
+    await viewAllButtons[2].trigger('click')
 
     // 2. Check if modal is open
     expect(wrapper.text()).toContain('All Following')
@@ -101,7 +98,7 @@ describe('Profile.vue Interactions', () => {
     expect(wrapper.text()).toContain('Are you sure you want to unfollow this user?')
 
     // 5. Confirm Unfollow
-    const deleteButton = wrapper.findAll('button').find((b) => b.text() === 'Delete')
+    const deleteButton = wrapper.findAll('button').find((b) => b.text() === 'Unfollow')
     expect(deleteButton).toBeDefined()
     await deleteButton?.trigger('click')
 
@@ -131,7 +128,7 @@ describe('Profile.vue Interactions', () => {
     expect(wrapper.text()).toContain('Are you sure you want to unlike this book?')
 
     // 5. Confirm Unlike
-    const deleteButton = wrapper.findAll('button').find((b) => b.text() === 'Delete')
+    const deleteButton = wrapper.findAll('button').find((b) => b.text() === 'Unlike')
     expect(deleteButton).toBeDefined()
     await deleteButton?.trigger('click')
 
