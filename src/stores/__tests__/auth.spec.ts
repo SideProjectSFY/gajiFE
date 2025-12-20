@@ -31,7 +31,9 @@ describe('Auth Store', () => {
     it('should register user successfully', async () => {
       const mockResponse = {
         data: {
-          user: { id: '1', username: 'testuser', email: 'test@test.com' },
+          userId: '1',
+          username: 'testuser',
+          email: 'test@test.com',
           accessToken: 'access-token',
           refreshToken: 'refresh-token',
         },
@@ -43,7 +45,11 @@ describe('Auth Store', () => {
       const result = await store.register('testuser', 'test@test.com', 'Password123')
 
       expect(result.success).toBe(true)
-      expect(store.user).toEqual(mockResponse.data.user)
+      expect(store.user).toEqual({
+        id: mockResponse.data.userId,
+        username: mockResponse.data.username,
+        email: mockResponse.data.email,
+      })
       expect(store.accessToken).toBe('access-token')
       expect(store.refreshToken).toBe('refresh-token')
       expect(store.isAuthenticated).toBe(true)
@@ -81,7 +87,9 @@ describe('Auth Store', () => {
     it('should login user successfully', async () => {
       const mockResponse = {
         data: {
-          user: { id: '1', username: 'testuser', email: 'test@test.com' },
+          userId: '1',
+          username: 'testuser',
+          email: 'test@test.com',
           accessToken: 'access-token',
           refreshToken: 'refresh-token',
         },
@@ -93,7 +101,11 @@ describe('Auth Store', () => {
       const result = await store.login('test@test.com', 'Password123')
 
       expect(result.success).toBe(true)
-      expect(store.user).toEqual(mockResponse.data.user)
+      expect(store.user).toEqual({
+        id: mockResponse.data.userId,
+        username: mockResponse.data.username,
+        email: mockResponse.data.email,
+      })
       expect(store.accessToken).toBe('access-token')
       expect(store.refreshToken).toBe('refresh-token')
       expect(store.isAuthenticated).toBe(true)
@@ -102,7 +114,9 @@ describe('Auth Store', () => {
     it('should login with rememberMe flag', async () => {
       const mockResponse = {
         data: {
-          user: { id: '1', username: 'testuser', email: 'test@test.com' },
+          userId: '1',
+          username: 'testuser',
+          email: 'test@test.com',
           accessToken: 'access-token',
           refreshToken: 'refresh-token',
         },
@@ -141,11 +155,15 @@ describe('Auth Store', () => {
   describe('Refresh Access Token', () => {
     it('should refresh access token successfully', async () => {
       const store = useAuthStore()
-      store.refreshToken = 'old-refresh-token'
+      // store.refreshToken = 'old-refresh-token' // No longer needed as we use cookies
 
       const mockResponse = {
         data: {
+          userId: '1',
+          username: 'testuser',
+          email: 'test@test.com',
           accessToken: 'new-access-token',
+          refreshToken: 'new-refresh-token',
         },
       }
 
@@ -155,19 +173,10 @@ describe('Auth Store', () => {
 
       expect(result).toBe(true)
       expect(store.accessToken).toBe('new-access-token')
-      expect(api.post).toHaveBeenCalledWith('/auth/refresh', {
-        refreshToken: 'old-refresh-token',
-      })
+      expect(api.post).toHaveBeenCalledWith('/auth/refresh')
     })
 
-    it('should return false if no refresh token', async () => {
-      const store = useAuthStore()
-
-      const result = await store.refreshAccessToken()
-
-      expect(result).toBe(false)
-      expect(api.post).not.toHaveBeenCalled()
-    })
+    // Removed "should return false if no refresh token" because we rely on cookies now
 
     it('should logout on refresh failure', async () => {
       const store = useAuthStore()
@@ -201,9 +210,7 @@ describe('Auth Store', () => {
       expect(store.accessToken).toBeNull()
       expect(store.refreshToken).toBeNull()
       expect(store.isAuthenticated).toBe(false)
-      expect(api.post).toHaveBeenCalledWith('/auth/logout', {
-        refreshToken: 'refresh-token',
-      })
+      expect(api.post).toHaveBeenCalledWith('/auth/logout')
     })
 
     it('should clear tokens even if logout API fails', async () => {
@@ -228,10 +235,10 @@ describe('Auth Store', () => {
 
       expect(store.isAuthenticated).toBe(false)
 
-      store.accessToken = 'access-token'
+      store.user = { id: '1', username: 'testuser', email: 'test@test.com' }
       expect(store.isAuthenticated).toBe(true)
 
-      store.accessToken = null
+      store.user = null
       expect(store.isAuthenticated).toBe(false)
     })
 
