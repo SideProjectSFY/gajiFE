@@ -34,7 +34,7 @@ api.interceptors.request.use(
   }
 )
 
-// Response interceptor - Handle 401 and token refresh
+// Response interceptor - Handle 401, 403 and token refresh
 api.interceptors.response.use(
   (response: AxiosResponse) => {
     return response
@@ -64,6 +64,28 @@ api.interceptors.response.use(
         if (window.location.pathname !== '/login') {
           window.location.href = '/login'
         }
+      }
+    }
+
+    // Handle 403 errors (forbidden) - clear auth and redirect to login
+    if (error.response?.status === 403) {
+      const authStore = useAuthStore()
+      console.log('[API] 403 Forbidden - clearing auth and redirecting to login')
+      authStore.logout()
+
+      // Only redirect if not already on login page
+      if (window.location.pathname !== '/login') {
+        window.location.href = '/login'
+      }
+    }
+
+    // Handle 404 errors (not found) - redirect to 404 page
+    if (error.response?.status === 404) {
+      console.log('[API] 404 Not Found - redirecting to 404 page')
+      // Use dynamic import to avoid circular dependency
+      const router = (await import('@/router')).default
+      if (router.currentRoute.value.name !== 'NotFound') {
+        router.push('/404')
       }
     }
 
