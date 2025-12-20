@@ -27,11 +27,10 @@ describe('BookFilterBar.vue', () => {
     const sortSelect = wrapper.find('#sort-filter')
     const options = sortSelect.findAll('option')
 
-    expect(options.length).toBe(4)
-    expect(options[0].text()).toBe('Most Scenarios')
-    expect(options[1].text()).toBe('Most Conversations')
-    expect(options[2].text()).toBe('Newest Books')
-    expect(options[3].text()).toBe('Alphabetical (A-Z)')
+    expect(options.length).toBe(3)
+    expect(options[0].text()).toBe('Latest')
+    expect(options[1].text()).toBe('Recommended')
+    expect(options[2].text()).toBe('Popular')
   })
 
   it('emits filterChange when genre is changed', async () => {
@@ -55,7 +54,7 @@ describe('BookFilterBar.vue', () => {
     const wrapper = mount(BookFilterBar)
 
     const sortSelect = wrapper.find('#sort-filter')
-    await sortSelect.setValue('conversations')
+    await sortSelect.setValue('popular')
 
     // Wait for debounce (300ms)
     await new Promise((resolve) => setTimeout(resolve, 350))
@@ -65,14 +64,14 @@ describe('BookFilterBar.vue', () => {
       genre: string
       sort: string
     }
-    expect(emittedValue.sort).toBe('conversations')
+    expect(emittedValue.sort).toBe('popular')
   })
 
   it('initializes with provided initial values', () => {
     const wrapper = mount(BookFilterBar, {
       props: {
         initialGenre: 'Sci-Fi',
-        initialSort: 'newest',
+        initialSort: 'latest',
       },
     })
 
@@ -80,7 +79,7 @@ describe('BookFilterBar.vue', () => {
     const sortSelect = wrapper.find('#sort-filter')
 
     expect((genreSelect.element as HTMLSelectElement).value).toBe('Sci-Fi')
-    expect((sortSelect.element as HTMLSelectElement).value).toBe('newest')
+    expect((sortSelect.element as HTMLSelectElement).value).toBe('latest')
   })
 
   it('is mobile responsive with proper styling', () => {
