@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { css } from 'styled-system/css'
 import { useToast } from '@/composables/useToast'
 import { useAuthStore } from '@/stores/auth'
@@ -11,6 +12,7 @@ interface Props {
 }
 
 const props = defineProps<Props>()
+const { t, locale } = useI18n()
 const toast = useToast()
 const authStore = useAuthStore()
 
@@ -39,7 +41,7 @@ const isEditContentValid = computed(
 const loadComments = async (page: number = 0) => {
   try {
     loading.value = true
-    const response: CommentPage = await commentApi.getComments(props.bookId, page)
+    const response: CommentPage = await commentApi.getComments(props.bookId, page, 10)
 
     if (page === 0) {
       comments.value = response.content
@@ -50,7 +52,7 @@ const loadComments = async (page: number = 0) => {
     currentPage.value = page
     hasMorePages.value = !response.last
   } catch (error) {
-    toast.error('Failed to load comments')
+    toast.error(t('comments.toast.loadFailed'))
   } finally {
     loading.value = false
   }
@@ -58,7 +60,7 @@ const loadComments = async (page: number = 0) => {
 
 const createComment = async () => {
   if (!isContentValid.value) {
-    toast.warning('Comment must be between 1 and 1000 characters')
+    toast.warning(t('comments.toast.lengthError'))
     return
   }
 
@@ -72,9 +74,9 @@ const createComment = async () => {
     comments.value.unshift(newComment)
     newCommentContent.value = ''
 
-    toast.success('Comment posted successfully')
+    toast.success(t('comments.toast.postSuccess'))
   } catch (error: any) {
-    toast.error(error.response?.data?.message || 'Failed to post comment')
+    toast.error(error.response?.data?.message || t('comments.toast.postFailed'))
   } finally {
     submitting.value = false
   }
@@ -92,7 +94,7 @@ const cancelEdit = () => {
 
 const saveEdit = async (commentId: string) => {
   if (!isEditContentValid.value) {
-    toast.warning('Comment must be between 1 and 1000 characters')
+    toast.warning(t('comments.toast.lengthError'))
     return
   }
 
@@ -109,9 +111,9 @@ const saveEdit = async (commentId: string) => {
 
     cancelEdit()
 
-    toast.success('Comment updated successfully')
+    toast.success(t('comments.toast.updateSuccess'))
   } catch (error: any) {
-    toast.success(error.response?.data?.message || 'Failed to update comment')
+    toast.success(error.response?.data?.message || t('comments.toast.updateFailed'))
   }
 }
 
@@ -135,9 +137,9 @@ const deleteComment = async () => {
     comments.value = comments.value.filter((c) => c.id !== commentId)
 
     cancelDelete()
-    toast.success('Comment deleted successfully')
+    toast.success(t('comments.toast.deleteSuccess'))
   } catch (error: any) {
-    toast.success(error.response?.data?.message || 'Failed to delete comment')
+    toast.success(error.response?.data?.message || t('comments.toast.deleteFailed'))
   }
 }
 
@@ -151,12 +153,23 @@ const formatDate = (dateString: string) => {
   const diffMs = now.getTime() - date.getTime()
   const diffMins = Math.floor(diffMs / 60000)
 
-  if (diffMins < 1) return 'just now'
-  if (diffMins < 60) return `${diffMins}m ago`
-  if (diffMins < 1440) return `${Math.floor(diffMins / 60)}h ago`
-  if (diffMins < 10080) return `${Math.floor(diffMins / 1440)}d ago`
+  if (diffMins < 1) return t('comments.time.justNow')
+  if (diffMins < 60) return t('comments.time.ago', { time: `${diffMins}${t('comments.time.m')}` })
+  if (diffMins < 1440)
+    return t('comments.time.ago', { time: `${Math.floor(diffMins / 60)}${t('comments.time.h')}` })
+  if (diffMins < 10080)
+    return t('comments.time.ago', {
+      time: `${Math.floor(diffMins / 1440)}${t('comments.time.d')}`,
+    })
 
-  return date.toLocaleDateString()
+  return new Intl.DateTimeFormat(locale.value, {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    timeZone: 'Asia/Seoul',
+  }).format(date)
 }
 
 // Lifecycle
@@ -186,7 +199,7 @@ onMounted(() => {
         })
       "
     >
-      💬 Comments
+      💬 {{ t('comments.title') }}
     </h2>
 
     <!-- Comment Form - Only for authenticated users -->
@@ -203,7 +216,7 @@ onMounted(() => {
       <textarea
         v-model="newCommentContent"
         data-testid="new-comment-textarea"
-        placeholder="Share your thoughts about this book..."
+        :placeholder="t('comments.placeholder')"
         :maxlength="1000"
         :class="
           css({
@@ -264,7 +277,7 @@ onMounted(() => {
           "
           @click="createComment"
         >
-          {{ submitting ? 'Posting...' : 'Post Comment' }}
+          {{ submitting ? t('comments.posting') : t('comments.post') }}
         </button>
       </div>
     </div>
@@ -281,7 +294,7 @@ onMounted(() => {
       "
     >
       <div :class="css({ fontSize: '2rem', mb: '2' })">⏳</div>
-      <p>Loading comments...</p>
+      <p>{{ t('comments.loading') }}</p>
     </div>
 
     <!-- Empty State -->
@@ -296,7 +309,7 @@ onMounted(() => {
       "
     >
       <div :class="css({ fontSize: '3rem', mb: '2' })">💭</div>
-      <p>No comments yet. Be the first to share your thoughts!</p>
+      <p>{{ t('comments.empty') }}</p>
     </div>
 
     <!-- Comments List -->
@@ -422,7 +435,7 @@ onMounted(() => {
                     "
                     @click="cancelEdit"
                   >
-                    Cancel
+                    {{ t('common.cancel') }}
                   </button>
                   <button
                     :disabled="!isEditContentValid"
@@ -441,7 +454,7 @@ onMounted(() => {
                     "
                     @click="saveEdit(comment.id)"
                   >
-                    Save
+                    {{ t('common.save') }}
                   </button>
                 </div>
               </div>
@@ -481,7 +494,7 @@ onMounted(() => {
                   "
                   @click="startEdit(comment)"
                 >
-                  ✏️ Edit
+                  ✏️ {{ t('common.edit') }}
                 </button>
                 <button
                   :class="
@@ -500,7 +513,7 @@ onMounted(() => {
                   "
                   @click="confirmDelete(comment.id)"
                 >
-                  🗑️ Delete
+                  🗑️ {{ t('common.delete') }}
                 </button>
               </div>
             </div>
@@ -538,7 +551,7 @@ onMounted(() => {
         "
         @click="loadMore"
       >
-        {{ loading ? 'Loading...' : '↓ Load More Comments' }}
+        {{ loading ? t('comments.loading') : `↓ ${t('comments.loadMore')}` }}
       </button>
     </div>
 
@@ -581,7 +594,7 @@ onMounted(() => {
             })
           "
         >
-          Delete Comment
+          {{ t('comments.deleteTitle') }}
         </h3>
         <p
           :class="
@@ -592,7 +605,7 @@ onMounted(() => {
             })
           "
         >
-          Are you sure you want to delete this comment? This action cannot be undone.
+          {{ t('comments.deleteConfirm') }}
         </p>
         <div :class="css({ display: 'flex', justifyContent: 'flex-end', gap: '3' })">
           <button
@@ -613,7 +626,7 @@ onMounted(() => {
             "
             @click="cancelDelete"
           >
-            Cancel
+            {{ t('common.cancel') }}
           </button>
           <button
             :class="
@@ -632,7 +645,7 @@ onMounted(() => {
             "
             @click="deleteComment"
           >
-            Delete
+            {{ t('common.delete') }}
           </button>
         </div>
       </div>
