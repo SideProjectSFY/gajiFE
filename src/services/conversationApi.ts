@@ -289,7 +289,19 @@ export async function likeConversation(conversationId: string): Promise<void> {
  * Unlike a conversation
  */
 export async function unlikeConversation(conversationId: string): Promise<void> {
-  await api.delete(`/conversations/${conversationId}/like`)
+  await api.delete(`/conversations/${conversationId}/unlike`)
+}
+
+/**
+ * Check if conversation is liked
+ */
+export async function checkConversationLiked(conversationId: string): Promise<boolean> {
+  try {
+    const response = await api.get<{ isLiked: boolean }>(`/conversations/${conversationId}/liked`)
+    return response.data.isLiked
+  } catch (error) {
+    return false
+  }
 }
 
 /**
