@@ -37,7 +37,7 @@ const fetchConversations = async () => {
       sort: sortOption.value,
       size: 50,
     })
-    conversations.value = data
+    conversations.value = data.filter((c) => c.isRoot)
   } catch (err) {
     console.error('Failed to load conversations:', err)
     error.value = 'Failed to load conversations.'
