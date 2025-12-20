@@ -3,30 +3,63 @@
     <AppHeader />
 
     <main class="book-browse-page" role="main" aria-label="Browse Books">
-      <header class="page-header">
-        <h1 class="page-title">📚 Browse Books</h1>
-        <p class="page-subtitle">Discover your next adventure in classic literature</p>
-      </header>
-
       <!-- Filter and Sort Section -->
-      <div class="filter-section">
-        <div class="filter-chips">
+      <div
+        :class="
+          css({
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            mb: '8',
+            flexWrap: 'wrap',
+            gap: '4',
+          })
+        "
+      >
+        <div :class="css({ display: 'flex', gap: '2', flexWrap: 'wrap' })">
           <button
             v-for="genre in genres"
             :key="genre.value"
-            :class="['filter-chip', { active: currentFilters.genre === genre.value }]"
             @click="handleGenreFilter(genre.value)"
+            :class="
+              css({
+                px: '4',
+                py: '1.5',
+                borderRadius: 'full',
+                fontSize: '0.875rem',
+                fontWeight: '500',
+                cursor: 'pointer',
+                transition: 'all 0.2s',
+                bg: currentFilters.genre === genre.value ? 'green.600' : 'gray.100',
+                color: currentFilters.genre === genre.value ? 'white' : 'gray.700',
+                _hover: {
+                  bg: currentFilters.genre === genre.value ? 'green.700' : 'gray.200',
+                },
+              })
+            "
           >
             {{ genre.label }}
           </button>
         </div>
 
-        <div class="sort-controls">
+        <div :class="css({ display: 'flex', bg: 'gray.100', borderRadius: 'md', p: '1' })">
           <button
             v-for="option in sortOptions"
             :key="option.value"
-            :class="['sort-button', { active: currentFilters.sort === option.value }]"
             @click="handleSortChange(option.value)"
+            :class="
+              css({
+                px: '3',
+                py: '1',
+                borderRadius: 'sm',
+                fontSize: '0.75rem',
+                fontWeight: '500',
+                cursor: 'pointer',
+                transition: 'all 0.2s',
+                bg: currentFilters.sort === option.value ? 'green.600' : 'transparent',
+                color: currentFilters.sort === option.value ? 'white' : 'gray.500',
+              })
+            "
           >
             {{ option.label }}
           </button>
@@ -78,6 +111,7 @@
 <script setup lang="ts">
 import { ref, onMounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
+import { css } from '../../styled-system/css'
 import AppHeader from '@/components/common/AppHeader.vue'
 import AppFooter from '@/components/common/AppFooter.vue'
 import BookGrid from '@/components/book/BookGrid.vue'
@@ -151,7 +185,24 @@ const fetchBooks = async (): Promise<void> => {
       sort: currentFilters.value.sort,
     })
 
-    books.value = response.content
+    let fetchedBooks = response.content
+
+    // Check for liked books if user is authenticated
+    if (authStore.user?.id) {
+      try {
+        const likedBooksResponse = await bookApi.getLikedBooks(authStore.user.id)
+        const likedBookIds = new Set(likedBooksResponse.content.map((b: any) => b.id))
+
+        fetchedBooks = fetchedBooks.map((book) => ({
+          ...book,
+          isLiked: likedBookIds.has(book.id),
+        }))
+      } catch (e) {
+        console.error('Failed to fetch liked books', e)
+      }
+    }
+
+    books.value = fetchedBooks
     totalPages.value = response.totalPages
     totalElements.value = response.totalElements
 
@@ -267,7 +318,7 @@ watch(
   margin: 0 auto;
   padding: 5rem 1rem 2rem;
   min-height: 100vh;
-  background: #f8f9fa;
+  background: #ffffff;
 }
 
 .page-header {
@@ -289,78 +340,7 @@ watch(
   margin: 0;
 }
 
-/* Filter Section */
-.filter-section {
-  background: white;
-  padding: 1.5rem;
-  border-radius: 12px;
-  margin-bottom: 2rem;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 2rem;
-}
-
-.filter-chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.75rem;
-  flex: 1;
-}
-
-.filter-chip {
-  padding: 0.5rem 1.25rem;
-  border: 2px solid #e0e0e0;
-  background: white;
-  border-radius: 24px;
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: #666;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.filter-chip:hover {
-  border-color: #4caf50;
-  color: #4caf50;
-  background: #f1f8f4;
-}
-
-.filter-chip.active {
-  background: #4caf50;
-  border-color: #4caf50;
-  color: white;
-}
-
-.sort-controls {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  flex-shrink: 0;
-}
-
-.sort-button {
-  padding: 0.5rem 1.5rem;
-  border: none;
-  background: #e0e0e0;
-  border-radius: 24px;
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: #666;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.sort-button:hover {
-  background: #d0d0d0;
-  color: #333;
-}
-
-.sort-button.active {
-  background: #4caf50;
-  color: white;
-}
+/* Filter Section styles removed as we use Panda CSS now */
 
 /* Results Info */
 .results-info {
