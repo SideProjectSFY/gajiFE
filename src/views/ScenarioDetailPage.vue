@@ -5,13 +5,15 @@
     </div>
 
     <div v-else-if="error" class="error-state">
-      <p class="error-message">{{ error }}</p>
+      <p class="error-message">
+        {{ error }}
+      </p>
       <button @click="$router.push('/scenarios/browse')">← Back to Browse</button>
     </div>
 
     <div v-else-if="scenario" class="content">
       <div class="header">
-        <button @click="$router.push('/scenarios/browse')" class="back-button">
+        <button class="back-button" @click="$router.push('/scenarios/browse')">
           ← Back to Browse
         </button>
 
@@ -56,17 +58,25 @@
 
         <div class="actions">
           <button
+            :disabled="isLiking"
+            class="btn-like"
+            :class="{ liked: isLiked }"
+            @click="toggleLike"
+          >
+            {{ isLiked ? '❤️' : '🤍' }} {{ isLiked ? 'Unlike' : 'Like' }}
+          </button>
+          <button
             data-testid="start-conversation-button"
-            @click="handleStartConversation"
             class="btn-primary"
+            @click="handleStartConversation"
           >
             💬 Start Conversation
           </button>
           <button
             v-if="!scenario.parent_scenario_id"
             data-testid="meta-fork-button"
-            @click="handleFork"
             class="btn-secondary"
+            @click="handleFork"
           >
             🍴 Fork Scenario
           </button>
@@ -79,7 +89,7 @@
             <ScenarioTreeView v-if="scenario.parent_scenario_id" :scenario-id="scenarioId" />
             <p v-else class="no-tree">This is a root scenario (no parent)</p>
           </TabPanel>
-          <TabPanel header="Fork History" v-if="!scenario.parent_scenario_id">
+          <TabPanel v-if="!scenario.parent_scenario_id" header="Fork History">
             <ForkHistoryTree :scenario-id="scenarioId" />
           </TabPanel>
         </TabView>
@@ -121,6 +131,8 @@ const scenario = ref<BrowseScenario | null>(null)
 const isLoading = ref(true)
 const error = ref('')
 const showForkModal = ref(false)
+const isLiked = ref(false)
+const isLiking = ref(false)
 
 const scenarioTypeLabel = computed(() => {
   if (!scenario.value) return ''
@@ -153,6 +165,16 @@ const fetchScenario = async () => {
     const response = await api.get(`/scenarios/${scenarioId}`)
     scenario.value = response.data
     trackScenarioViewed(scenarioId, response.data.book_id)
+
+    // Fetch like status if authenticated
+    if (authStore.isAuthenticated && authStore.user) {
+      try {
+        const likeResponse = await api.get(`/scenarios/${scenarioId}/like-status`)
+        isLiked.value = likeResponse.data.isLiked || false
+      } catch (err) {
+        console.error('Failed to fetch like status:', err)
+      }
+    }
   } catch (err: unknown) {
     const apiError = err as { response?: { data?: { message?: string } } }
     console.error('Failed to fetch scenario:', err)
@@ -183,8 +205,8 @@ const handleFork = () => {
   showForkModal.value = true
 }
 
-const handleForked = async (forkedScenario: { id: string }) => {
-  console.log('Scenario forked successfully!', forkedScenario)
+const handleForked = async (forkedConversation: { id: string }) => {
+  console.log('Scenario forked and conversation created!', forkedConversation)
 
   trackScenarioForked({
     originalId: scenarioId,
@@ -195,8 +217,45 @@ const handleForked = async (forkedScenario: { id: string }) => {
     scenario.value.fork_count = (scenario.value.fork_count || 0) + 1
   }
 
-  success('🍴 Scenario forked! Explore your meta-timeline.', 4000)
-  router.push(`/scenarios/${forkedScenario.id}`)
+  success('🍴 Scenario forked! Starting your conversation...', 4000)
+  router.push(`/conversations/${forkedConversation.id}`)
+}
+
+const toggleLike = async () => {
+  if (!authStore.isAuthenticated) {
+    showErrorToast('Please login to like scenarios')
+    router.push({ name: 'Login', query: { redirect: route.fullPath } })
+    return
+  }
+
+  if (isLiking.value) return
+
+  isLiking.value = true
+  const previousLikedState = isLiked.value
+
+  try {
+    // Optimistic update
+    isLiked.value = !isLiked.value
+
+    if (isLiked.value) {
+      await api.post(`/scenarios/${scenarioId}/like`)
+      if (scenario.value) {
+        scenario.value.like_count = (scenario.value.like_count || 0) + 1
+      }
+    } else {
+      await api.delete(`/scenarios/${scenarioId}/like`)
+      if (scenario.value) {
+        scenario.value.like_count = Math.max(0, (scenario.value.like_count || 0) - 1)
+      }
+    }
+  } catch (err) {
+    console.error('Failed to toggle like:', err)
+    // Revert on error
+    isLiked.value = previousLikedState
+    showErrorToast('Failed to update like status')
+  } finally {
+    isLiking.value = false
+  }
 }
 
 const handleStartConversation = async () => {
@@ -366,7 +425,8 @@ onMounted(() => {
 }
 
 .btn-primary,
-.btn-secondary {
+.btn-secondary,
+.btn-like {
   padding: 0.75rem 1.5rem;
   border-radius: 0.5rem;
   font-weight: 600;
@@ -393,6 +453,28 @@ onMounted(() => {
 
 .btn-secondary:hover {
   background-color: #eff6ff;
+}
+
+.btn-like {
+  background-color: white;
+  color: #6b7280;
+  border: 2px solid #d1d5db;
+}
+
+.btn-like:hover:not(:disabled) {
+  border-color: #ef4444;
+  color: #ef4444;
+}
+
+.btn-like.liked {
+  background-color: #fef2f2;
+  border-color: #ef4444;
+  color: #ef4444;
+}
+
+.btn-like:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .tabs {
