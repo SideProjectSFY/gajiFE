@@ -1,16 +1,46 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { css } from 'styled-system/css'
 import { useAuthStore } from '../../stores/auth'
+import LogoSvg from '@/assets/Logo.svg'
+import GlobeSvg from '@/assets/Globe.svg'
 
 const router = useRouter()
 const route = useRoute()
 const authStore = useAuthStore()
+const { locale, t } = useI18n()
 const isMenuOpen = ref(false)
 const searchQuery = ref('')
+const isLanguageMenuOpen = ref(false)
 
 const isAuthenticated = computed(() => authStore.isAuthenticated)
+
+const changeLanguage = (lang: 'ko' | 'en') => {
+  locale.value = lang
+  localStorage.setItem('locale', lang)
+  isLanguageMenuOpen.value = false
+}
+
+const toggleLanguageMenu = () => {
+  isLanguageMenuOpen.value = !isLanguageMenuOpen.value
+}
+
+const handleClickOutside = (event: MouseEvent) => {
+  const target = event.target as HTMLElement
+  if (isLanguageMenuOpen.value && !target.closest('.language-selector')) {
+    isLanguageMenuOpen.value = false
+  }
+}
+
+onMounted(() => {
+  document.addEventListener('click', handleClickOutside)
+})
+
+onUnmounted(() => {
+  document.removeEventListener('click', handleClickOutside)
+})
 
 const isActive = (path: string): boolean => {
   return route.path === path || route.path.startsWith(path + '/')
@@ -119,10 +149,10 @@ const handleMenuKeydown = (event: KeyboardEvent): void => {
         "
         @click="goToHome"
       >
-        <span :class="css({ fontSize: '1.5rem' })">🌱</span>
-        <span :class="css({ fontSize: '1.5rem', fontWeight: 'bold', color: 'green.500' })"
-          >Gaji</span
-        >
+        <LogoSvg :class="css({ width: '2rem', height: '2rem' })" style="fill: #1f7d51" />
+        <span :class="css({ fontSize: '1.5rem', fontWeight: 'bold', color: 'green.500' })">{{
+          t('home.title')
+        }}</span>
       </a>
 
       <!-- Desktop Navigation -->
@@ -147,7 +177,7 @@ const handleMenuKeydown = (event: KeyboardEvent): void => {
             })
           "
         >
-          About
+          {{ t('nav.about') }}
         </router-link>
         <router-link
           to="/books"
@@ -166,7 +196,7 @@ const handleMenuKeydown = (event: KeyboardEvent): void => {
             })
           "
         >
-          Books
+          {{ t('nav.books') }}
         </router-link>
         <router-link
           to="/conversations"
@@ -185,7 +215,7 @@ const handleMenuKeydown = (event: KeyboardEvent): void => {
             })
           "
         >
-          Conversations
+          {{ t('nav.conversations') }}
         </router-link>
       </nav>
 
@@ -196,8 +226,8 @@ const handleMenuKeydown = (event: KeyboardEvent): void => {
           <input
             v-model="searchQuery"
             type="text"
-            placeholder="Search books, scenarios..."
-            aria-label="Search books, scenarios"
+            :placeholder="t('search.placeholder')"
+            :aria-label="t('search.ariaLabel')"
             :class="
               css({
                 px: '4',
@@ -239,6 +269,94 @@ const handleMenuKeydown = (event: KeyboardEvent): void => {
             🔍
           </button>
         </div>
+
+        <!-- Language Selector -->
+        <div :class="css({ position: 'relative' })" class="language-selector">
+          <button
+            :class="
+              css({
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                bg: 'transparent',
+                border: 'none',
+                cursor: 'pointer',
+                color: 'gray.700',
+                p: '2',
+                transition: 'all 0.2s',
+                _hover: { color: 'green.500' },
+              })
+            "
+            :aria-label="'Change language'"
+            @click="toggleLanguageMenu"
+          >
+            <GlobeSvg :class="css({ width: '1.5rem', height: '1.5rem' })" />
+          </button>
+          <div
+            v-if="isLanguageMenuOpen"
+            :class="
+              css({
+                position: 'absolute',
+                top: 'calc(100% + 4px)',
+                right: '0',
+                bg: 'white',
+                border: '1px solid',
+                borderColor: 'gray.200',
+                borderRadius: '0.375rem',
+                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+                minW: '100px',
+                zIndex: 1000,
+                overflow: 'hidden',
+              })
+            "
+          >
+            <button
+              :class="
+                css({
+                  display: 'block',
+                  w: '100%',
+                  textAlign: 'center',
+                  px: '4',
+                  py: '2.5',
+                  bg: locale === 'ko' ? 'green.50' : 'white',
+                  color: locale === 'ko' ? 'green.600' : 'gray.700',
+                  border: 'none',
+                  cursor: 'pointer',
+                  fontSize: '0.875rem',
+                  fontWeight: '600',
+                  transition: 'all 0.2s',
+                  _hover: { bg: 'green.50', color: 'green.600' },
+                })
+              "
+              @click="changeLanguage('ko')"
+            >
+              {{ locale === 'ko' ? '한국어' : 'KOR' }}
+            </button>
+            <button
+              :class="
+                css({
+                  display: 'block',
+                  w: '100%',
+                  textAlign: 'center',
+                  px: '4',
+                  py: '2.5',
+                  bg: locale === 'en' ? 'green.50' : 'white',
+                  color: locale === 'en' ? 'green.600' : 'gray.700',
+                  border: 'none',
+                  cursor: 'pointer',
+                  fontSize: '0.875rem',
+                  fontWeight: '600',
+                  transition: 'all 0.2s',
+                  _hover: { bg: 'green.50', color: 'green.600' },
+                })
+              "
+              @click="changeLanguage('en')"
+            >
+              {{ locale === 'ko' ? '영어' : 'ENG' }}
+            </button>
+          </div>
+        </div>
+
         <template v-if="!isAuthenticated">
           <button
             :class="
@@ -255,10 +373,9 @@ const handleMenuKeydown = (event: KeyboardEvent): void => {
                 _hover: { color: 'green.500' },
               })
             "
-            aria-label="Login to your account"
             @click="goToLogin"
           >
-            Login
+            {{ t('nav.login') }}
           </button>
           <button
             :class="
@@ -276,32 +393,31 @@ const handleMenuKeydown = (event: KeyboardEvent): void => {
                 _hover: { bg: 'green.600' },
               })
             "
-            aria-label="Sign up for a new account"
             @click="goToSignUp"
           >
-            Sign Up
+            {{ t('nav.signup') }}
           </button>
         </template>
         <template v-else>
           <button
             :class="
               css({
-                bg: 'none',
+                bg: isActive('/profile') ? 'green.50' : 'none',
                 border: 'none',
                 cursor: 'pointer',
                 fontSize: '1rem',
                 fontWeight: '500',
-                color: 'gray.700',
+                color: isActive('/profile') ? 'green.600' : 'gray.700',
                 px: '4',
                 py: '2',
-                transition: 'color 0.2s',
-                _hover: { color: 'green.500' },
+                borderRadius: '0.375rem',
+                transition: 'all 0.2s',
+                _hover: { color: 'green.500', bg: 'green.50' },
               })
             "
-            aria-label="Go to your profile"
             @click="goToProfile"
           >
-            Profile
+            {{ t('nav.profile') }}
           </button>
           <button
             :class="
@@ -318,10 +434,9 @@ const handleMenuKeydown = (event: KeyboardEvent): void => {
                 _hover: { color: 'green.500' },
               })
             "
-            aria-label="Logout from your account"
             @click="handleLogout"
           >
-            Logout
+            {{ t('nav.logout') }}
           </button>
         </template>
       </div>
@@ -419,7 +534,7 @@ const handleMenuKeydown = (event: KeyboardEvent): void => {
           "
           @click="closeMenu"
         >
-          About
+          {{ t('nav.about') }}
         </router-link>
         <router-link
           to="/books"
@@ -439,7 +554,7 @@ const handleMenuKeydown = (event: KeyboardEvent): void => {
           "
           @click="closeMenu"
         >
-          Books
+          {{ t('nav.books') }}
         </router-link>
         <router-link
           to="/conversations"
@@ -459,7 +574,7 @@ const handleMenuKeydown = (event: KeyboardEvent): void => {
           "
           @click="closeMenu"
         >
-          Conversations
+          {{ t('nav.conversations') }}
         </router-link>
         <button
           :class="
@@ -478,8 +593,74 @@ const handleMenuKeydown = (event: KeyboardEvent): void => {
           "
           @click="goToSearch"
         >
-          🔍 Search
+          🔍 {{ t('nav.search') }}
         </button>
+
+        <!-- Mobile Language Selector -->
+        <div
+          :class="
+            css({
+              borderTop: '1px solid',
+              borderColor: 'gray.200',
+              pt: '4',
+            })
+          "
+        >
+          <div
+            :class="
+              css({ px: '4', mb: '3', fontSize: '0.875rem', fontWeight: '600', color: 'gray.600' })
+            "
+          >
+            🌐 Language
+          </div>
+          <div :class="css({ display: 'flex', gap: '2', px: '4' })">
+            <button
+              :class="
+                css({
+                  flex: 1,
+                  px: '3',
+                  py: '2',
+                  bg: locale === 'ko' ? 'green.500' : 'white',
+                  color: locale === 'ko' ? 'white' : 'gray.700',
+                  border: '1px solid',
+                  borderColor: locale === 'ko' ? 'green.500' : 'gray.300',
+                  borderRadius: '0.375rem',
+                  cursor: 'pointer',
+                  fontSize: '0.875rem',
+                  fontWeight: '500',
+                  transition: 'all 0.2s',
+                  _hover: { bg: locale === 'ko' ? 'green.600' : 'gray.50' },
+                })
+              "
+              @click="changeLanguage('ko')"
+            >
+              한국어
+            </button>
+            <button
+              :class="
+                css({
+                  flex: 1,
+                  px: '3',
+                  py: '2',
+                  bg: locale === 'en' ? 'green.500' : 'white',
+                  color: locale === 'en' ? 'white' : 'gray.700',
+                  border: '1px solid',
+                  borderColor: locale === 'en' ? 'green.500' : 'gray.300',
+                  borderRadius: '0.375rem',
+                  cursor: 'pointer',
+                  fontSize: '0.875rem',
+                  fontWeight: '500',
+                  transition: 'all 0.2s',
+                  _hover: { bg: locale === 'en' ? 'green.600' : 'gray.50' },
+                })
+              "
+              @click="changeLanguage('en')"
+            >
+              English
+            </button>
+          </div>
+        </div>
+
         <div
           :class="
             css({
@@ -513,7 +694,7 @@ const handleMenuKeydown = (event: KeyboardEvent): void => {
               "
               @click="goToLogin"
             >
-              Login
+              {{ t('nav.login') }}
             </button>
             <button
               :class="
@@ -533,28 +714,30 @@ const handleMenuKeydown = (event: KeyboardEvent): void => {
               "
               @click="goToSignUp"
             >
-              Sign Up
+              {{ t('nav.signup') }}
             </button>
           </template>
           <template v-else>
             <button
               :class="
                 css({
-                  bg: 'none',
+                  bg: isActive('/profile') ? 'green.50' : 'none',
                   border: 'none',
                   cursor: 'pointer',
                   fontSize: '1rem',
                   fontWeight: '500',
-                  color: 'gray.700',
+                  color: isActive('/profile') ? 'green.600' : 'gray.700',
                   py: '2',
+                  px: isActive('/profile') ? '4' : '0',
+                  borderRadius: '0.375rem',
                   textAlign: 'left',
-                  transition: 'color 0.2s',
-                  _hover: { color: 'green.500' },
+                  transition: 'all 0.2s',
+                  _hover: { color: 'green.500', bg: 'green.50', px: '4' },
                 })
               "
               @click="goToProfile"
             >
-              Profile
+              {{ t('nav.profile') }}
             </button>
             <button
               :class="
@@ -575,7 +758,7 @@ const handleMenuKeydown = (event: KeyboardEvent): void => {
               "
               @click="handleLogout"
             >
-              Logout
+              {{ t('nav.logout') }}
             </button>
           </template>
         </div>

@@ -2,10 +2,14 @@
 <script setup lang="ts">
 import { reactive, ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { useAnalytics } from '@/composables/useAnalytics'
+import LogoSvg from '@/assets/Logo.svg'
+import LanguageSwitcher from '@/components/common/LanguageSwitcher.vue'
 
 const router = useRouter()
+const { t } = useI18n()
 const authStore = useAuthStore()
 const { trackSignUp } = useAnalytics()
 
@@ -82,11 +86,11 @@ const passwordStrengthColor = computed(() => {
 const validateUsername = (): void => {
   const usernameRegex = /^[a-zA-Z0-9_]+$/
   if (!form.username) {
-    errors.username = 'Username is required'
+    errors.username = 'register.errors.usernameRequired'
   } else if (form.username.length < 3) {
-    errors.username = 'Username must be at least 3 characters'
+    errors.username = 'register.errors.usernameLength'
   } else if (!usernameRegex.test(form.username)) {
-    errors.username = 'Username can only contain letters, numbers, and underscores'
+    errors.username = 'register.errors.usernameInvalid'
   } else {
     errors.username = ''
   }
@@ -95,9 +99,9 @@ const validateUsername = (): void => {
 const validateEmail = (): void => {
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
   if (!form.email) {
-    errors.email = 'Email is required'
+    errors.email = 'register.errors.emailRequired'
   } else if (!emailRegex.test(form.email)) {
-    errors.email = 'Please enter a valid email address'
+    errors.email = 'register.errors.emailInvalid'
   } else {
     errors.email = ''
   }
@@ -105,15 +109,15 @@ const validateEmail = (): void => {
 
 const validatePassword = (): void => {
   if (!form.password) {
-    errors.password = 'Password is required'
+    errors.password = 'register.errors.passwordRequired'
   } else if (form.password.length < 8) {
-    errors.password = 'Password must be at least 8 characters with uppercase, lowercase, and number'
+    errors.password = 'register.errors.passwordComplexity'
   } else if (!/[A-Z]/.test(form.password)) {
-    errors.password = 'Password must be at least 8 characters with uppercase, lowercase, and number'
+    errors.password = 'register.errors.passwordComplexity'
   } else if (!/[a-z]/.test(form.password)) {
-    errors.password = 'Password must be at least 8 characters with uppercase, lowercase, and number'
+    errors.password = 'register.errors.passwordComplexity'
   } else if (!/[0-9]/.test(form.password)) {
-    errors.password = 'Password must be at least 8 characters with uppercase, lowercase, and number'
+    errors.password = 'register.errors.passwordComplexity'
   } else {
     errors.password = ''
   }
@@ -121,9 +125,9 @@ const validatePassword = (): void => {
 
 const validateConfirmPassword = (): void => {
   if (!form.confirmPassword) {
-    errors.confirmPassword = 'Please confirm your password'
+    errors.confirmPassword = 'register.confirmPasswordPlaceholder'
   } else if (form.password !== form.confirmPassword) {
-    errors.confirmPassword = 'Passwords do not match'
+    errors.confirmPassword = 'register.errors.passwordMismatch'
   } else {
     errors.confirmPassword = ''
   }
@@ -204,10 +208,10 @@ onMounted(() => {
     >
       <div style="text-align: center; color: white">
         <div style="font-size: 2rem; font-weight: bold; margin-bottom: 1rem">
-          Every story has infinite branches to explore
+          {{ t('register.brandTitle') }}
         </div>
         <div style="font-size: 1rem; opacity: 0.9; font-style: italic">
-          Discover endless possibilities
+          {{ t('register.brandSubtitle') }}
         </div>
       </div>
     </div>
@@ -221,19 +225,27 @@ onMounted(() => {
         justify-content: center;
         padding: 3rem;
         background-color: #f9fafb;
+        position: relative;
       "
     >
+      <!-- Language Switcher -->
+      <div style="position: absolute; top: 1.5rem; right: 1.5rem">
+        <LanguageSwitcher />
+      </div>
+
       <div style="width: 100%; max-width: 420px">
         <!-- Logo -->
         <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 2rem">
-          <span style="font-size: 1.5rem">�</span>
+          <LogoSvg style="width: 2rem; height: 2rem; fill: #1f7d51" />
           <span style="font-size: 1.25rem; font-weight: bold; color: #1f2937">Gaji</span>
         </div>
 
         <h1 style="font-size: 1.75rem; font-weight: bold; margin-bottom: 0.5rem; color: #111827">
-          Start exploring infinite story branches
+          {{ t('register.title') }}
         </h1>
-        <p style="color: #6b7280; margin-bottom: 2rem; font-size: 0.875rem">Email</p>
+        <p style="color: #6b7280; margin-bottom: 2rem; font-size: 0.875rem">
+          {{ t('register.subtitle') }}
+        </p>
 
         <form
           style="display: flex; flex-direction: column; gap: 1.25rem"
@@ -251,14 +263,14 @@ onMounted(() => {
                 margin-bottom: 0.5rem;
               "
             >
-              Email
+              {{ t('register.emailLabel') }}
             </label>
             <input
               id="email"
               ref="emailInputRef"
               v-model="form.email"
               type="email"
-              placeholder="your.email@example.com"
+              :placeholder="t('register.emailPlaceholder')"
               required
               maxlength="255"
               autocomplete="email"
@@ -284,7 +296,7 @@ onMounted(() => {
               data-testid="email-error"
               style="color: #ef4444; font-size: 0.75rem; display: block; margin-top: 0.25rem"
             >
-              {{ errors.email }}
+              {{ t(errors.email) }}
             </span>
           </div>
 
@@ -300,14 +312,15 @@ onMounted(() => {
                 margin-bottom: 0.5rem;
               "
             >
-              Username
+              {{ t('register.usernameLabel') }}
             </label>
             <input
               id="username"
               v-model="form.username"
               type="text"
-              placeholder="Choose a unique username"
+              :placeholder="t('register.usernamePlaceholder')"
               required
+              minlength="3"
               maxlength="50"
               autocomplete="username"
               data-testid="username-input"
@@ -333,7 +346,7 @@ onMounted(() => {
               data-testid="username-error"
               style="color: #ef4444; font-size: 0.75rem; display: block; margin-top: 0.25rem"
             >
-              {{ errors.username }}
+              {{ t(errors.username) }}
             </span>
           </div>
 
@@ -349,13 +362,13 @@ onMounted(() => {
                 margin-bottom: 0.5rem;
               "
             >
-              Password
+              {{ t('register.passwordLabel') }}
             </label>
             <input
               id="password"
               v-model="form.password"
               type="password"
-              placeholder="Create a strong password"
+              :placeholder="t('register.passwordPlaceholder')"
               required
               autocomplete="new-password"
               data-testid="password-input"
@@ -388,7 +401,9 @@ onMounted(() => {
                   margin-bottom: 0.25rem;
                 "
               >
-                <span style="font-size: 0.75rem; color: #6b7280">Password strength:</span>
+                <span style="font-size: 0.75rem; color: #6b7280">{{
+                  t('register.passwordStrengthLabel')
+                }}</span>
                 <span
                   :style="{
                     fontSize: '0.75rem',
@@ -397,7 +412,7 @@ onMounted(() => {
                     textTransform: 'capitalize',
                   }"
                 >
-                  {{ passwordStrength }}
+                  {{ t(`register.passwordStrength.${passwordStrength}`) }}
                 </span>
               </div>
               <div
@@ -431,14 +446,15 @@ onMounted(() => {
               data-testid="password-error"
               style="color: #ef4444; font-size: 0.75rem; display: block; margin-top: 0.25rem"
             >
-              {{ errors.password }}
+              {{ t(errors.password) }}
             </span>
           </div>
 
           <!-- Confirm Password Input -->
+          <!-- Confirm Password Input -->
           <div>
             <label
-              for="confirm-password"
+              for="confirmPassword"
               style="
                 font-size: 0.875rem;
                 font-weight: 500;
@@ -447,13 +463,13 @@ onMounted(() => {
                 margin-bottom: 0.5rem;
               "
             >
-              Confirm Password
+              {{ t('register.confirmPasswordLabel') }}
             </label>
             <input
-              id="confirm-password"
+              id="confirmPassword"
               v-model="form.confirmPassword"
               type="password"
-              placeholder="Re-enter your password"
+              :placeholder="t('register.confirmPasswordPlaceholder')"
               required
               autocomplete="new-password"
               data-testid="confirm-password-input"
@@ -481,26 +497,24 @@ onMounted(() => {
               data-testid="confirm-password-error"
               style="color: #ef4444; font-size: 0.75rem; display: block; margin-top: 0.25rem"
             >
-              {{ errors.confirmPassword }}
+              {{ t(errors.confirmPassword) }}
             </span>
           </div>
 
           <!-- Terms Checkbox -->
-          <div style="display: flex; align-items: flex-start; gap: 0.5rem">
+          <!-- Terms of Service -->
+          <div style="display: flex; align-items: center; gap: 0.5rem">
             <input
-              id="agreeToTerms"
+              id="terms"
               v-model="form.agreeToTerms"
               type="checkbox"
               required
-              data-testid="agree-to-terms-checkbox"
-              aria-required="true"
-              aria-label="I agree to the Terms of Service and Privacy Policy"
+              data-testid="terms-checkbox"
             />
-            <label for="agreeToTerms" style="font-size: 0.75rem; color: #6b7280; line-height: 1.4">
-              I agree to the Terms of Service and Privacy Policy
+            <label for="terms" style="font-size: 0.875rem; color: #374151">
+              {{ t('register.agreeToTerms') }}
             </label>
           </div>
-
           <!-- Submit Button -->
           <button
             type="submit"
@@ -519,7 +533,7 @@ onMounted(() => {
               opacity: isLoading || !isFormValid ? 0.6 : 1,
             }"
           >
-            {{ isLoading ? 'Creating Account...' : 'Create Account' }}
+            {{ isLoading ? t('register.submitting') : t('register.submit') }}
           </button>
         </form>
 
@@ -544,15 +558,15 @@ onMounted(() => {
               color: #6b7280;
             "
           >
-            or
+            {{ t('login.or') }}
           </span>
         </div>
 
         <!-- Footer -->
         <p style="text-align: center; margin-top: 1.5rem; font-size: 0.875rem; color: #6b7280">
-          Already have an account?
+          {{ t('register.alreadyHaveAccount') }}
           <router-link to="/login" style="color: #16a34a; text-decoration: none; font-weight: 600">
-            Login
+            {{ t('register.login') }}
           </router-link>
         </p>
       </div>

@@ -1,78 +1,139 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { css } from '../../styled-system/css'
 import AppHeader from '@/components/common/AppHeader.vue'
 import AppFooter from '@/components/common/AppFooter.vue'
+import ForkScenarioModal from '@/components/scenario/ForkScenarioModal.vue'
 import { getConversations, type ConversationSummary } from '@/services/conversationApi'
+import type { BrowseScenario } from '@/types'
+import api from '@/services/api'
+import { useToast } from '@/composables/useToast'
+import { useAuthStore } from '@/stores/auth'
 
 const router = useRouter()
+const { t } = useI18n()
+const { success, error: showErrorToast } = useToast()
+const authStore = useAuthStore()
 const conversations = ref<ConversationSummary[]>([])
 const loading = ref(true)
 const error = ref<string | null>(null)
 const searchQuery = ref('')
-const selectedGenre = ref('All Genres')
-const sortOption = ref('Latest')
+const selectedGenre = ref(t('conversations.filters.allGenres'))
+const sortOption = ref(t('conversations.sort.latest'))
+const showForkModal = ref(false)
+const selectedScenario = ref<BrowseScenario | null>(null)
 
-const genres = ['All Genres', 'Romance', 'Classic', 'Genre', 'Adventure', 'Dystopian']
-const sortOptions = ['Latest', 'Recommended', 'Popular']
+const genres = [
+  t('conversations.filters.allGenres'),
+  t('conversations.filters.romance'),
+  t('conversations.filters.classic'),
+  t('conversations.filters.genre'),
+  t('conversations.filters.adventure'),
+  t('conversations.filters.dystopian'),
+]
+const sortOptions = [
+  t('conversations.sort.latest'),
+  t('conversations.sort.recommended'),
+  t('conversations.sort.popular'),
+]
 
-onMounted(async () => {
+// Map display values to API values
+const genreToApiValue = (displayValue: string): string | undefined => {
+  const genreMap: Record<string, string | undefined> = {
+    [t('conversations.filters.allGenres')]: undefined,
+    [t('conversations.filters.romance')]: 'Romance',
+    [t('conversations.filters.classic')]: 'Classic',
+    [t('conversations.filters.genre')]: 'Genre',
+    [t('conversations.filters.adventure')]: 'Adventure',
+    [t('conversations.filters.dystopian')]: 'Dystopian',
+  }
+  return genreMap[displayValue]
+}
+
+const sortToApiValue = (displayValue: string): string => {
+  const sortMap: Record<string, string> = {
+    [t('conversations.sort.latest')]: 'latest',
+    [t('conversations.sort.recommended')]: 'recommended',
+    [t('conversations.sort.popular')]: 'popular',
+  }
+  return sortMap[displayValue] || 'latest'
+}
+
+const fetchConversations = async () => {
   try {
     loading.value = true
-    // Fetch ALL public conversations
-    const data = await getConversations({ filter: 'public', size: 50 })
-    conversations.value = data
+    error.value = null
+    const data = await getConversations({
+      filter: 'public',
+      search: searchQuery.value,
+      genre: genreToApiValue(selectedGenre.value),
+      sort: sortToApiValue(sortOption.value),
+      size: 50,
+    })
+    conversations.value = data.filter((c) => c.isRoot)
   } catch (err) {
     console.error('Failed to load conversations:', err)
-    error.value = 'Failed to load conversations.'
+    error.value = t('conversations.error')
   } finally {
     loading.value = false
   }
+}
+
+watch([searchQuery, selectedGenre, sortOption], () => {
+  // Debounce search if needed, but for now direct call
+  fetchConversations()
 })
 
-const filteredConversations = computed(() => {
-  let result = conversations.value
-
-  // Search filter
-  if (searchQuery.value) {
-    const query = searchQuery.value.toLowerCase()
-    result = result.filter(
-      (c) =>
-        c.title.toLowerCase().includes(query) ||
-        c.bookTitle?.toLowerCase().includes(query) ||
-        c.bookAuthor?.toLowerCase().includes(query)
-    )
-  }
-
-  // Genre filter (Mock implementation - assumes genre is in tags or book metadata which we might not have fully)
-  // For now, just return all if 'All Genres'
-  if (selectedGenre.value !== 'All Genres') {
-    // If we had genre data, we would filter here.
-    // For demo purposes, we'll just show all or maybe filter by random assignment if needed,
-    // but better to just show all to avoid empty states.
-  }
-
-  return result
+onMounted(() => {
+  fetchConversations()
 })
 
 const navigateToConversation = (id: string): void => {
   router.push(`/conversations/${id}`)
 }
 
-const navigateToBook = (e: Event, bookTitle?: string): void => {
+const navigateToBook = (e: Event, bookId?: string): void => {
   e.stopPropagation()
-  // In a real app, we'd navigate to book detail.
-  // Since we don't have book ID easily here without joining, we'll just go to books page.
-  router.push('/books')
+  if (bookId) {
+    router.push(`/books/${bookId}`)
+  } else {
+    router.push('/books')
+  }
 }
 
 // Helper to get random tags for UI fidelity (since backend doesn't provide them yet)
 const getTags = (conv: ConversationSummary) => {
-  const baseTags = ['Character', 'Situation']
-  if (conv.bookTitle?.includes('Pride')) return [...baseTags, 'Romance', 'Classic']
-  if (conv.bookTitle?.includes('1984')) return [...baseTags, 'Dystopian', 'Political']
-  return [...baseTags, 'Event']
+  const baseTags = [t('conversations.tags.character'), t('conversations.tags.situation')]
+  if (conv.bookTitle?.includes('Pride'))
+    return [...baseTags, t('conversations.tags.romance'), t('conversations.tags.classic')]
+  if (conv.bookTitle?.includes('1984'))
+    return [...baseTags, t('conversations.tags.dystopian'), t('conversations.tags.political')]
+  return [...baseTags, t('conversations.tags.event')]
+}
+
+const handleForkChat = async (scenarioId: string) => {
+  if (!authStore.isAuthenticated) {
+    showErrorToast('Please login to fork a scenario')
+    router.push('/login')
+    return
+  }
+
+  try {
+    const response = await api.get(`/scenarios/${scenarioId}`)
+    selectedScenario.value = response.data
+    showForkModal.value = true
+  } catch (err) {
+    console.error('Failed to load scenario for forking:', err)
+    showErrorToast('Failed to load scenario details')
+  }
+}
+
+const handleForked = (forkedConversation: { id: string }) => {
+  showForkModal.value = false
+  success('🍴 Scenario forked! Starting conversation...', 3000)
+  router.push(`/conversations/${forkedConversation.id}`)
 }
 </script>
 
@@ -110,7 +171,6 @@ const getTags = (conv: ConversationSummary) => {
           <button
             v-for="genre in genres"
             :key="genre"
-            @click="selectedGenre = genre"
             :class="
               css({
                 px: '4',
@@ -127,6 +187,7 @@ const getTags = (conv: ConversationSummary) => {
                 },
               })
             "
+            @click="selectedGenre = genre"
           >
             {{ genre }}
           </button>
@@ -136,7 +197,6 @@ const getTags = (conv: ConversationSummary) => {
           <button
             v-for="option in sortOptions"
             :key="option"
-            @click="sortOption = option"
             :class="
               css({
                 px: '3',
@@ -150,6 +210,7 @@ const getTags = (conv: ConversationSummary) => {
                 color: sortOption === option ? 'white' : 'gray.500',
               })
             "
+            @click="sortOption = option"
           >
             {{ option }}
           </button>
@@ -158,12 +219,12 @@ const getTags = (conv: ConversationSummary) => {
 
       <!-- Count -->
       <div :class="css({ mb: '6', fontSize: '0.875rem', color: 'gray.500' })">
-        {{ filteredConversations.length }} conversations available
+        {{ conversations.length }} {{ t('conversations.count.available') }}
       </div>
 
       <!-- Loading State -->
       <div v-if="loading" :class="css({ textAlign: 'center', py: '12' })">
-        Loading conversations...
+        {{ t('conversations.loading') }}
       </div>
 
       <!-- Error State -->
@@ -173,10 +234,10 @@ const getTags = (conv: ConversationSummary) => {
 
       <!-- Empty State -->
       <div
-        v-else-if="filteredConversations.length === 0"
+        v-else-if="conversations.length === 0"
         :class="css({ textAlign: 'center', py: '12', color: 'gray.500' })"
       >
-        No conversations found.
+        {{ t('conversations.empty') }}
       </div>
 
       <!-- Conversations Grid -->
@@ -191,7 +252,7 @@ const getTags = (conv: ConversationSummary) => {
         "
       >
         <div
-          v-for="conv in filteredConversations"
+          v-for="conv in conversations"
           :key="conv.id"
           :class="
             css({
@@ -201,6 +262,8 @@ const getTags = (conv: ConversationSummary) => {
               borderColor: 'gray.200',
               p: '6',
               transition: 'all 0.2s',
+              display: 'flex',
+              flexDirection: 'column',
               _hover: {
                 borderColor: 'green.500',
                 boxShadow: 'md',
@@ -254,14 +317,27 @@ const getTags = (conv: ConversationSummary) => {
                     fontSize: '1.125rem',
                     fontWeight: 'bold',
                     color: 'gray.900',
-                    lineClamp: '1',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
                   })
                 "
               >
                 {{ conv.title }}
               </h3>
-              <p :class="css({ fontSize: '0.75rem', color: 'gray.500', lineClamp: '1' })">
-                {{ conv.bookTitle || 'Unknown Book' }} by {{ conv.bookAuthor || 'Unknown Author' }}
+              <p
+                :class="
+                  css({
+                    fontSize: '0.75rem',
+                    color: 'gray.500',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                  })
+                "
+              >
+                {{ conv.bookTitle || t('conversations.unknown.book') }} {{ t('conversations.by') }}
+                {{ conv.bookAuthor || t('conversations.unknown.author') }}
               </p>
             </div>
           </div>
@@ -273,16 +349,25 @@ const getTags = (conv: ConversationSummary) => {
                 fontSize: '0.875rem',
                 color: 'gray.600',
                 mb: '4',
-                lineClamp: '3',
-                h: '4.5em', // Fixed height for alignment
+                h: '2.5em',
+                lineHeight: '1.25em',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
               })
             "
+            :style="{
+              display: '-webkit-box',
+              '-webkit-line-clamp': '2',
+              '-webkit-box-orient': 'vertical',
+            }"
           >
-            {{ conv.scenarioDescription || 'No description available for this conversation.' }}
+            {{ conv.scenarioDescription || t('conversations.noDescription') }}
           </p>
 
           <!-- Tags -->
-          <div :class="css({ display: 'flex', gap: '2', mb: '4', flexWrap: 'wrap' })">
+          <div
+            :class="css({ display: 'flex', gap: '2', mb: '3', flexWrap: 'wrap', minH: '1.5rem' })"
+          >
             <span
               v-for="tag in getTags(conv)"
               :key="tag"
@@ -316,17 +401,19 @@ const getTags = (conv: ConversationSummary) => {
               })
             "
           >
-            <span>💬 {{ conv.messageCount || 0 }} conversations</span>
+            <span>💬 {{ conv.messageCount || 0 }} {{ t('conversations.messageCount') }}</span>
           </div>
+
+          <!-- Spacer to push actions to bottom -->
+          <div :class="css({ flex: 1 })" />
 
           <!-- Actions -->
           <div :class="css({ display: 'flex', gap: '2' })">
             <button
-              @click="navigateToConversation(conv.id)"
               :class="
                 css({
                   flex: 1,
-                  bg: 'green.600',
+                  bg: 'green.500',
                   color: 'white',
                   py: '2',
                   borderRadius: 'md',
@@ -334,18 +421,18 @@ const getTags = (conv: ConversationSummary) => {
                   fontWeight: '600',
                   cursor: 'pointer',
                   transition: 'bg 0.2s',
-                  _hover: { bg: 'green.700' },
+                  _hover: { bg: 'green.600' },
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   gap: '2',
                 })
               "
+              @click="handleForkChat(conv.scenarioId)"
             >
-              <span>💬</span> Start Chat
+              <span>🍴</span> {{ t('conversations.actions.forkChat') }}
             </button>
             <button
-              @click="(e) => navigateToBook(e, conv.bookTitle)"
               :class="
                 css({
                   px: '3',
@@ -360,7 +447,8 @@ const getTags = (conv: ConversationSummary) => {
                   justifyContent: 'center',
                 })
               "
-              title="Go to Book"
+              :title="t('conversations.actions.goToBook')"
+              @click="(e) => navigateToBook(e, conv.bookId)"
             >
               📖
             </button>
@@ -368,6 +456,14 @@ const getTags = (conv: ConversationSummary) => {
         </div>
       </div>
     </main>
+
+    <ForkScenarioModal
+      v-if="showForkModal && selectedScenario"
+      :parent-scenario="selectedScenario"
+      :is-open="showForkModal"
+      @close="showForkModal = false"
+      @forked="handleForked"
+    />
 
     <AppFooter />
   </div>

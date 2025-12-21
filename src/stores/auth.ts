@@ -43,27 +43,26 @@ export const useAuthStore = defineStore('auth', {
   }),
 
   getters: {
-    isAuthenticated: (state): boolean => !!state.accessToken,
+    isAuthenticated: (state): boolean => !!state.user,
     currentUser: (state): User | null => state.user,
   },
 
   actions: {
     // Initialize auth state from cookies
     initializeFromCookies(): void {
-      const accessToken = getCookie(COOKIE_KEYS.ACCESS_TOKEN)
-      const refreshToken = getCookie(COOKIE_KEYS.REFRESH_TOKEN)
+      // We don't read tokens from cookies because they are HttpOnly
+      // We only read user info to restore the session state
       const userId = getCookie(COOKIE_KEYS.USER_ID)
       const username = getCookie(COOKIE_KEYS.USERNAME)
       const email = getCookie(COOKIE_KEYS.USER_EMAIL)
 
-      if (accessToken && userId && username && email) {
-        this.accessToken = accessToken
-        this.refreshToken = refreshToken
+      if (userId && username && email) {
         this.user = {
           id: userId,
           username: username,
           email: email,
         }
+        // We don't have the tokens in memory after refresh, but cookies are set
       }
     },
 
@@ -71,8 +70,7 @@ export const useAuthStore = defineStore('auth', {
     saveAuthToCookies(data: AuthResponse, rememberMe: boolean = false): void {
       const days = rememberMe ? 7 : 1 // 7 days if remember me, otherwise 1 day
 
-      setCookie(COOKIE_KEYS.ACCESS_TOKEN, data.accessToken, { days })
-      setCookie(COOKIE_KEYS.REFRESH_TOKEN, data.refreshToken, { days })
+      // We don't set token cookies here because backend sets them as HttpOnly
       setCookie(COOKIE_KEYS.USER_ID, data.userId, { days })
       setCookie(COOKIE_KEYS.USERNAME, data.username, { days })
       setCookie(COOKIE_KEYS.USER_EMAIL, data.email, { days })
@@ -88,11 +86,14 @@ export const useAuthStore = defineStore('auth', {
 
     // Clear auth data from cookies
     clearAuthCookies(): void {
-      deleteCookie(COOKIE_KEYS.ACCESS_TOKEN)
-      deleteCookie(COOKIE_KEYS.REFRESH_TOKEN)
+      // We can't clear HttpOnly cookies from JS, but we can clear our user cookies
+      // To clear HttpOnly cookies, we need to call the logout endpoint
       deleteCookie(COOKIE_KEYS.USER_ID)
       deleteCookie(COOKIE_KEYS.USERNAME)
       deleteCookie(COOKIE_KEYS.USER_EMAIL)
+      // Also try to delete token cookies just in case they were set by JS previously
+      deleteCookie(COOKIE_KEYS.ACCESS_TOKEN)
+      deleteCookie(COOKIE_KEYS.REFRESH_TOKEN)
 
       this.user = null
       this.accessToken = null
@@ -140,17 +141,11 @@ export const useAuthStore = defineStore('auth', {
     },
 
     async refreshAccessToken(): Promise<boolean> {
-      if (!this.refreshToken) {
-        return false
-      }
-
+      // We rely on HttpOnly cookies for refresh token
       try {
-        const response = await api.post<{ accessToken: string }>('/auth/refresh', {
-          refreshToken: this.refreshToken,
-        })
+        const response = await api.post<AuthResponse>('/auth/refresh')
 
-        this.accessToken = response.data.accessToken
-        setCookie(COOKIE_KEYS.ACCESS_TOKEN, response.data.accessToken, { days: 1 })
+        this.saveAuthToCookies(response.data, true)
 
         return true
       } catch (error) {
@@ -161,9 +156,7 @@ export const useAuthStore = defineStore('auth', {
 
     async logout(): Promise<void> {
       try {
-        await api.post('/auth/logout', {
-          refreshToken: this.refreshToken,
-        })
+        await api.post('/auth/logout')
       } catch (error) {
         console.error('Logout failed:', error)
       } finally {

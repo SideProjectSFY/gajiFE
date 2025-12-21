@@ -126,7 +126,11 @@ const styles = {
     width: '50px',
     height: '50px',
     borderRadius: '50%',
-    objectFit: 'cover',
+    backgroundColor: 'gray.200',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontSize: '24px',
   }),
   username: css({
     fontSize: '16px',
@@ -208,11 +212,9 @@ const styles = {
           :to="`/profile/${user.username}`"
           :class="styles.userInfo"
         >
-          <img
-            :src="user.avatarUrl || '/default-avatar.png'"
-            alt="Avatar"
-            :class="styles.avatar"
-          >
+          <div :class="styles.avatar">
+            👤
+          </div>
           <div>
             <h3 :class="styles.username">
               {{ user.username }}

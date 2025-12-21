@@ -61,12 +61,15 @@ describe('LikeButton.vue', () => {
 
   it('is enabled when authenticated', () => {
     authStore.accessToken = 'test-token'
+    authStore.user = { id: '1', username: 'test', email: 'test@test.com' }
+    authStore.user = { id: '1', username: 'test', email: 'test@test.com' }
     wrapper = createWrapper()
     expect(wrapper.find('.like-button').attributes('disabled')).toBeUndefined()
   })
 
   it('checks like status on mount when authenticated', async () => {
     authStore.accessToken = 'test-token'
+    authStore.user = { id: '1', username: 'test', email: 'test@test.com' }
     vi.mocked(api.get).mockResolvedValue({
       data: { isLiked: true, likeCount: 10 },
     })
@@ -89,6 +92,7 @@ describe('LikeButton.vue', () => {
 
   it('handles like toggle with optimistic update', async () => {
     authStore.accessToken = 'test-token'
+    authStore.user = { id: '1', username: 'test', email: 'test@test.com' }
     vi.mocked(api.post).mockResolvedValue({
       data: { isLiked: true, likeCount: 6 },
     })
@@ -104,6 +108,7 @@ describe('LikeButton.vue', () => {
 
   it('handles unlike toggle', async () => {
     authStore.accessToken = 'test-token'
+    authStore.user = { id: '1', username: 'test', email: 'test@test.com' }
     vi.mocked(api.get).mockResolvedValue({
       data: { isLiked: true, likeCount: 5 },
     })
@@ -123,6 +128,7 @@ describe('LikeButton.vue', () => {
 
   it('rolls back on API error', async () => {
     authStore.accessToken = 'test-token'
+    authStore.user = { id: '1', username: 'test', email: 'test@test.com' }
     vi.mocked(api.post).mockRejectedValue(new Error('API Error'))
 
     wrapper = createWrapper({ initialLikeCount: 5 })
@@ -138,6 +144,7 @@ describe('LikeButton.vue', () => {
 
   it('emits like-change event on successful like', async () => {
     authStore.accessToken = 'test-token'
+    authStore.user = { id: '1', username: 'test', email: 'test@test.com' }
     vi.mocked(api.post).mockResolvedValue({
       data: { isLiked: true, likeCount: 6 },
     })
@@ -153,6 +160,7 @@ describe('LikeButton.vue', () => {
 
   it('adds animating class during animation', async () => {
     authStore.accessToken = 'test-token'
+    authStore.user = { id: '1', username: 'test', email: 'test@test.com' }
     vi.mocked(api.post).mockResolvedValue({
       data: { isLiked: true, likeCount: 6 },
     })
@@ -171,6 +179,7 @@ describe('LikeButton.vue', () => {
 
   it('updates aria-label when liked', async () => {
     authStore.accessToken = 'test-token'
+    authStore.user = { id: '1', username: 'test', email: 'test@test.com' }
     vi.mocked(api.get).mockResolvedValue({
       data: { isLiked: true, likeCount: 5 },
     })

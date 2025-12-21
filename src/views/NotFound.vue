@@ -1,40 +1,97 @@
 <script setup lang="ts">
 import { css } from '../../styled-system/css'
+import LogoSvg from '@/assets/Logo.svg'
+import { useI18n } from 'vue-i18n'
+import LanguageSwitcher from '@/components/common/LanguageSwitcher.vue'
+
+const { t } = useI18n()
 
 // Static style definitions
 const styles = {
   container: css({
     minHeight: '100vh',
     display: 'flex',
+    flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'neutral.50',
+    backgroundColor: '#f9fafb',
+    padding: '2rem',
+    position: 'relative',
   }),
   content: css({
     textAlign: 'center',
+    maxWidth: '600px',
+    width: '100%',
+  }),
+  logoContainer: css({
+    marginBottom: '2rem',
+    display: 'flex',
+    justifyContent: 'center',
+    animation: 'bounce 2s infinite',
   }),
   heading: css({
-    fontSize: '6rem',
+    fontSize: { base: '4rem', md: '6rem' },
+    fontWeight: '800',
+    lineHeight: '1',
+    background: 'linear-gradient(135deg, #1f7d51 0%, #10b981 100%)',
+    backgroundClip: 'text',
+    WebkitBackgroundClip: 'text',
+    color: 'transparent',
+    marginBottom: '1.5rem',
+  }),
+  subHeading: css({
+    fontSize: { base: '1.5rem', md: '2rem' },
     fontWeight: 'bold',
-    color: 'primary.600',
+    color: 'gray.800',
     marginBottom: '1rem',
   }),
   description: css({
-    fontSize: '1.5rem',
-    color: 'neutral.600',
-    marginBottom: '2rem',
+    fontSize: '1.125rem',
+    color: 'gray.600',
+    marginBottom: '2.5rem',
+    lineHeight: '1.6',
   }),
-  link: css({
-    display: 'inline-block',
-    padding: '0.75rem 2rem',
-    backgroundColor: 'primary.600',
+  buttonGroup: css({
+    display: 'flex',
+    gap: '1rem',
+    justifyContent: 'center',
+    flexWrap: 'wrap',
+  }),
+  primaryLink: css({
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: '0.875rem 2rem',
+    backgroundColor: '#1f7d51',
     color: 'white',
-    borderRadius: 'md',
+    borderRadius: 'full',
     textDecoration: 'none',
     fontWeight: '600',
+    fontSize: '1rem',
+    transition: 'all 0.2s',
+    boxShadow: 'lg',
+    '&:hover': {
+      backgroundColor: '#166534',
+      transform: 'translateY(-2px)',
+      boxShadow: 'xl',
+    },
+  }),
+  secondaryLink: css({
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: '0.875rem 2rem',
+    backgroundColor: 'white',
+    color: '#1f7d51',
+    border: '1px solid #1f7d51',
+    borderRadius: 'full',
+    textDecoration: 'none',
+    fontWeight: '600',
+    fontSize: '1rem',
     transition: 'all 0.2s',
     '&:hover': {
-      backgroundColor: 'primary.700',
+      backgroundColor: '#f0fdf4',
+      transform: 'translateY(-2px)',
     },
   }),
 }
@@ -42,19 +99,31 @@ const styles = {
 
 <template>
   <div :class="styles.container">
+    <div style="position: absolute; top: 1.5rem; right: 1.5rem">
+      <LanguageSwitcher />
+    </div>
     <div :class="styles.content">
-      <h1 :class="styles.heading">
-        404
-      </h1>
-      <p :class="styles.description">
-        페이지를 찾을 수 없습니다.
-      </p>
-      <router-link
-        to="/"
-        :class="styles.link"
-      >
-        홈으로 돌아가기
-      </router-link>
+      <div :class="styles.logoContainer">
+        <LogoSvg style="width: 80px; height: 80px; fill: #1f7d51" />
+      </div>
+
+      <h1 :class="styles.heading">404</h1>
+
+      <h2 :class="styles.subHeading">
+        {{ t('notFound.title') }}
+      </h2>
+
+      <p :class="styles.description" v-html="t('notFound.description')"></p>
+
+      <div :class="styles.buttonGroup">
+        <router-link to="/" :class="styles.primaryLink">
+          {{ t('notFound.goHome') }}
+        </router-link>
+
+        <router-link to="/books" :class="styles.secondaryLink">
+          {{ t('notFound.findNewStory') }}
+        </router-link>
+      </div>
     </div>
   </div>
 </template>

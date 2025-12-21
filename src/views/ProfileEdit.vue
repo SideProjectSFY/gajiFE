@@ -143,7 +143,11 @@ const styles = {
     width: '150px',
     height: '150px',
     borderRadius: '50%',
-    objectFit: 'cover',
+    backgroundColor: 'gray.200',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontSize: '64px',
     border: '4px solid',
     borderColor: 'primary.500',
   }),
@@ -269,11 +273,9 @@ const styles = {
 
       <form @submit.prevent="handleSubmit">
         <div :class="styles.avatarSection">
-          <img
-            :src="avatarPreview || (profile as any)?.avatarUrl || '/default-avatar.png'"
-            alt="Avatar"
-            :class="styles.avatarLarge"
-          >
+          <div :class="styles.avatarLarge">
+            👤
+          </div>
           <div :class="styles.avatarUpload">
             <label
               for="avatar"

@@ -2,6 +2,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { css } from '../../../styled-system/css'
 
 interface Conversation {
@@ -28,6 +29,7 @@ const emit = defineEmits<Emits>()
 
 const router = useRouter()
 const route = useRoute()
+const { t } = useI18n()
 
 const conversations = ref<Conversation[]>([])
 const isLoading = ref(false)
@@ -60,7 +62,7 @@ async function loadConversations(): Promise<void> {
             id: conv.id,
             scenarioTitle: scenario.whatIfQuestion || scenario.title,
             bookTitle: scenario.bookTitle,
-            lastMessage: 'Click to view messages',
+            lastMessage: t('chat.clickToViewMessages'),
             lastMessageAt: conv.updatedAt || conv.createdAt,
             messageCount: conv.messageCount || 0,
             type: conv.isRoot ? ('ROOT' as const) : ('FORKED' as const),
@@ -70,8 +72,8 @@ async function loadConversations(): Promise<void> {
           return {
             id: conv.id,
             scenarioTitle: conv.title,
-            bookTitle: 'Unknown',
-            lastMessage: 'Click to view messages',
+            bookTitle: t('chat.unknownBook'),
+            lastMessage: t('chat.clickToViewMessages'),
             lastMessageAt: conv.updatedAt || conv.createdAt,
             messageCount: conv.messageCount || 0,
             type: conv.isRoot ? ('ROOT' as const) : ('FORKED' as const),
@@ -215,7 +217,7 @@ const styles = {
   }),
   newChatButton: css({
     padding: '0.75rem 1.5rem',
-    backgroundColor: 'blue.500',
+    backgroundColor: '#1F7D51',
     color: 'white',
     border: 'none',
     borderRadius: '0.5rem',
@@ -227,7 +229,7 @@ const styles = {
     gap: '0.5rem',
     transition: 'all 0.2s',
     '&:hover': {
-      backgroundColor: 'blue.600',
+      backgroundColor: '#186642',
     },
   }),
   conversationList: css({
@@ -358,7 +360,7 @@ const styles = {
           <div v-else-if="conversations.length === 0" :class="styles.emptyContainer">
             <span :class="styles.emptyIcon">📭</span>
             <p :class="styles.emptyText">아직 대화가 없습니다</p>
-            <button :class="styles.newChatButton" @click="router.push('/scenarios')">
+            <button :class="styles.newChatButton" @click="router.push('/books')">
               <span>➕</span>
               새 대화 시작
             </button>

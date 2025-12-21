@@ -3,6 +3,7 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { css } from 'styled-system/css'
 import AppHeader from '../components/common/AppHeader.vue'
 import AppFooter from '../components/common/AppFooter.vue'
@@ -15,6 +16,7 @@ import type { BooksResponse } from '@/types/book'
 
 const route = useRoute()
 const router = useRouter()
+const { t } = useI18n()
 const { trackBookViewed } = useAnalytics()
 const authStore = useAuthStore()
 
@@ -129,11 +131,6 @@ const fetchBook = async () => {
   } catch (err: any) {
     console.error('[BookDetailPage] Failed to fetch book:', err, err.message, err.stack)
     error.value = 'Failed to load book details'
-    // Redirect to books page if book not found
-    if (err.response?.status === 404) {
-      console.log('[BookDetailPage] 404, redirecting')
-      router.push('/books')
-    }
   } finally {
     loading.value = false
     console.log(
@@ -286,7 +283,7 @@ const handleScenarioCreated = (data: any) => {
               css({ color: 'gray.600', textDecoration: 'none', _hover: { color: 'green.500' } })
             "
           >
-            ← Go to Book List
+            ← {{ t('books.detail.backToBookList') }}
           </router-link>
         </div>
       </div>
@@ -304,7 +301,9 @@ const handleScenarioCreated = (data: any) => {
           })
         "
       >
-        <p :class="css({ color: 'gray.600' })">Loading book details...</p>
+        <p :class="css({ color: 'gray.600' })">
+          {{ t('books.detail.loading') }}
+        </p>
       </div>
 
       <!-- Error State -->
@@ -320,9 +319,10 @@ const handleScenarioCreated = (data: any) => {
           })
         "
       >
-        <p :class="css({ color: 'red.600', mb: '4' })">{{ error }}</p>
+        <p :class="css({ color: 'red.600', mb: '4' })">
+          {{ error }}
+        </p>
         <button
-          @click="fetchBook"
           :class="
             css({
               px: '4',
@@ -333,6 +333,7 @@ const handleScenarioCreated = (data: any) => {
               _hover: { bg: 'green.600' },
             })
           "
+          @click="fetchBook"
         >
           Retry
         </button>
@@ -396,7 +397,7 @@ const handleScenarioCreated = (data: any) => {
                   })
                 "
               >
-                {{ tag }}
+                {{ t(tag) }}
               </span>
             </div>
 
@@ -416,7 +417,7 @@ const handleScenarioCreated = (data: any) => {
 
             <!-- Author & Genre -->
             <p :class="css({ fontSize: '1rem', color: 'gray.600', mb: '4' })">
-              by {{ book.author }} • {{ book.genre }}
+              {{ t('books.detail.byAuthorGenre', { author: book.author, genre: book.genre }) }}
             </p>
 
             <!-- Description -->
@@ -438,7 +439,7 @@ const handleScenarioCreated = (data: any) => {
             <div :class="css({ display: 'flex', gap: '6', mb: '0' })">
               <div>
                 <div :class="css({ fontSize: '0.75rem', color: 'gray.500', mb: '1' })">
-                  📝 Scenarios
+                  📝 {{ t('books.stats.scenarios') }}
                 </div>
                 <div :class="css({ fontSize: '1.125rem', fontWeight: 'bold', color: 'gray.900' })">
                   {{ book.scenarioCount }}
@@ -446,7 +447,7 @@ const handleScenarioCreated = (data: any) => {
               </div>
               <div>
                 <div :class="css({ fontSize: '0.75rem', color: 'gray.500', mb: '1' })">
-                  💬 Conversations
+                  💬 {{ t('books.stats.conversations') }}
                 </div>
                 <div :class="css({ fontSize: '1.125rem', fontWeight: 'bold', color: 'gray.900' })">
                   {{ book.conversationCount.toLocaleString() }}
@@ -454,7 +455,7 @@ const handleScenarioCreated = (data: any) => {
               </div>
               <div>
                 <div :class="css({ fontSize: '0.75rem', color: 'gray.500', mb: '1' })">
-                  ❤️ Likes
+                  ❤️ {{ t('books.stats.likes') }}
                 </div>
                 <div :class="css({ fontSize: '1.125rem', fontWeight: 'bold', color: 'gray.900' })">
                   {{ book.likeCount ?? 0 }}
@@ -499,7 +500,7 @@ const handleScenarioCreated = (data: any) => {
                 })
               "
             >
-              🔗 Search Characters
+              🔗 {{ t('books.detail.searchCharacters') }}
             </h2>
 
             <!-- SVG Graph -->
@@ -594,9 +595,9 @@ const handleScenarioCreated = (data: any) => {
                       })
                     "
                   />
-                  <span :class="css({ fontSize: '0.75rem', color: 'gray.700' })"
-                    >Main Character</span
-                  >
+                  <span :class="css({ fontSize: '0.75rem', color: 'gray.700' })">{{
+                    t('books.detail.legend.mainCharacter')
+                  }}</span>
                 </div>
                 <div :class="css({ display: 'flex', alignItems: 'center', gap: '2' })">
                   <div
@@ -609,9 +610,9 @@ const handleScenarioCreated = (data: any) => {
                       })
                     "
                   />
-                  <span :class="css({ fontSize: '0.75rem', color: 'gray.700' })"
-                    >Minor Character</span
-                  >
+                  <span :class="css({ fontSize: '0.75rem', color: 'gray.700' })">{{
+                    t('books.detail.legend.minorCharacter')
+                  }}</span>
                 </div>
                 <div :class="css({ display: 'flex', alignItems: 'center', gap: '2' })">
                   <div
@@ -623,7 +624,9 @@ const handleScenarioCreated = (data: any) => {
                       })
                     "
                   />
-                  <span :class="css({ fontSize: '0.75rem', color: 'gray.700' })">Strong Bond</span>
+                  <span :class="css({ fontSize: '0.75rem', color: 'gray.700' })">{{
+                    t('books.detail.legend.strongBond')
+                  }}</span>
                 </div>
                 <div :class="css({ display: 'flex', alignItems: 'center', gap: '2' })">
                   <div
@@ -635,7 +638,9 @@ const handleScenarioCreated = (data: any) => {
                       })
                     "
                   />
-                  <span :class="css({ fontSize: '0.75rem', color: 'gray.700' })">Weak Connect</span>
+                  <span :class="css({ fontSize: '0.75rem', color: 'gray.700' })">{{
+                    t('books.detail.legend.weakConnect')
+                  }}</span>
                 </div>
                 <div :class="css({ display: 'flex', alignItems: 'center', gap: '2' })">
                   <div
@@ -647,9 +652,9 @@ const handleScenarioCreated = (data: any) => {
                       })
                     "
                   />
-                  <span :class="css({ fontSize: '0.75rem', color: 'gray.700' })"
-                    >Mean Conflict</span
-                  >
+                  <span :class="css({ fontSize: '0.75rem', color: 'gray.700' })">{{
+                    t('books.detail.legend.meanConflict')
+                  }}</span>
                 </div>
               </div>
             </div>
@@ -679,7 +684,7 @@ const handleScenarioCreated = (data: any) => {
                   })
                 "
               >
-                All Characters
+                {{ t('books.detail.allCharacters') }}
               </h2>
               <div :class="css({ display: 'flex', flexDirection: 'column', gap: '3' })">
                 <div
@@ -728,7 +733,7 @@ const handleScenarioCreated = (data: any) => {
                         })
                       "
                     >
-                      Featured
+                      {{ t('books.detail.featured') }}
                     </span>
                   </div>
                   <p :class="css({ fontSize: '0.875rem', color: 'gray.600', mb: '3' })">
@@ -749,11 +754,16 @@ const handleScenarioCreated = (data: any) => {
                         })
                       "
                     >
-                      {{ tag }}
+                      {{ t(tag) }}
                     </span>
                   </div>
                   <p :class="css({ fontSize: '0.75rem', color: 'gray.500', mb: '3' })">
-                    💬 {{ character.conversations.toLocaleString() }} conversations started
+                    💬
+                    {{
+                      t('books.detail.conversationsStarted', {
+                        count: character.conversations.toLocaleString(),
+                      })
+                    }}
                   </p>
                 </div>
               </div>
@@ -789,8 +799,10 @@ const handleScenarioCreated = (data: any) => {
           >
             {{
               selectedCharacter === null
-                ? 'Select Character'
-                : `Create ${characters.find((c) => c.id === selectedCharacter)?.name}`
+                ? t('books.detail.selectCharacterButton')
+                : t('books.detail.createCharacterScenario', {
+                    name: characters.find((c) => c.id === selectedCharacter)?.name,
+                  })
             }}
           </button>
         </div>
@@ -866,10 +878,10 @@ const handleScenarioCreated = (data: any) => {
               })
             "
           >
-            Create New Scenario
+            {{ t('books.scenario.createTitle') }}
           </h2>
           <p :class="css({ fontSize: '0.875rem', color: 'gray.600' })">
-            Configure scenario settings for your conversation
+            {{ t('books.scenario.createSubtitle') }}
           </p>
         </div>
 
@@ -928,7 +940,7 @@ const handleScenarioCreated = (data: any) => {
               })
             "
           >
-            What changes do you want to make?
+            {{ t('books.scenario.changesTitle') }}
           </h3>
 
           <!-- Character Property -->
@@ -950,7 +962,7 @@ const handleScenarioCreated = (data: any) => {
                   css({ fontSize: '0.9375rem', fontWeight: '600', color: 'gray.900', mb: '2' })
                 "
               >
-                Character Property
+                {{ t('books.scenario.characterProperty') }}
               </h4>
               <span
                 :class="
@@ -1014,7 +1026,7 @@ const handleScenarioCreated = (data: any) => {
           >
             <div :class="css({ display: 'flex', justifyContent: 'space-between', mb: '2' })">
               <h4 :class="css({ fontSize: '1rem', fontWeight: '600', color: 'gray.900', mb: '3' })">
-                Event Alterations
+                {{ t('books.scenario.eventAlterations') }}
               </h4>
               <span
                 :class="
@@ -1077,7 +1089,7 @@ const handleScenarioCreated = (data: any) => {
           >
             <div :class="css({ display: 'flex', justifyContent: 'space-between', mb: '2' })">
               <h4 :class="css({ fontSize: '1rem', fontWeight: '600', color: 'gray.900', mb: '3' })">
-                Setting Modifications
+                {{ t('books.scenario.settingModifications') }}
               </h4>
               <span
                 :class="
@@ -1148,7 +1160,7 @@ const handleScenarioCreated = (data: any) => {
               })
             "
           >
-            Please provide at least one scenario type with 10+ characters
+            {{ t('books.scenario.validationError') }}
           </div>
         </div>
 
@@ -1166,7 +1178,7 @@ const handleScenarioCreated = (data: any) => {
               })
             "
           >
-            Scenario Description (Optional)
+            {{ t('books.scenario.descriptionLabel') }}
           </label>
           <textarea
             id="scenario-description"
@@ -1189,7 +1201,7 @@ const handleScenarioCreated = (data: any) => {
                 },
               })
             "
-            placeholder="Describe your scenario or add notes..."
+            :placeholder="t('books.scenario.descriptionPlaceholder')"
           />
         </div>
 
@@ -1217,7 +1229,7 @@ const handleScenarioCreated = (data: any) => {
             "
             @click="createScenario"
           >
-            Create Scenario
+            {{ t('books.detail.createScenario') }}
           </button>
           <button
             data-testid="cancel-button"
@@ -1240,7 +1252,7 @@ const handleScenarioCreated = (data: any) => {
             "
             @click="closeScenarioModal"
           >
-            Cancel
+            {{ t('common.cancel') }}
           </button>
         </div>
       </div>

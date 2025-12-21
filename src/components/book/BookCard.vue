@@ -33,18 +33,18 @@
 
         <div class="book-card__meta">
           <span class="book-card__genre" :aria-label="`Genre: ${book.genre}`">{{
-            book.genre
+            t(`books.filters.${book.genre.toLowerCase()}`, book.genre)
           }}</span>
           <div class="book-card__stats" aria-label="Book statistics">
             <span class="stat">
               <i class="pi pi-list" aria-hidden="true" />
               <span class="sr-only">Scenarios:</span>
-              {{ book.scenarioCount }} scenarios
+              {{ book.scenarioCount }} {{ t('books.stats.scenarios') }}
             </span>
             <span class="stat">
               <i class="pi pi-comments" aria-hidden="true" />
               <span class="sr-only">Conversations:</span>
-              {{ book.conversationCount }} conversations
+              {{ book.conversationCount }} {{ t('books.stats.conversations') }}
             </span>
           </div>
         </div>
@@ -57,7 +57,11 @@
         class="action-button"
         :class="{ active: isLiked, loading: isLiking }"
         :disabled="isLiking"
-        :aria-label="isLiked ? `Unlike ${book.title}` : `Like ${book.title}`"
+        :aria-label="
+          isLiked
+            ? `${t('books.actions.unlike')} ${book.title}`
+            : `${t('books.actions.like')} ${book.title}`
+        "
         :aria-pressed="isLiked"
         @click="handleLike"
       >
@@ -67,16 +71,16 @@
           aria-hidden="true"
         />
         <i v-else class="pi pi-spin pi-spinner" aria-hidden="true" />
-        <span>{{ isLiked ? 'Unlike' : 'Like' }}</span>
+        <span>{{ isLiked ? t('books.actions.unlike') : t('books.actions.like') }}</span>
       </button>
 
       <button
         class="action-button view-book"
-        :aria-label="`View details for ${book.title}`"
+        :aria-label="`${t('books.actions.viewBook')} ${book.title}`"
         @click="handleClick"
       >
         <i class="pi pi-eye" aria-hidden="true" />
-        <span>View Book</span>
+        <span>{{ t('books.actions.viewBook') }}</span>
       </button>
     </div>
   </article>
@@ -84,7 +88,10 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import type { Book } from '@/types/book'
+
+const { t } = useI18n()
 
 interface Props {
   book: Book
@@ -327,14 +334,14 @@ const handleLike = async (): Promise<void> => {
 }
 
 .action-button.view-book {
-  background: #4caf50;
+  background: #1f7d51;
   color: white;
-  border: 2px solid #4caf50;
+  border: 2px solid #1f7d51;
 }
 
 .action-button.view-book:hover:not(:disabled) {
-  background: #45a049;
-  border-color: #45a049;
+  background: #17613e;
+  border-color: #17613e;
   color: white;
   transform: translateY(-1px);
 }

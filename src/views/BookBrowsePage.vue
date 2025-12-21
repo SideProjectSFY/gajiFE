@@ -1,31 +1,78 @@
 <template>
-  <div class="book-browse-layout">
+  <div :class="css({ minH: '100vh', display: 'flex', flexDirection: 'column', bg: 'white' })">
     <AppHeader />
+    <div :class="css({ h: '20' })" />
 
-    <main class="book-browse-page" role="main" aria-label="Browse Books">
-      <header class="page-header">
-        <h1 class="page-title">📚 Browse Books</h1>
-        <p class="page-subtitle">Discover your next adventure in classic literature</p>
-      </header>
-
+    <main
+      :class="
+        css({
+          flex: 1,
+          maxW: '1200px',
+          w: 'full',
+          mx: 'auto',
+          px: { base: '4', md: '8' },
+          py: '8',
+        })
+      "
+      role="main"
+      aria-label="Browse Books"
+    >
       <!-- Filter and Sort Section -->
-      <div class="filter-section">
-        <div class="filter-chips">
+      <div
+        :class="
+          css({
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            mb: '8',
+            flexWrap: 'wrap',
+            gap: '4',
+          })
+        "
+      >
+        <div :class="css({ display: 'flex', gap: '2', flexWrap: 'wrap' })">
           <button
             v-for="genre in genres"
             :key="genre.value"
-            :class="['filter-chip', { active: currentFilters.genre === genre.value }]"
+            :class="
+              css({
+                px: '4',
+                py: '1.5',
+                borderRadius: 'full',
+                fontSize: '0.875rem',
+                fontWeight: '500',
+                cursor: 'pointer',
+                transition: 'all 0.2s',
+                bg: currentFilters.genre === genre.value ? 'green.600' : 'gray.100',
+                color: currentFilters.genre === genre.value ? 'white' : 'gray.700',
+                _hover: {
+                  bg: currentFilters.genre === genre.value ? 'green.700' : 'gray.200',
+                },
+              })
+            "
             @click="handleGenreFilter(genre.value)"
           >
             {{ genre.label }}
           </button>
         </div>
 
-        <div class="sort-controls">
+        <div :class="css({ display: 'flex', bg: 'gray.100', borderRadius: 'md', p: '1' })">
           <button
             v-for="option in sortOptions"
             :key="option.value"
-            :class="['sort-button', { active: currentFilters.sort === option.value }]"
+            :class="
+              css({
+                px: '3',
+                py: '1',
+                borderRadius: 'sm',
+                fontSize: '0.75rem',
+                fontWeight: '500',
+                cursor: 'pointer',
+                transition: 'all 0.2s',
+                bg: currentFilters.sort === option.value ? 'green.600' : 'transparent',
+                color: currentFilters.sort === option.value ? 'white' : 'gray.500',
+              })
+            "
             @click="handleSortChange(option.value)"
           >
             {{ option.label }}
@@ -34,20 +81,39 @@
       </div>
 
       <!-- Results Count -->
-      <div v-if="!loading && !error" class="results-info">
-        <p class="results-count">
-          {{ totalElements }} book{{ totalElements !== 1 ? 's' : '' }} found
-        </p>
+      <div
+        v-if="!loading && !error"
+        :class="css({ mb: '6', fontSize: '0.875rem', color: 'gray.500' })"
+      >
+        {{ totalElements }}
+        {{ totalElements !== 1 ? t('books.count.available') : t('books.count.single') }}
       </div>
 
       <!-- Error State -->
-      <div v-if="error" class="error-container" role="alert" aria-live="polite">
+      <div
+        v-if="error"
+        class="error-container"
+        role="alert"
+        aria-live="polite"
+      >
         <div class="error-content">
-          <i class="pi pi-exclamation-triangle" aria-hidden="true" />
-          <p class="error-message">{{ error }}</p>
-          <button class="retry-button" aria-label="Retry loading books" @click="retryFetch">
-            <i class="pi pi-refresh" aria-hidden="true" />
-            Retry
+          <i
+            class="pi pi-exclamation-triangle"
+            aria-hidden="true"
+          />
+          <p class="error-message">
+            {{ error }}
+          </p>
+          <button
+            class="retry-button"
+            aria-label="Retry loading books"
+            @click="retryFetch"
+          >
+            <i
+              class="pi pi-refresh"
+              aria-hidden="true"
+            />
+            {{ t('books.error.retry') }}
           </button>
         </div>
       </div>
@@ -78,33 +144,38 @@
 <script setup lang="ts">
 import { ref, onMounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
+import { useI18n } from 'vue-i18n'
+import { css } from '../../styled-system/css'
 import AppHeader from '@/components/common/AppHeader.vue'
 import AppFooter from '@/components/common/AppFooter.vue'
 import BookGrid from '@/components/book/BookGrid.vue'
 import PaginationControls from '@/components/book/PaginationControls.vue'
 import { bookApi } from '@/services/bookApi'
 import type { Book, BookSortOption } from '@/types/book'
+import { useAuthStore } from '@/stores/auth'
 
 const router = useRouter()
 const route = useRoute()
+const authStore = useAuthStore()
+const { t } = useI18n()
 
 // Genre options matching the design
 const genres = [
-  { label: 'All Genres', value: '' },
-  { label: 'Romance', value: 'Romance' },
-  { label: 'Fantasy', value: 'Fantasy' },
-  { label: 'Mystery', value: 'Mystery' },
-  { label: 'Sci-Fi', value: 'Sci-Fi' },
-  { label: 'Horror', value: 'Horror' },
-  { label: 'Adventure', value: 'Adventure' },
-  { label: 'Historical', value: 'Historical' },
+  { label: t('books.filters.allGenres'), value: '' },
+  { label: t('books.filters.romance'), value: 'Romance' },
+  { label: t('books.filters.fantasy'), value: 'Fantasy' },
+  { label: t('books.filters.mystery'), value: 'Mystery' },
+  { label: t('books.filters.sciFi'), value: 'Sci-Fi' },
+  { label: t('books.filters.horror'), value: 'Horror' },
+  { label: t('books.filters.adventure'), value: 'Adventure' },
+  { label: t('books.filters.historical'), value: 'Historical' },
 ]
 
 // Sort options
 const sortOptions: { label: string; value: BookSortOption }[] = [
-  { label: 'Latest', value: 'latest' },
-  { label: 'Recommended', value: 'recommended' },
-  { label: 'Popular', value: 'popular' },
+  { label: t('books.sort.latest'), value: 'latest' },
+  { label: t('books.sort.recommended'), value: 'recommended' },
+  { label: t('books.sort.popular'), value: 'popular' },
 ]
 
 // State
@@ -124,7 +195,7 @@ const currentFilters = ref<{
   sort: 'latest',
 })
 
-const emptyMessage = ref('No books available yet. Check back soon!')
+const emptyMessage = ref(t('books.empty'))
 
 // Initialize from URL query params
 const initializeFromQuery = (): void => {
@@ -149,20 +220,37 @@ const fetchBooks = async (): Promise<void> => {
       sort: currentFilters.value.sort,
     })
 
-    books.value = response.content
+    let fetchedBooks = response.content
+
+    // Check for liked books if user is authenticated
+    if (authStore.user?.id) {
+      try {
+        const likedBooksResponse = await bookApi.getLikedBooks(authStore.user.id)
+        const likedBookIds = new Set(likedBooksResponse.content.map((b: any) => b.id))
+
+        fetchedBooks = fetchedBooks.map((book) => ({
+          ...book,
+          isLiked: likedBookIds.has(book.id),
+        }))
+      } catch (e) {
+        console.error('Failed to fetch liked books', e)
+      }
+    }
+
+    books.value = fetchedBooks
     totalPages.value = response.totalPages
     totalElements.value = response.totalElements
 
     // Update empty message based on filters
     if (currentFilters.value.genre) {
-      emptyMessage.value = `No books found for ${currentFilters.value.genre}. Try another filter.`
+      emptyMessage.value = t('books.emptyFiltered')
     } else {
-      emptyMessage.value = 'No books available yet. Check back soon!'
+      emptyMessage.value = t('books.empty')
     }
   } catch (err) {
     console.error('Failed to fetch books:', err)
     books.value = []
-    error.value = 'Failed to load books. Please try again.'
+    error.value = t('books.error.failed')
   } finally {
     loading.value = false
   }
@@ -217,6 +305,11 @@ const handleBookClick = (book: Book): void => {
 }
 
 const handleLike = async (bookId: string, isLiked: boolean): Promise<void> => {
+  if (!authStore.isAuthenticated) {
+    router.push('/login')
+    return
+  }
+
   try {
     if (isLiked) {
       await bookApi.likeBook(bookId)
@@ -246,219 +339,3 @@ watch(
   }
 )
 </script>
-
-<style scoped>
-.book-browse-layout {
-  display: flex;
-  flex-direction: column;
-  min-height: 100vh;
-}
-
-.book-browse-page {
-  flex: 1;
-  max-width: 1400px;
-  margin: 0 auto;
-  padding: 5rem 1rem 2rem;
-  min-height: 100vh;
-  background: #f8f9fa;
-}
-
-.page-header {
-  margin-bottom: 2rem;
-  text-align: center;
-  padding: 1rem;
-}
-
-.page-title {
-  font-size: 2.5rem;
-  font-weight: 700;
-  color: #1a1a1a;
-  margin: 0 0 0.5rem 0;
-}
-
-.page-subtitle {
-  font-size: 1.125rem;
-  color: #666;
-  margin: 0;
-}
-
-/* Filter Section */
-.filter-section {
-  background: white;
-  padding: 1.5rem;
-  border-radius: 12px;
-  margin-bottom: 2rem;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 2rem;
-}
-
-.filter-chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.75rem;
-  flex: 1;
-}
-
-.filter-chip {
-  padding: 0.5rem 1.25rem;
-  border: 2px solid #e0e0e0;
-  background: white;
-  border-radius: 24px;
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: #666;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.filter-chip:hover {
-  border-color: #4caf50;
-  color: #4caf50;
-  background: #f1f8f4;
-}
-
-.filter-chip.active {
-  background: #4caf50;
-  border-color: #4caf50;
-  color: white;
-}
-
-.sort-controls {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  flex-shrink: 0;
-}
-
-.sort-button {
-  padding: 0.5rem 1.5rem;
-  border: none;
-  background: #e0e0e0;
-  border-radius: 24px;
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: #666;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.sort-button:hover {
-  background: #d0d0d0;
-  color: #333;
-}
-
-.sort-button.active {
-  background: #4caf50;
-  color: white;
-}
-
-/* Results Info */
-.results-info {
-  margin-bottom: 1.5rem;
-  text-align: center;
-}
-
-.results-count {
-  font-size: 0.875rem;
-  color: #666;
-  margin: 0;
-}
-
-/* Error State */
-.error-container {
-  display: flex;
-  justify-content: center;
-  padding: 3rem 1rem;
-  background: white;
-  border-radius: 12px;
-  margin: 2rem 0;
-}
-
-.error-content {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 1rem;
-  text-align: center;
-  max-width: 400px;
-}
-
-.error-content .pi-exclamation-triangle {
-  font-size: 3rem;
-  color: #ef4444;
-}
-
-.error-message {
-  font-size: 1rem;
-  color: #666;
-  margin: 0;
-}
-
-.retry-button {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.75rem 1.5rem;
-  background: #4caf50;
-  color: white;
-  border: none;
-  border-radius: 8px;
-  font-size: 0.875rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.retry-button:hover {
-  background: #45a049;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 8px rgba(76, 175, 80, 0.2);
-}
-
-/* Responsive */
-@media (max-width: 768px) {
-  .book-browse-page {
-    padding: 4rem 0.5rem 1rem;
-  }
-
-  .page-title {
-    font-size: 2rem;
-  }
-
-  .page-subtitle {
-    font-size: 1rem;
-  }
-
-  .page-header {
-    margin-bottom: 1.5rem;
-  }
-
-  .filter-section {
-    padding: 1rem;
-    flex-direction: column;
-    align-items: stretch;
-    gap: 1rem;
-  }
-
-  .filter-chips {
-    gap: 0.5rem;
-    justify-content: flex-start;
-  }
-
-  .filter-chip {
-    padding: 0.375rem 1rem;
-    font-size: 0.8125rem;
-  }
-
-  .sort-controls {
-    justify-content: flex-end;
-  }
-
-  .error-container {
-    padding: 2rem 1rem;
-  }
-}
-</style>

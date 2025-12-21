@@ -25,73 +25,66 @@
       <form :class="css({ spaceY: '5' })" @submit.prevent="handleSubmit">
         <!-- Character Properties -->
         <div :class="css(formGroup)">
-          <label :class="css(formLabel)">
-            Character Properties
-            <span :class="css(requiredMark)">*</span>
-          </label>
+          <div :class="css(validationRow)">
+            <label :class="css(formLabel)" for="character-changes">
+              Character Properties
+              <span :class="css(requiredMark)">*</span>
+            </label>
+            <span :class="css(charCount)">{{ formData.characterChanges.length }}/10</span>
+          </div>
           <textarea
+            id="character-changes"
             v-model="formData.characterChanges"
             :class="css(formTextarea)"
             rows="4"
             placeholder="Describe character changes (e.g., 'What if Hermione was sorted into Slytherin?')"
             data-testid="character-changes-input"
           />
-          <div :class="css(validationRow)">
-            <p v-if="!isCharacterChangesValid" :class="css(errorText)">
-              Must be at least {{ MIN_CHARS }} characters
-            </p>
-            <p :class="css(charCount)">{{ getCharCount(formData.characterChanges) }} characters</p>
-          </div>
         </div>
 
         <!-- Event Alterations -->
         <div :class="css(formGroup)">
-          <label :class="css(formLabel)">
-            Event Alterations
-            <span :class="css(requiredMark)">*</span>
-          </label>
+          <div :class="css(validationRow)">
+            <label :class="css(formLabel)" for="event-alterations">
+              Event Alterations
+              <span :class="css(requiredMark)">*</span>
+            </label>
+            <span :class="css(charCount)">{{ formData.eventAlterations.length }}/10</span>
+          </div>
           <textarea
+            id="event-alterations"
             v-model="formData.eventAlterations"
             :class="css(formTextarea)"
             rows="4"
             placeholder="Describe event changes (e.g., 'What if Harry Potter lost in the first task of the Triwizard Tournament?')"
             data-testid="event-alterations-input"
           />
-          <div :class="css(validationRow)">
-            <p v-if="!isEventAlterationsValid" :class="css(errorText)">
-              Must be at least {{ MIN_CHARS }} characters
-            </p>
-            <p :class="css(charCount)">{{ getCharCount(formData.eventAlterations) }} characters</p>
-          </div>
         </div>
 
         <!-- Setting Modifications -->
         <div :class="css(formGroup)">
-          <label :class="css(formLabel)">
-            Setting Modifications
-            <span :class="css(requiredMark)">*</span>
-          </label>
+          <div :class="css(validationRow)">
+            <label :class="css(formLabel)" for="setting-modifications">
+              Setting Modifications
+              <span :class="css(requiredMark)">*</span>
+            </label>
+            <span :class="css(charCount)">{{ formData.settingModifications.length }}/10</span>
+          </div>
           <textarea
+            id="setting-modifications"
             v-model="formData.settingModifications"
             :class="css(formTextarea)"
             rows="4"
             placeholder="Describe setting changes (e.g., 'What if Hogwarts was located in Japan?')"
             data-testid="setting-modifications-input"
           />
-          <div :class="css(validationRow)">
-            <p v-if="!isSettingModificationsValid" :class="css(errorText)">
-              Must be at least {{ MIN_CHARS }} characters
-            </p>
-            <p :class="css(charCount)">
-              {{ getCharCount(formData.settingModifications) }} characters
-            </p>
-          </div>
         </div>
 
         <!-- Description -->
         <div :class="css(formGroup)">
-          <label :class="css(formLabel)">Description (optional)</label>
+          <label :class="css(formLabel)" for="description">Description (optional)</label>
           <textarea
+            id="description"
             v-model="formData.description"
             :class="css(formTextarea)"
             rows="3"
@@ -101,11 +94,16 @@
         </div>
 
         <!-- Validation Message -->
-        <div v-if="showValidationError" :class="css(validationMessage)">
-          <p>
-            ⚠️ At least one field (Character, Event, or Setting) must have {{ MIN_CHARS }}+
-            characters
-          </p>
+        <div
+          v-if="
+            !hasAtLeastOneValidType &&
+            (formData.characterChanges ||
+              formData.eventAlterations ||
+              formData.settingModifications)
+          "
+          :class="css(validationMessage)"
+        >
+          Please provide at least one scenario type with 10+ characters
         </div>
 
         <!-- Actions -->
@@ -166,20 +164,11 @@ const formData = ref<CreateScenarioForm>({
 })
 
 // Validation
-const isCharacterChangesValid = computed(() => {
-  const length = formData.value.characterChanges.trim().length
-  return length === 0 || length >= MIN_CHARS
-})
+const isCharacterChangesValid = computed(() => true)
 
-const isEventAlterationsValid = computed(() => {
-  const length = formData.value.eventAlterations.trim().length
-  return length === 0 || length >= MIN_CHARS
-})
+const isEventAlterationsValid = computed(() => true)
 
-const isSettingModificationsValid = computed(() => {
-  const length = formData.value.settingModifications.trim().length
-  return length === 0 || length >= MIN_CHARS
-})
+const isSettingModificationsValid = computed(() => true)
 
 const hasAtLeastOneValidType = computed(() => {
   return (
@@ -197,18 +186,6 @@ const isFormValid = computed(() => {
     hasAtLeastOneValidType.value
   )
 })
-
-const showValidationError = computed(() => {
-  const hasTyped =
-    formData.value.characterChanges.length > 0 ||
-    formData.value.eventAlterations.length > 0 ||
-    formData.value.settingModifications.length > 0
-  return hasTyped && !hasAtLeastOneValidType.value
-})
-
-const getCharCount = (text: string) => {
-  return text.trim().length
-}
 
 const handleClose = () => {
   formData.value = {

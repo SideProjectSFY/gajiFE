@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import axios from 'axios'
+import api from '@/services/api'
 import { useAuthStore } from './auth'
 
 export interface Message {
@@ -42,9 +42,6 @@ export const useConversationStore = defineStore('conversation', () => {
   const error = ref<string | null>(null)
   const pollingRetries = ref(0)
   const maxRetries = 3
-
-  // API base URL
-  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
 
   // Actions
   function setConversations(newConversations: Conversation[]): void {
@@ -101,18 +98,10 @@ export const useConversationStore = defineStore('conversation', () => {
       const userId = authStore.user?.id || '00000000-0000-0000-0000-000000000000'
 
       // Submit message to backend
-      await axios.post(
-        `${API_BASE_URL}/api/conversations/${currentConversation.value.id}/messages`,
-        {
-          content,
-          role: 'user',
-        },
-        {
-          headers: {
-            'X-User-Id': userId,
-          },
-        }
-      )
+      await api.post(`/conversations/${currentConversation.value.id}/messages`, {
+        content,
+        role: 'user',
+      })
 
       // Start polling for AI response
       await startPolling()
@@ -145,8 +134,8 @@ export const useConversationStore = defineStore('conversation', () => {
     if (!currentConversation.value) return
 
     try {
-      const response = await axios.get<PollResponse>(
-        `${API_BASE_URL}/api/conversations/${currentConversation.value.id}/messages/poll`
+      const response = await api.get<PollResponse>(
+        `/conversations/${currentConversation.value.id}/messages/poll`
       )
 
       const { status, content, error: apiError, messageId } = response.data
@@ -234,15 +223,9 @@ export const useConversationStore = defineStore('conversation', () => {
       const authStore = useAuthStore()
       const userId = authStore.user?.id || '00000000-0000-0000-0000-000000000000'
 
-      const response = await axios.post<Conversation>(
-        `${API_BASE_URL}/api/v1/conversations/${conversationId}/fork`,
-        { description },
-        {
-          headers: {
-            'X-User-Id': userId,
-          },
-        }
-      )
+      const response = await api.post<Conversation>(`/conversations/${conversationId}/fork`, {
+        description,
+      })
 
       // Optimistically update parent conversation
       const parentConv = conversations.value.find((c) => c.id === conversationId)

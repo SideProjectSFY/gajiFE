@@ -3,9 +3,7 @@
  * Handles HTTP requests for user-related operations
  */
 
-import axios from 'axios'
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
+import api from './api'
 
 export interface User {
   id: string
@@ -20,7 +18,7 @@ export const userApi = {
    * @param userId User ID to follow
    */
   async followUser(userId: string): Promise<void> {
-    await axios.post(`${API_BASE_URL}/api/v1/users/${userId}/follow`)
+    await api.post(`/users/${userId}/follow`)
   },
 
   /**
@@ -28,7 +26,7 @@ export const userApi = {
    * @param userId User ID to unfollow
    */
   async unfollowUser(userId: string): Promise<void> {
-    await axios.delete(`${API_BASE_URL}/api/v1/users/${userId}/follow`)
+    await api.delete(`/users/${userId}/unfollow`)
   },
 
   /**
@@ -36,7 +34,7 @@ export const userApi = {
    * @param username Username
    */
   async getUserProfile(username: string): Promise<User> {
-    const response = await axios.get<User>(`${API_BASE_URL}/api/v1/users/${username}`)
+    const response = await api.get<User>(`/users/${username}`)
     return response.data
   },
 
@@ -45,8 +43,8 @@ export const userApi = {
    * @param userId User ID
    */
   async getFollowers(userId: string): Promise<User[]> {
-    const response = await axios.get<User[]>(`${API_BASE_URL}/api/v1/users/${userId}/followers`)
-    return response.data
+    const response = await api.get<any>(`/users/${userId}/followers`)
+    return response.data.content
   },
 
   /**
@@ -54,7 +52,17 @@ export const userApi = {
    * @param userId User ID
    */
   async getFollowing(userId: string): Promise<User[]> {
-    const response = await axios.get<User[]>(`${API_BASE_URL}/api/v1/users/${userId}/following`)
+    const response = await api.get<any>(`/users/${userId}/following`)
+    return response.data.content
+  },
+
+  /**
+   * Update user profile
+   * @param userId User ID
+   * @param data Profile update data
+   */
+  async updateProfile(userId: string, data: { bio?: string }): Promise<User> {
+    const response = await api.put<User>(`/users/${userId}`, data)
     return response.data
   },
 }

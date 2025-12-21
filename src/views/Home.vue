@@ -1,24 +1,26 @@
 <!-- eslint-disable @typescript-eslint/explicit-function-return-type -->
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { css } from 'styled-system/css'
 import AppHeader from '../components/common/AppHeader.vue'
 import AppFooter from '../components/common/AppFooter.vue'
 
 const router = useRouter()
+const { t } = useI18n()
 
 const showHotTopics = ref(false)
 const searchQuery = ref('')
 
-const hotTopics = [
-  '좋아하는 작가의 새로운 단편 작품 공개',
-  '#겨울과 너의 시작들 독서 챌린지',
-  '작품이 선실에게 말하며 읽힌다 경험 서비스 시작',
-  '실재와 어이사를 오가는 이야기들',
-  '저작권도 무슨 포리스 노벨 버전',
-  '가상과 현실 오가 이야기',
-]
+const hotTopics = computed(() => [
+  t('home.topics.newShortStory'),
+  t('home.topics.winterChallenge'),
+  t('home.topics.readingExperience'),
+  t('home.topics.realityStories'),
+  t('home.topics.copyrightNovel'),
+  t('home.topics.virtualReality'),
+])
 
 const toggleHotTopics = () => {
   showHotTopics.value = !showHotTopics.value
@@ -58,7 +60,7 @@ const handleSearch = () => {
             })
           "
         >
-          Gaji
+          {{ t('home.title') }}
         </h1>
         <router-link
           to="/about"
@@ -75,7 +77,7 @@ const handleSearch = () => {
             })
           "
         >
-          What is "Gaji" mean?
+          {{ t('home.whatIsGaji') }}
         </router-link>
 
         <div :class="css({ w: 'full', mb: '8' })">
@@ -91,7 +93,8 @@ const handleSearch = () => {
                   color: 'gray.400',
                 })
               "
-            >🔍</span>
+              >🔍</span
+            >
             <input
               v-model="searchQuery"
               :class="
@@ -113,9 +116,9 @@ const handleSearch = () => {
                 })
               "
               type="text"
-              placeholder="Search All of Books"
+              :placeholder="t('search.allBooks')"
               @keyup.enter="handleSearch"
-            >
+            />
           </div>
         </div>
 
@@ -139,7 +142,9 @@ const handleSearch = () => {
             "
             @click="toggleHotTopics"
           >
-            <span :class="css({ fontSize: '1.125rem', fontWeight: '600', color: 'gray.800' })">Hot Topics</span>
+            <span :class="css({ fontSize: '1.125rem', fontWeight: '600', color: 'gray.800' })">{{
+              t('home.hotTopics')
+            }}</span>
             <span
               :class="
                 css({
@@ -149,7 +154,8 @@ const handleSearch = () => {
                   transform: showHotTopics ? 'rotate(180deg)' : 'rotate(0deg)',
                 })
               "
-            >▼</span>
+              >▼</span
+            >
           </div>
 
           <div
@@ -184,7 +190,8 @@ const handleSearch = () => {
             >
               <span
                 :class="css({ color: 'green.500', fontWeight: 'bold', mr: '3', minW: '1.5rem' })"
-              >{{ index + 1 }}.</span>
+                >{{ index + 1 }}.</span
+              >
               <span :class="css({ flex: 1 })">{{ topic }}</span>
             </div>
           </div>

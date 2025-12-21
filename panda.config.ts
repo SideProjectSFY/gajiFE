@@ -58,9 +58,15 @@ export default defineConfig({
           warning: { value: '#f59e0b' },
           error: { value: '#ef4444' },
           info: { value: '#3b82f6' },
+          green: {
+            500: { value: '#1F7D51' },
+            600: { value: '#17613E' },
+          },
         },
         fonts: {
-          base: { value: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' },
+          base: {
+            value: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+          },
           body: { value: '{fonts.base}' },
           heading: { value: '{fonts.base}' },
           mono: { value: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace' },

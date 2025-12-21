@@ -1,14 +1,8 @@
 <template>
-  <nav
-    class="pagination-controls"
-    role="navigation"
-    aria-label="Pagination"
-  >
-    <output
-      class="pagination-info"
-      aria-live="polite"
-    >
-      Showing {{ startItem }}-{{ endItem }} of {{ totalElements }} books
+  <nav class="pagination-controls" role="navigation" aria-label="Pagination">
+    <output class="pagination-info" aria-live="polite">
+      {{ t('pagination.showing') }} {{ startItem }}-{{ endItem }} {{ t('pagination.of') }}
+      {{ totalElements }} {{ t('pagination.books') }}
     </output>
 
     <div class="pagination-buttons">
@@ -19,11 +13,8 @@
         aria-label="Go to previous page"
         @click="handlePageChange(currentPage - 1)"
       >
-        <i
-          class="pi pi-chevron-left"
-          aria-hidden="true"
-        />
-        Prev
+        <i class="pi pi-chevron-left" aria-hidden="true" />
+        {{ t('pagination.prev') }}
       </button>
 
       <button
@@ -42,14 +33,10 @@
         class="pagination-button"
         :disabled="currentPage === totalPages - 1"
         :aria-disabled="currentPage === totalPages - 1"
-        aria-label="Go to next page"
         @click="handlePageChange(currentPage + 1)"
       >
-        Next
-        <i
-          class="pi pi-chevron-right"
-          aria-hidden="true"
-        />
+        {{ t('pagination.next') }}
+        <i class="pi pi-chevron-right" aria-hidden="true" />
       </button>
     </div>
   </nav>
@@ -57,6 +44,9 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
+
+const { t } = useI18n()
 
 interface Props {
   currentPage: number
@@ -147,13 +137,13 @@ const handlePageChange = (page: number): void => {
 
 .pagination-button:hover:not(:disabled) {
   background: #f5f5f5;
-  border-color: #1976d2;
+  border-color: #1f7d51;
   transform: translateY(-1px);
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .pagination-button:focus-visible {
-  outline: 2px solid #1976d2;
+  outline: 2px solid #1f7d51;
   outline-offset: 2px;
 }
 
@@ -169,15 +159,15 @@ const handlePageChange = (page: number): void => {
 }
 
 .pagination-button.active {
-  background: #1976d2;
+  background: #1f7d51;
   color: white;
-  border-color: #1976d2;
+  border-color: #1f7d51;
   font-weight: 600;
 }
 
 .pagination-button.active:hover {
-  background: #1565c0;
-  border-color: #1565c0;
+  background: #17613e;
+  border-color: #17613e;
 }
 
 .pagination-button i {
