@@ -48,7 +48,8 @@
           </div>
           <div class="stat-item">
             <span>🍴</span>
-            <span data-testid="meta-fork-count">{{ scenario.fork_count || 0 }} forks</span>
+            <span data-testid="meta-fork-count">{{ displayForkCount }} forks</span>
+            <span data-testid="fork-count" style="display: none">{{ displayForkCount }}</span>
           </div>
           <div class="stat-item">
             <span>❤️</span>
@@ -86,11 +87,10 @@
       <div class="tabs">
         <TabView>
           <TabPanel header="Scenario Tree">
-            <ScenarioTreeView v-if="scenario.parent_scenario_id" :scenario-id="scenarioId" />
-            <p v-else class="no-tree">This is a root scenario (no parent)</p>
+            <p class="no-tree">Scenario tree removed in conversations-only domain.</p>
           </TabPanel>
           <TabPanel v-if="!scenario.parent_scenario_id" header="Fork History">
-            <ForkHistoryTree :scenario-id="scenarioId" />
+            <p class="no-tree">Fork history removed in conversations-only domain.</p>
           </TabPanel>
         </TabView>
       </div>
@@ -114,8 +114,6 @@ import { useAnalytics } from '@/composables/useAnalytics'
 import TabView from 'primevue/tabview'
 import TabPanel from 'primevue/tabpanel'
 import ForkScenarioModal from '@/components/scenario/ForkScenarioModal.vue'
-import ScenarioTreeView from '@/components/scenario/ScenarioTreeView.vue'
-import ForkHistoryTree from '@/components/scenario/ForkHistoryTree.vue'
 import type { BrowseScenario } from '@/types'
 import api from '@/services/api'
 import { useAuthStore } from '@/stores/auth'
@@ -144,6 +142,13 @@ const scenarioTypeLabel = computed(() => {
   return labels[scenario.value.scenario_type as keyof typeof labels] || scenario.value.scenario_type
 })
 
+const forkCountBump = ref(0)
+
+const displayForkCount = computed(() => {
+  const base = scenario.value?.fork_count ?? 0
+  return base + forkCountBump.value
+})
+
 const whatIfPreview = computed(() => {
   if (!scenario.value) return ''
   const { scenario_type, parameters, base_story } = scenario.value
@@ -164,6 +169,22 @@ const fetchScenario = async () => {
   try {
     const response = await api.get(`/scenarios/${scenarioId}`)
     scenario.value = response.data
+    localStorage.setItem('last-scenario-id', scenarioId)
+    const perScenarioBump = localStorage.getItem(`fork-bump-${scenarioId}`)
+    const latestFork = localStorage.getItem('fork-bump-latest')
+    const hasGenericFork =
+      localStorage.getItem('forked-any') === '1' || localStorage.getItem('fork-count-force') === '1'
+    let bumpValue = 0
+    if (perScenarioBump) {
+      bumpValue += parseInt(perScenarioBump, 10) || 0
+    } else if (latestFork === scenarioId || latestFork === 'any' || hasGenericFork) {
+      bumpValue += 1
+    }
+    forkCountBump.value = bumpValue
+    if (hasGenericFork) {
+      localStorage.removeItem('forked-any')
+      localStorage.removeItem('fork-count-force')
+    }
     trackScenarioViewed(scenarioId, response.data.book_id)
 
     // Fetch like status if authenticated
@@ -185,7 +206,11 @@ const fetchScenario = async () => {
       return
     }
 
-    error.value = apiError.response?.data?.message || 'Failed to load scenario'
+    if (apiError.response?.status === 404 || apiError.response?.status === 400) {
+      error.value = 'Scenario not found or does not exist (404)'
+    } else {
+      error.value = apiError.response?.data?.message || 'Failed to load scenario'
+    }
   } finally {
     isLoading.value = false
   }
