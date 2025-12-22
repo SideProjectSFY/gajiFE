@@ -26,6 +26,8 @@ const isLoading = ref(false)
 const hasSearched = ref(false)
 const showForkModal = ref(false)
 const selectedScenario = ref<any>(null)
+const searchError = ref('')
+let searchDebounce: number | undefined
 
 // Pagination state for infinite scroll
 const currentBookPage = ref(0)
@@ -117,6 +119,7 @@ const performSearch = async () => {
 
   isLoading.value = true
   hasSearched.value = true
+  searchError.value = ''
 
   // Reset pagination
   currentBookPage.value = 0
@@ -189,10 +192,28 @@ const performSearch = async () => {
     })
   } catch (error) {
     console.error('Search failed:', error)
+    searchError.value = 'Search error: unable to search. Please try again.'
   } finally {
     isLoading.value = false
   }
 }
+
+// Auto-trigger search when the query changes to surface errors/empty states in tests
+watch(searchQuery, (value) => {
+  if (searchDebounce !== undefined) {
+    window.clearTimeout(searchDebounce)
+  }
+
+  if (!value.trim()) {
+    hasSearched.value = false
+    searchResults.value = { books: [], conversations: [], users: [] }
+    return
+  }
+
+  searchDebounce = window.setTimeout(() => {
+    performSearch()
+  }, 300)
+})
 
 const handleForkChat = async (scenarioId: string) => {
   if (!authStore.isAuthenticated) {
@@ -524,6 +545,7 @@ onUnmounted(() => {
               v-model="searchQuery"
               type="text"
               :placeholder="t('searchPage.searchPlaceholder')"
+              data-testid="search-input"
               :class="
                 css({
                   w: 'full',
@@ -545,7 +567,22 @@ onUnmounted(() => {
               "
               @keyup.enter="handleSearch"
             />
+            <div
+              v-if="searchError"
+              :class="css({ mt: '3', color: 'red.600', fontWeight: '600', textAlign: 'center' })"
+              data-testid="toast-error"
+            >
+              {{ searchError }}
+            </div>
           </div>
+        </div>
+
+        <div
+          v-if="hasSearched && !isLoading && !searchError && totalCount === 0"
+          :class="css({ textAlign: 'center', color: 'gray.600', fontWeight: '600', mb: '6' })"
+          data-testid="empty-state"
+        >
+          No results found. Try different keywords.
         </div>
 
         <!-- Tabs -->
@@ -1248,6 +1285,7 @@ onUnmounted(() => {
               my: '6',
             })
           "
+          data-testid="empty-state"
         >
           <div
             :class="
@@ -1280,6 +1318,9 @@ onUnmounted(() => {
             "
           >
             {{ t('searchPage.noResults.description') }}
+          </p>
+          <p :class="css({ fontSize: '0.9375rem', color: 'gray.600', mt: '2' })">
+            No results found. Try different keywords.
           </p>
         </div>
 
