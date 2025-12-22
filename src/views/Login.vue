@@ -7,6 +7,7 @@ import { useAuthStore } from '@/stores/auth'
 import { useAnalytics } from '@/composables/useAnalytics'
 import LogoSvg from '@/assets/Logo.svg'
 import LanguageSwitcher from '@/components/common/LanguageSwitcher.vue'
+import AuthLayout from '@/components/auth/AuthLayout.vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -97,18 +98,8 @@ onMounted(() => {
 </script>
 
 <template>
-  <div style="min-height: 100vh; display: flex; background-color: white">
-    <!-- Left Section: Brand Area -->
-    <div
-      style="
-        flex: 1;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        background: linear-gradient(135deg, #4a5568 0%, #2d3748 100%);
-        padding: 3rem;
-      "
-    >
+  <AuthLayout>
+    <template #overlay>
       <div style="text-align: center; color: white">
         <div style="font-size: 2rem; font-weight: bold; margin-bottom: 1rem">
           {{ t('login.brandTitle') }}
@@ -117,38 +108,40 @@ onMounted(() => {
           {{ t('login.brandSubtitle') }}
         </div>
       </div>
-    </div>
-
-    <!-- Right Section: Login Form -->
-    <div
-      style="
-        flex: 1;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        padding: 3rem;
-        background-color: #f9fafb;
-        position: relative;
-      "
-    >
+    </template>
+    <template #form>
       <!-- Language Switcher -->
       <div style="position: absolute; top: 1.5rem; right: 1.5rem">
         <LanguageSwitcher />
       </div>
 
-      <div style="width: 100%; max-width: 420px">
+      <div style="width: 100%; max-width: 420px; margin: 0 auto">
         <!-- Logo -->
-        <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 2rem">
+        <div
+          style="
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 2rem;
+            cursor: pointer;
+          "
+          @click="router.push('/')"
+        >
           <LogoSvg style="width: 2rem; height: 2rem; fill: #1f7d51" />
           <span style="font-size: 1.25rem; font-weight: bold; color: #1f2937">Gaji</span>
         </div>
 
-        <h1 style="font-size: 1.75rem; font-weight: bold; margin-bottom: 0.5rem; color: #111827">
+        <h1
+          style="
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+            color: #111827;
+            margin-bottom: 2rem;
+          "
+        >
           {{ t('login.title') }}
         </h1>
-        <p style="color: #6b7280; margin-bottom: 2rem; font-size: 0.875rem">
-          {{ t('login.subtitle') }}
-        </p>
 
         <form
           style="display: flex; flex-direction: column; gap: 1.25rem"
@@ -316,8 +309,8 @@ onMounted(() => {
           </router-link>
         </p>
       </div>
-    </div>
-  </div>
+    </template>
+  </AuthLayout>
 </template>
 
 <style scoped>
