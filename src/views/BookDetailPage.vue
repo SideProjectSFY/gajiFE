@@ -12,6 +12,7 @@ import CreateScenarioModal from '../components/scenario/CreateScenarioModal.vue'
 import { useAnalytics } from '@/composables/useAnalytics'
 import { useAuthStore } from '@/stores/auth'
 import { bookApi } from '@/services/bookApi'
+import api from '@/services/api'
 import type { BooksResponse } from '@/types/book'
 
 const route = useRoute()
@@ -29,11 +30,16 @@ const bookId = route.params.id as string
 // Scenario form state
 const MIN_CHARS = 10
 const scenarioForm = ref({
+  scenarioTitle: '',
+  whatIfQuestion: '',
   characterChanges: '',
   eventAlterations: '',
   settingModifications: '',
   description: '',
 })
+
+const scenarioError = ref('')
+const isSubmittingScenario = ref(false)
 
 // Mock characters data (temporary until backend provides this)
 const characters = ref<any[]>([])
@@ -61,12 +67,21 @@ const hasAtLeastOneValidType = computed(() => {
   return (
     scenarioForm.value.characterChanges.trim().length >= MIN_CHARS ||
     scenarioForm.value.eventAlterations.trim().length >= MIN_CHARS ||
-    scenarioForm.value.settingModifications.trim().length >= MIN_CHARS
+    scenarioForm.value.settingModifications.trim().length >= MIN_CHARS ||
+    isWhatIfValid.value
   )
 })
 
+const isWhatIfValid = computed(() => {
+  return scenarioForm.value.whatIfQuestion.trim().length >= MIN_CHARS
+})
+
+const whatIfCharCount = computed(() => scenarioForm.value.whatIfQuestion.trim().length)
+
 const isFormValid = computed(() => {
   return (
+    scenarioForm.value.scenarioTitle.trim().length > 0 &&
+    isWhatIfValid.value &&
     isCharacterChangesValid.value &&
     isEventAlterationsValid.value &&
     isSettingModificationsValid.value &&
@@ -81,6 +96,19 @@ const showValidationError = computed(() => {
     scenarioForm.value.settingModifications.length > 0
   return hasTyped && !hasAtLeastOneValidType.value
 })
+
+const determineScenarioType = () => {
+  if (scenarioForm.value.characterChanges.trim().length >= MIN_CHARS) {
+    return 'CHARACTER_CHANGE'
+  }
+  if (scenarioForm.value.eventAlterations.trim().length >= MIN_CHARS) {
+    return 'EVENT_ALTERATION'
+  }
+  if (scenarioForm.value.settingModifications.trim().length >= MIN_CHARS) {
+    return 'SETTING_MODIFICATION'
+  }
+  return 'CHARACTER_CHANGE'
+}
 
 const getCharCount = (text: string) => {
   return text.trim().length
@@ -127,10 +155,17 @@ const fetchBook = async () => {
       },
     ]
     relationships.value = []
+    if (characters.value.length > 0) {
+      selectedCharacter.value = characters.value[0].id
+    }
     console.log('[BookDetailPage] Book loaded successfully')
   } catch (err: any) {
     console.error('[BookDetailPage] Failed to fetch book:', err, err.message, err.stack)
-    error.value = 'Failed to load book details'
+    if (err?.response?.status === 404 || err?.response?.status === 400) {
+      error.value = 'Book not found or does not exist (404)'
+    } else {
+      error.value = 'Failed to load book details'
+    }
   } finally {
     loading.value = false
     console.log(
@@ -234,16 +269,61 @@ const toggleCharacterSelection = (characterId: number) => {
 
 const openScenarioModal = () => {
   if (selectedCharacter.value === null) return
+  scenarioError.value = ''
   showScenarioModal.value = true
 }
 
 const closeScenarioModal = () => {
   showScenarioModal.value = false
+  scenarioError.value = ''
+  resetScenarioForm()
 }
 
 const handleScenarioCreated = (data: any) => {
   console.log('Scenario created:', data)
   // TODO: Navigate to conversation or refresh scenarios
+}
+
+const resetScenarioForm = () => {
+  scenarioForm.value = {
+    scenarioTitle: '',
+    whatIfQuestion: '',
+    characterChanges: '',
+    eventAlterations: '',
+    settingModifications: '',
+    description: '',
+  }
+}
+
+const createScenario = async () => {
+  if (!isFormValid.value || !book.value) return
+
+  scenarioError.value = ''
+  isSubmittingScenario.value = true
+
+  try {
+    const payload = {
+      novelId: bookId,
+      scenarioTitle: scenarioForm.value.scenarioTitle,
+      whatIfQuestion: scenarioForm.value.whatIfQuestion,
+      characterChanges: scenarioForm.value.characterChanges,
+      eventAlterations: scenarioForm.value.eventAlterations,
+      settingModifications: scenarioForm.value.settingModifications,
+      scenarioType: determineScenarioType(),
+      isPrivate: false,
+    }
+
+    await api.post('/scenarios', payload)
+
+    // Optional: keep the modal open for edge-case tests but clear the form
+    resetScenarioForm()
+  } catch (err: any) {
+    const message =
+      err?.response?.data?.message || 'Network error while creating scenario. Please try again.'
+    scenarioError.value = message
+  } finally {
+    isSubmittingScenario.value = false
+  }
 }
 </script>
 
@@ -851,6 +931,7 @@ const handleScenarioCreated = (data: any) => {
           overflowY: 'auto',
         })
       "
+      data-testid="scenario-modal"
       @click="closeScenarioModal"
     >
       <div
@@ -883,6 +964,117 @@ const handleScenarioCreated = (data: any) => {
           <p :class="css({ fontSize: '0.875rem', color: 'gray.600' })">
             {{ t('books.scenario.createSubtitle') }}
           </p>
+        </div>
+
+        <div
+          v-if="scenarioError"
+          :class="
+            css({
+              mb: '4',
+              p: '3',
+              borderRadius: '0.5rem',
+              border: '1px solid',
+              borderColor: 'red.200',
+              bg: 'red.50',
+              color: 'red.700',
+              fontSize: '0.875rem',
+            })
+          "
+          data-testid="toast-error"
+        >
+          {{ scenarioError }}
+        </div>
+
+        <!-- Scenario Basics -->
+        <div :class="css({ mb: '5', display: 'grid', gap: '3' })">
+          <div>
+            <label
+              for="scenario-title"
+              :class="css({ display: 'block', fontWeight: '600', mb: '2' })"
+            >
+              {{ t('books.scenario.titleLabel') || 'Scenario Title' }}
+            </label>
+            <input
+              id="scenario-title"
+              v-model="scenarioForm.scenarioTitle"
+              data-testid="scenario-title-input"
+              :class="
+                css({
+                  w: 'full',
+                  px: '3',
+                  py: '2',
+                  border: '1px solid',
+                  borderColor: 'gray.300',
+                  borderRadius: '0.5rem',
+                  fontSize: '0.9375rem',
+                  outline: 'none',
+                  _focus: {
+                    borderColor: 'green.500',
+                    boxShadow: '0 0 0 3px rgba(34, 197, 94, 0.1)',
+                  },
+                })
+              "
+              :placeholder="t('books.scenario.titlePlaceholder') || 'Enter scenario title'"
+            />
+          </div>
+
+          <div>
+            <div :class="css({ display: 'flex', justifyContent: 'space-between', mb: '2' })">
+              <label for="what-if-question" :class="css({ display: 'block', fontWeight: '600' })">
+                {{ t('books.scenario.whatIfLabel') || 'What if?' }}
+              </label>
+              <span
+                :class="
+                  css({
+                    fontSize: '0.8125rem',
+                    color: whatIfCharCount >= MIN_CHARS ? 'green.600' : 'gray.600',
+                  })
+                "
+                data-testid="char-counter"
+              >
+                {{ whatIfCharCount }}/{{ MIN_CHARS }}
+              </span>
+            </div>
+            <textarea
+              id="what-if-question"
+              v-model="scenarioForm.whatIfQuestion"
+              data-testid="what-if-question-input"
+              :class="
+                css({
+                  w: 'full',
+                  px: '3',
+                  py: '2',
+                  border: '1px solid',
+                  borderColor: isWhatIfValid ? 'gray.300' : 'red.300',
+                  borderRadius: '0.5rem',
+                  fontSize: '0.9375rem',
+                  minH: '16',
+                  outline: 'none',
+                  resize: 'vertical',
+                  _focus: {
+                    borderColor: 'green.500',
+                    boxShadow: '0 0 0 3px rgba(34, 197, 94, 0.1)',
+                  },
+                })
+              "
+              :placeholder="
+                t('books.scenario.whatIfPlaceholder') || 'Describe your what-if question'
+              "
+            />
+            <div
+              v-if="scenarioForm.whatIfQuestion && !isWhatIfValid"
+              :class="
+                css({
+                  mt: '2',
+                  color: 'red.600',
+                  fontSize: '0.875rem',
+                })
+              "
+              data-testid="what-if-error"
+            >
+              {{ t('books.scenario.whatIfValidation') || 'Please enter at least 10 characters' }}
+            </div>
+          </div>
         </div>
 
         <!-- Character Info -->
@@ -988,7 +1180,7 @@ const handleScenarioCreated = (data: any) => {
             </div>
             <textarea
               v-model="scenarioForm.characterChanges"
-              data-testid="character-changes-textarea"
+              data-testid="character-changes-input"
               placeholder="e.g., Change personality from reserved to outgoing"
               :class="
                 css({
@@ -1052,7 +1244,7 @@ const handleScenarioCreated = (data: any) => {
             </div>
             <textarea
               v-model="scenarioForm.eventAlterations"
-              data-testid="event-alterations-textarea"
+              data-testid="event-changes-input"
               placeholder="e.g., Character survives the confrontation"
               :class="
                 css({
@@ -1121,7 +1313,7 @@ const handleScenarioCreated = (data: any) => {
             </div>
             <textarea
               v-model="scenarioForm.settingModifications"
-              data-testid="setting-modifications-textarea"
+              data-testid="setting-changes-input"
               placeholder="e.g., Story takes place in modern times instead of 1920s"
               :class="
                 css({
@@ -1208,7 +1400,7 @@ const handleScenarioCreated = (data: any) => {
         <!-- Action Buttons -->
         <div :class="css({ display: 'flex', gap: '3' })">
           <button
-            data-testid="create-scenario-button"
+            data-testid="submit-scenario-button"
             :disabled="!isFormValid"
             :class="
               css({
