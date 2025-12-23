@@ -147,7 +147,16 @@
       "backToBookList": "Go to Book List",
       "byAuthorGenre": "by {author} • {genre}",
       "selectCharacterButton": "Select Character",
-      "createCharacterScenario": "Create {name}"
+      "createCharacterScenario": "Create {name}",
+      "featured": "Featured",
+      "conversationsStarted": "{count} conversations started",
+      "legend": {
+        "mainCharacter": "Main Character",
+        "minorCharacter": "Minor Character",
+        "strongBond": "Strong Bond",
+        "weakConnect": "Weak Connection",
+        "meanConflict": "Conflict"
+      }
     },
     "scenario": {
       "createTitle": "Create New Scenario",
@@ -213,7 +222,8 @@
     "by": "by",
     "unknown": {
       "book": "Unknown Book",
-      "author": "Unknown Author"
+      "author": "Unknown Author",
+      "title": "Untitled Conversation"
     },
     "noDescription": "No description available for this conversation.",
     "messageCount": "conversations",
@@ -306,7 +316,11 @@
     "askAnything": "Ask the character anything",
     "messageList": "Conversation message list",
     "clickToViewMessages": "Click to view messages",
-    "unknownBook": "Unknown Book"
+    "unknownBook": "Unknown Book",
+    "input": {
+      "loading": "AI is responding...",
+      "placeholder": "Type a message... (Enter: Send, Shift+Enter: New line)"
+    }
   },
   "searchPage": {
     "searchPlaceholder": "Search for books, characters, conversations...",
@@ -329,6 +343,7 @@
     "loginToFollow": "Please login to follow users",
     "follow": "Follow",
     "unfollow": "Unfollow",
+    "bookDescription": "Scenarios: {scenarioCount}, Conversations: {conversationCount}",
     "noResults": {
       "title": "No results found",
       "description": "Try searching with different keywords"
@@ -397,5 +412,14 @@
       "medium": "Medium",
       "strong": "Strong"
     }
+  },
+  "auth": {
+    "loginRequired": "Login Required",
+    "loginToLike": "Please login to like"
+  },
+  "scenario": {
+    "creating": "Creating scenario...",
+    "forking": "Forking scenario...",
+    "waitMessage": "This may take about 20 seconds."
   }
 }
