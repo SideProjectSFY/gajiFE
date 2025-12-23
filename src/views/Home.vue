@@ -42,6 +42,7 @@ const handleSearch = () => {
         overscrollBehavior: 'none',
         display: 'flex',
         flexDirection: 'column',
+        scrollbarGutter: 'stable',
       })
     "
   >
