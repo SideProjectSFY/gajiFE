@@ -1,7 +1,6 @@
 <template>
   <div :class="css({ minH: '100vh', display: 'flex', flexDirection: 'column', bg: 'white' })">
     <AppHeader />
-    <div :class="css({ h: '20' })" />
 
     <main
       :class="
@@ -90,29 +89,14 @@
       </div>
 
       <!-- Error State -->
-      <div
-        v-if="error"
-        class="error-container"
-        role="alert"
-        aria-live="polite"
-      >
+      <div v-if="error" class="error-container" role="alert" aria-live="polite">
         <div class="error-content">
-          <i
-            class="pi pi-exclamation-triangle"
-            aria-hidden="true"
-          />
+          <i class="pi pi-exclamation-triangle" aria-hidden="true" />
           <p class="error-message">
             {{ error }}
           </p>
-          <button
-            class="retry-button"
-            aria-label="Retry loading books"
-            @click="retryFetch"
-          >
-            <i
-              class="pi pi-refresh"
-              aria-hidden="true"
-            />
+          <button class="retry-button" aria-label="Retry loading books" @click="retryFetch">
+            <i class="pi pi-refresh" aria-hidden="true" />
             {{ t('books.error.retry') }}
           </button>
         </div>
@@ -142,7 +126,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, watch } from 'vue'
+import { ref, onMounted, watch, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { css } from '../../styled-system/css'
@@ -153,14 +137,16 @@ import PaginationControls from '@/components/book/PaginationControls.vue'
 import { bookApi } from '@/services/bookApi'
 import type { Book, BookSortOption } from '@/types/book'
 import { useAuthStore } from '@/stores/auth'
+import { useToast } from '@/composables/useToast'
 
 const router = useRouter()
 const route = useRoute()
 const authStore = useAuthStore()
 const { t } = useI18n()
+const { warning } = useToast()
 
 // Genre options matching the design
-const genres = [
+const genres = computed(() => [
   { label: t('books.filters.allGenres'), value: '' },
   { label: t('books.filters.romance'), value: 'Romance' },
   { label: t('books.filters.fantasy'), value: 'Fantasy' },
@@ -169,14 +155,14 @@ const genres = [
   { label: t('books.filters.horror'), value: 'Horror' },
   { label: t('books.filters.adventure'), value: 'Adventure' },
   { label: t('books.filters.historical'), value: 'Historical' },
-]
+])
 
 // Sort options
-const sortOptions: { label: string; value: BookSortOption }[] = [
+const sortOptions = computed<{ label: string; value: BookSortOption }[]>(() => [
   { label: t('books.sort.latest'), value: 'latest' },
   { label: t('books.sort.recommended'), value: 'recommended' },
   { label: t('books.sort.popular'), value: 'popular' },
-]
+])
 
 // State
 const books = ref<Book[]>([])
@@ -306,6 +292,7 @@ const handleBookClick = (book: Book): void => {
 
 const handleLike = async (bookId: string, isLiked: boolean): Promise<void> => {
   if (!authStore.isAuthenticated) {
+    warning(t('auth.loginRequired') || 'Please login to like books')
     router.push('/login')
     return
   }
