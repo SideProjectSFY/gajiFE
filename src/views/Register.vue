@@ -85,7 +85,7 @@ const passwordStrengthColor = computed(() => {
 })
 
 const validateUsername = (): void => {
-  const usernameRegex = /^[a-zA-Z0-9_]+$/
+  const usernameRegex = /^[a-zA-Z0-9_가-힣]+$/
   if (!form.username) {
     errors.username = 'register.errors.usernameRequired'
   } else if (form.username.length < 3) {
