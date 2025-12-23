@@ -10,9 +10,9 @@ const props = defineProps<{
 }>()
 
 const groupRef = shallowRef()
-const penRef = shallowRef()
-const scrollRef = shallowRef()
-const bookRef = shallowRef()
+const booksRef = shallowRef()
+const handshakeRef = shallowRef()
+const emojisRef = shallowRef()
 const keyRef = shallowRef()
 
 const { onBeforeRender } = useLoop()
@@ -24,16 +24,16 @@ const stagePosition = computed(() => props.activeStage + props.stageBlend)
 // Stage visibility
 const stageAlpha = (index: number) => (index === props.activeStage ? 1 : 0)
 
-const alphaPen = computed(() => stageAlpha(0))
-const alphaScroll = computed(() => stageAlpha(1))
-const alphaBook = computed(() => stageAlpha(2))
+const alphaBooks = computed(() => stageAlpha(0))
+const alphaHandshake = computed(() => stageAlpha(1))
+const alphaEmojis = computed(() => stageAlpha(2))
 const alphaKey = computed(() => stageAlpha(3))
 
 // Scales
 const SCALE_MULTIPLIER = 1.5
-const penScale = computed(() => (0.8 + 0.2 * alphaPen.value) * SCALE_MULTIPLIER)
-const scrollScale = computed(() => (0.8 + 0.2 * alphaScroll.value) * SCALE_MULTIPLIER)
-const bookScale = computed(() => (0.8 + 0.2 * alphaBook.value) * SCALE_MULTIPLIER)
+const booksScale = computed(() => (0.8 + 0.2 * alphaBooks.value) * SCALE_MULTIPLIER)
+const handshakeScale = computed(() => (0.8 + 0.2 * alphaHandshake.value) * SCALE_MULTIPLIER)
+const emojisScale = computed(() => (0.8 + 0.2 * alphaEmojis.value) * SCALE_MULTIPLIER)
 const keyScale = computed(() => (0.8 + 0.2 * alphaKey.value) * SCALE_MULTIPLIER)
 
 // Anchors (Y positions)
@@ -56,16 +56,18 @@ onBeforeRender(({ elapsed }) => {
   }
 
   // Individual Animations
-  if (penRef.value) {
-    penRef.value.rotation.z = Math.sin(elapsed) * 0.1
-    penRef.value.rotation.x = Math.cos(elapsed * 0.5) * 0.1
+  if (booksRef.value) {
+    booksRef.value.position.y = stageAnchors[0] + Math.sin(elapsed) * 0.05
   }
-  if (scrollRef.value) {
-    scrollRef.value.rotation.x = Math.sin(elapsed * 0.8) * 0.1
+  if (handshakeRef.value) {
+    // Gentle shake animation
+    handshakeRef.value.rotation.z = Math.sin(elapsed * 2) * 0.05
+    handshakeRef.value.position.y = stageAnchors[1] + Math.sin(elapsed * 4) * 0.05
   }
-  if (bookRef.value) {
-    // Book opening animation?
-    // For now just float
+  if (emojisRef.value) {
+    // Emojis floating/bouncing
+    emojisRef.value.rotation.z = Math.sin(elapsed * 1.5) * 0.05
+    emojisRef.value.position.y = stageAnchors[2] + Math.cos(elapsed) * 0.05
   }
   if (keyRef.value) {
     keyRef.value.rotation.z = elapsed * 0.5
@@ -75,87 +77,224 @@ onBeforeRender(({ elapsed }) => {
 
 <template>
   <TresGroup ref="groupRef">
-    <!-- Stage 0: Pen (Writing) -->
+    <!-- Stage 0: Books (Knowledge/Story) - Stack of Books -->
     <TresGroup
-      ref="penRef"
+      ref="booksRef"
       :position="[0, stageAnchors[0], 0]"
-      :scale="[penScale, penScale, penScale]"
-      :visible="alphaPen > 0.001"
+      :scale="[booksScale, booksScale, booksScale]"
+      :visible="alphaBooks > 0.001"
+      :rotation="[0.2, -0.5, 0]"
     >
-      <!-- Body -->
-      <TresMesh :position="[0, 0, 0]">
-        <TresCylinderGeometry :args="[0.1, 0.1, 1.5, 16]" />
-        <TresMeshStandardMaterial color="#1e293b" :roughness="0.3" :metalness="0.8" />
-      </TresMesh>
-      <!-- Tip -->
-      <TresMesh :position="[0, -0.85, 0]">
-        <TresConeGeometry :args="[0.1, 0.2, 16]" />
-        <TresMeshStandardMaterial color="#fbbf24" :metalness="1" :roughness="0.2" />
-      </TresMesh>
-      <!-- Feather/Top (Optional) -->
-      <TresMesh :position="[0, 0.85, 0]">
-        <TresSphereGeometry :args="[0.12, 16, 16]" />
-        <TresMeshStandardMaterial color="#fbbf24" :metalness="1" :roughness="0.2" />
-      </TresMesh>
+      <!-- Bottom Book (Purple) -->
+      <TresGroup :position="[0, -0.4, 0]" :rotation="[0, 0.2, 0]">
+        <!-- Cover Top -->
+        <TresMesh :position="[0, 0.15, 0]">
+          <TresBoxGeometry :args="[1.6, 0.05, 2.2]" />
+          <TresMeshStandardMaterial color="#8b5cf6" />
+        </TresMesh>
+        <!-- Cover Bottom -->
+        <TresMesh :position="[0, -0.15, 0]">
+          <TresBoxGeometry :args="[1.6, 0.05, 2.2]" />
+          <TresMeshStandardMaterial color="#8b5cf6" />
+        </TresMesh>
+        <!-- Spine -->
+        <TresMesh :position="[-0.75, 0, 0]">
+          <TresBoxGeometry :args="[0.1, 0.35, 2.2]" />
+          <TresMeshStandardMaterial color="#7c3aed" />
+        </TresMesh>
+        <!-- Pages -->
+        <TresMesh :position="[0.05, 0, 0]">
+          <TresBoxGeometry :args="[1.5, 0.25, 2.1]" />
+          <TresMeshStandardMaterial color="#fefce8" />
+        </TresMesh>
+      </TresGroup>
+
+      <!-- Middle Book (Cyan) -->
+      <TresGroup :position="[0, 0, 0]" :rotation="[0, -0.15, 0]">
+        <!-- Cover Top -->
+        <TresMesh :position="[0, 0.15, 0]">
+          <TresBoxGeometry :args="[1.4, 0.05, 2.0]" />
+          <TresMeshStandardMaterial color="#22d3ee" />
+        </TresMesh>
+        <!-- Cover Bottom -->
+        <TresMesh :position="[0, -0.15, 0]">
+          <TresBoxGeometry :args="[1.4, 0.05, 2.0]" />
+          <TresMeshStandardMaterial color="#22d3ee" />
+        </TresMesh>
+        <!-- Spine -->
+        <TresMesh :position="[-0.65, 0, 0]">
+          <TresBoxGeometry :args="[0.1, 0.35, 2.0]" />
+          <TresMeshStandardMaterial color="#06b6d4" />
+        </TresMesh>
+        <!-- Pages -->
+        <TresMesh :position="[0.05, 0, 0]">
+          <TresBoxGeometry :args="[1.3, 0.25, 1.9]" />
+          <TresMeshStandardMaterial color="#fefce8" />
+        </TresMesh>
+      </TresGroup>
+
+      <!-- Top Book (Orange) -->
+      <TresGroup :position="[0, 0.4, 0]" :rotation="[0, 0.1, 0]">
+        <!-- Cover Top -->
+        <TresMesh :position="[0, 0.15, 0]">
+          <TresBoxGeometry :args="[1.2, 0.05, 1.8]" />
+          <TresMeshStandardMaterial color="#fbbf24" />
+        </TresMesh>
+        <!-- Cover Bottom -->
+        <TresMesh :position="[0, -0.15, 0]">
+          <TresBoxGeometry :args="[1.2, 0.05, 1.8]" />
+          <TresMeshStandardMaterial color="#fbbf24" />
+        </TresMesh>
+        <!-- Spine -->
+        <TresMesh :position="[-0.55, 0, 0]">
+          <TresBoxGeometry :args="[0.1, 0.35, 1.8]" />
+          <TresMeshStandardMaterial color="#f59e0b" />
+        </TresMesh>
+        <!-- Pages -->
+        <TresMesh :position="[0.05, 0, 0]">
+          <TresBoxGeometry :args="[1.1, 0.25, 1.7]" />
+          <TresMeshStandardMaterial color="#fefce8" />
+        </TresMesh>
+        <!-- Bookmark -->
+        <TresMesh :position="[0.2, 0, 0.9]" :rotation="[0.2, 0, 0]">
+          <TresBoxGeometry :args="[0.15, 0.4, 0.02]" />
+          <TresMeshStandardMaterial color="#ef4444" />
+        </TresMesh>
+      </TresGroup>
     </TresGroup>
 
-    <!-- Stage 1: Scroll (Connection) -->
+    <!-- Stage 1: Handshake (Connection) -->
     <TresGroup
-      ref="scrollRef"
+      ref="handshakeRef"
       :position="[0, stageAnchors[1], 0]"
-      :scale="[scrollScale, scrollScale, scrollScale]"
-      :visible="alphaScroll > 0.001"
+      :scale="[handshakeScale, handshakeScale, handshakeScale]"
+      :visible="alphaHandshake > 0.001"
     >
-      <!-- Paper -->
-      <TresMesh :position="[0, 0, 0]" :rotation="[0, 0, 0]">
-        <TresPlaneGeometry :args="[1.2, 1.6, 4, 4]" />
-        <TresMeshStandardMaterial color="#fefce8" side="DoubleSide" />
-      </TresMesh>
-      <!-- Top Roll -->
-      <TresMesh :position="[0, 0.8, 0.05]" :rotation="[0, 0, 1.57]">
-        <TresCylinderGeometry :args="[0.1, 0.1, 1.4, 16]" />
-        <TresMeshStandardMaterial color="#854d0e" />
-      </TresMesh>
-      <!-- Bottom Roll -->
-      <TresMesh :position="[0, -0.8, 0.05]" :rotation="[0, 0, 1.57]">
-        <TresCylinderGeometry :args="[0.1, 0.1, 1.4, 16]" />
-        <TresMeshStandardMaterial color="#854d0e" />
-      </TresMesh>
+      <!-- Left Arm (Front/Bottom-Left) -->
+      <TresGroup :position="[-0.55, -0.4, 0]" :rotation="[0, 0, -0.785]">
+        <!-- Sleeve (Even Shorter & Wider) -->
+        <TresMesh :position="[0, 0, 0]">
+          <TresCylinderGeometry :args="[0.3, 0.3, 0.6, 16]" />
+          <TresMeshStandardMaterial color="#fbbf24" />
+        </TresMesh>
+        <!-- Cuff -->
+        <TresMesh :position="[0, 0.35, 0]">
+          <TresCylinderGeometry :args="[0.33, 0.33, 0.15, 16]" />
+          <TresMeshStandardMaterial color="#ffffff" />
+        </TresMesh>
+        <!-- Hand Base (Even Bigger) -->
+        <TresMesh :position="[0, 0.7, 0]">
+          <TresBoxGeometry :args="[0.5, 0.65, 0.25]" />
+          <TresMeshStandardMaterial color="#fda4af" />
+        </TresMesh>
+        <!-- Thumb (Even Bigger) -->
+        <TresMesh :position="[0.28, 0.65, 0.05]" :rotation="[0, 0, -0.6]">
+          <TresCapsuleGeometry :args="[0.13, 0.45, 4, 8]" />
+          <TresMeshStandardMaterial color="#fda4af" />
+        </TresMesh>
+        <!-- Fingers (Even Bigger) -->
+        <TresMesh :position="[0.25, 0.9, -0.12]" :rotation="[0, 0, -0.2]">
+          <TresBoxGeometry :args="[0.25, 0.5, 0.18]" />
+          <TresMeshStandardMaterial color="#fda4af" />
+        </TresMesh>
+      </TresGroup>
+
+      <!-- Right Arm (Back/Bottom-Right) -->
+      <TresGroup :position="[0.55, -0.4, 0]" :rotation="[0, 0, 0.785]">
+        <!-- Sleeve (Even Shorter & Wider) -->
+        <TresMesh :position="[0, 0, 0]">
+          <TresCylinderGeometry :args="[0.3, 0.3, 0.6, 16]" />
+          <TresMeshStandardMaterial color="#fbbf24" />
+        </TresMesh>
+        <!-- Cuff -->
+        <TresMesh :position="[0, 0.35, 0]">
+          <TresCylinderGeometry :args="[0.33, 0.33, 0.15, 16]" />
+          <TresMeshStandardMaterial color="#ffffff" />
+        </TresMesh>
+        <!-- Hand Base (Even Bigger) -->
+        <TresMesh :position="[0, 0.7, 0]">
+          <TresBoxGeometry :args="[0.5, 0.65, 0.25]" />
+          <TresMeshStandardMaterial color="#fda4af" />
+        </TresMesh>
+        <!-- Thumb (Even Bigger) -->
+        <TresMesh :position="[-0.28, 0.65, 0.05]" :rotation="[0, 0, 0.6]">
+          <TresCapsuleGeometry :args="[0.13, 0.45, 4, 8]" />
+          <TresMeshStandardMaterial color="#fda4af" />
+        </TresMesh>
+        <!-- Fingers (Even Bigger) -->
+        <TresMesh :position="[-0.25, 0.9, 0.18]" :rotation="[0, 0, 0.2]">
+          <TresBoxGeometry :args="[0.25, 0.5, 0.18]" />
+          <TresMeshStandardMaterial color="#fda4af" />
+        </TresMesh>
+      </TresGroup>
     </TresGroup>
 
-    <!-- Stage 2: Book (Emotion/Story) - Reusing existing book model -->
+    <!-- Stage 2: Emojis (Laugh & Cry) -->
     <TresGroup
-      ref="bookRef"
+      ref="emojisRef"
       :position="[0, stageAnchors[2], 0]"
-      :scale="[bookScale, bookScale, bookScale]"
-      :visible="alphaBook > 0.001"
-      :rotation="[0.5, -0.5, 0]"
+      :scale="[emojisScale, emojisScale, emojisScale]"
+      :visible="alphaEmojis > 0.001"
     >
-      <!-- Left Cover -->
-      <TresMesh :position="[-0.8, 0, 0]" :rotation="[0, 0.2, 0]">
-        <TresBoxGeometry :args="[1.6, 2.2, 0.1]" />
-        <TresMeshStandardMaterial color="#ef4444" />
-      </TresMesh>
-      <!-- Right Cover -->
-      <TresMesh :position="[0.8, 0, 0]" :rotation="[0, -0.2, 0]">
-        <TresBoxGeometry :args="[1.6, 2.2, 0.1]" />
-        <TresMeshStandardMaterial color="#ef4444" />
-      </TresMesh>
-      <!-- Left Pages -->
-      <TresMesh :position="[-0.75, 0.05, 0]" :rotation="[0, 0.2, 0]">
-        <TresBoxGeometry :args="[1.4, 2.0, 0.15]" />
-        <TresMeshStandardMaterial color="#fefce8" />
-      </TresMesh>
-      <!-- Right Pages -->
-      <TresMesh :position="[0.75, 0.05, 0]" :rotation="[0, -0.2, 0]">
-        <TresBoxGeometry :args="[1.4, 2.0, 0.15]" />
-        <TresMeshStandardMaterial color="#fefce8" />
-      </TresMesh>
-      <!-- Spine -->
-      <TresMesh :position="[0, 0, 0]" :rotation="[0, 0, 1.57]">
-        <TresCylinderGeometry :args="[0.15, 0.15, 2.2, 16]" />
-        <TresMeshStandardMaterial color="#b91c1c" />
-      </TresMesh>
+      <!-- Laughing Face (Left) -->
+      <TresGroup :position="[-0.6, 0, 0]" :rotation="[0, 0.2, 0]">
+        <!-- Head -->
+        <TresMesh>
+          <TresSphereGeometry :args="[0.5, 32, 32]" />
+          <TresMeshStandardMaterial color="#facc15" :roughness="0.2" :metalness="0.1" />
+        </TresMesh>
+        <!-- Eyes (^ ^) -->
+        <TresMesh :position="[-0.2, 0.15, 0.45]" :rotation="[0, 0, -0.785]">
+          <TresCapsuleGeometry :args="[0.05, 0.2, 4, 8]" />
+          <TresMeshStandardMaterial color="#374151" />
+        </TresMesh>
+        <TresMesh :position="[0.2, 0.15, 0.45]" :rotation="[0, 0, 0.785]">
+          <TresCapsuleGeometry :args="[0.05, 0.2, 4, 8]" />
+          <TresMeshStandardMaterial color="#374151" />
+        </TresMesh>
+        <!-- Mouth (Big Smile) -->
+        <TresMesh :position="[0, -0.1, 0.4]" :rotation="[0, 0, 3.14]">
+          <TresTorusGeometry :args="[0.25, 0.05, 16, 32, 3.14]" />
+          <TresMeshStandardMaterial color="#374151" />
+        </TresMesh>
+        <!-- Teeth (Optional white strip) -->
+        <TresMesh :position="[0, -0.1, 0.42]" :rotation="[0, 0, 0]">
+          <TresBoxGeometry :args="[0.4, 0.05, 0.02]" />
+          <TresMeshStandardMaterial color="#ffffff" />
+        </TresMesh>
+      </TresGroup>
+
+      <!-- Crying Face (Right) -->
+      <TresGroup :position="[0.6, 0, 0]" :rotation="[0, -0.2, 0]">
+        <!-- Head -->
+        <TresMesh>
+          <TresSphereGeometry :args="[0.5, 32, 32]" />
+          <TresMeshStandardMaterial color="#facc15" :roughness="0.2" :metalness="0.1" />
+        </TresMesh>
+        <!-- Eyes (T T or closed down) -->
+        <TresMesh :position="[-0.2, 0.15, 0.45]" :rotation="[0, 0, 1.57]">
+          <TresCapsuleGeometry :args="[0.05, 0.2, 4, 8]" />
+          <TresMeshStandardMaterial color="#374151" />
+        </TresMesh>
+        <TresMesh :position="[0.2, 0.15, 0.45]" :rotation="[0, 0, 1.57]">
+          <TresCapsuleGeometry :args="[0.05, 0.2, 4, 8]" />
+          <TresMeshStandardMaterial color="#374151" />
+        </TresMesh>
+        <!-- Tears (Blue streams) -->
+        <TresMesh :position="[-0.2, -0.1, 0.5]" :rotation="[0, 0, 0]">
+          <TresConeGeometry :args="[0.08, 0.4, 16]" />
+          <TresMeshStandardMaterial color="#60a5fa" />
+        </TresMesh>
+        <TresMesh :position="[0.2, -0.1, 0.5]" :rotation="[0, 0, 0]">
+          <TresConeGeometry :args="[0.08, 0.4, 16]" />
+          <TresMeshStandardMaterial color="#60a5fa" />
+        </TresMesh>
+        <!-- Mouth (Wailing O) -->
+        <TresMesh :position="[0, -0.25, 0.45]" :rotation="[1.57, 0, 0]">
+          <TresTorusGeometry :args="[0.1, 0.04, 16, 32]" />
+          <TresMeshStandardMaterial color="#374151" />
+        </TresMesh>
+      </TresGroup>
     </TresGroup>
 
     <!-- Stage 3: Key (Magic/Unlock) -->
@@ -168,21 +307,45 @@ onBeforeRender(({ elapsed }) => {
       <!-- Head (Ring) -->
       <TresMesh :position="[0, 0.8, 0]">
         <TresTorusGeometry :args="[0.3, 0.08, 16, 32]" />
-        <TresMeshStandardMaterial color="#fbbf24" :metalness="1" :roughness="0.1" />
+        <TresMeshStandardMaterial
+          color="#fde68a"
+          :metalness="1"
+          :roughness="0.08"
+          emissive="#fbbf24"
+          :emissive-intensity="0.45"
+        />
       </TresMesh>
       <!-- Shaft -->
       <TresMesh :position="[0, 0, 0]">
         <TresCylinderGeometry :args="[0.08, 0.08, 1.6, 16]" />
-        <TresMeshStandardMaterial color="#fbbf24" :metalness="1" :roughness="0.1" />
+        <TresMeshStandardMaterial
+          color="#fde68a"
+          :metalness="1"
+          :roughness="0.08"
+          emissive="#fbbf24"
+          :emissive-intensity="0.45"
+        />
       </TresMesh>
       <!-- Teeth -->
       <TresMesh :position="[0.2, -0.6, 0]">
         <TresBoxGeometry :args="[0.4, 0.2, 0.1]" />
-        <TresMeshStandardMaterial color="#fbbf24" :metalness="1" :roughness="0.1" />
+        <TresMeshStandardMaterial
+          color="#fde68a"
+          :metalness="1"
+          :roughness="0.08"
+          emissive="#fbbf24"
+          :emissive-intensity="0.45"
+        />
       </TresMesh>
       <TresMesh :position="[0.2, -0.3, 0]">
         <TresBoxGeometry :args="[0.3, 0.15, 0.1]" />
-        <TresMeshStandardMaterial color="#fbbf24" :metalness="1" :roughness="0.1" />
+        <TresMeshStandardMaterial
+          color="#fde68a"
+          :metalness="1"
+          :roughness="0.08"
+          emissive="#fbbf24"
+          :emissive-intensity="0.45"
+        />
       </TresMesh>
     </TresGroup>
   </TresGroup>
