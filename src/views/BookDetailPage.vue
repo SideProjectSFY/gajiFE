@@ -21,6 +21,8 @@ const { t } = useI18n()
 const { trackBookViewed } = useAnalytics()
 const authStore = useAuthStore()
 
+const containerRef = ref<HTMLElement | null>(null)
+
 // State
 const loading = ref(true)
 const error = ref('')
@@ -235,7 +237,20 @@ const handleScenarioCreated = (data: any) => {
 </script>
 
 <template>
-  <div :class="css({ minH: '100vh', display: 'flex', flexDirection: 'column', bg: 'gray.50' })">
+  <div
+    ref="containerRef"
+    :class="
+      css({
+        height: '100vh',
+        overflowY: 'auto',
+        overscrollBehavior: 'none',
+        display: 'flex',
+        flexDirection: 'column',
+        bg: 'gray.50',
+        scrollbarGutter: 'stable',
+      })
+    "
+  >
     <AppHeader />
 
     <main
