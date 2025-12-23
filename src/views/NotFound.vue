@@ -134,15 +134,6 @@ const styles = {
 
       <p :class="styles.description" v-html="t('notFound.description')"></p>
 
-      <!-- Provide a search box for recovery paths (used by tests) -->
-      <div :class="styles.searchBox">
-        <input
-          data-testid="search-input"
-          :placeholder="t('notFound.searchPlaceholder', 'Search scenarios or books')"
-          :class="styles.searchInput"
-        />
-      </div>
-
       <div :class="styles.buttonGroup">
         <router-link to="/" :class="styles.primaryLink">
           {{ t('notFound.goHome') }}
