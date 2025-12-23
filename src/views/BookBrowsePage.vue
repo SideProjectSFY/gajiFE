@@ -1,5 +1,18 @@
 <template>
-  <div :class="css({ minH: '100vh', display: 'flex', flexDirection: 'column', bg: 'white' })">
+  <div
+    ref="containerRef"
+    :class="
+      css({
+        height: '100vh',
+        overflowY: 'auto',
+        overscrollBehavior: 'none',
+        display: 'flex',
+        flexDirection: 'column',
+        bg: 'white',
+        scrollbarGutter: 'stable',
+      })
+    "
+  >
     <AppHeader />
 
     <main
@@ -142,6 +155,8 @@ const route = useRoute()
 const authStore = useAuthStore()
 const { t } = useI18n()
 const { warning } = useToast()
+
+const containerRef = ref<HTMLElement | null>(null)
 
 // Styles for error state matching NotFound.vue
 const styles = {
@@ -336,7 +351,9 @@ const handlePageChange = (page: number): void => {
   currentPage.value = page
   updateUrl()
   fetchBooks()
-  window.scrollTo({ top: 0, behavior: 'smooth' })
+  if (containerRef.value) {
+    containerRef.value.scrollTo({ top: 0, behavior: 'smooth' })
+  }
 }
 
 const handleBookClick = (book: Book): void => {
