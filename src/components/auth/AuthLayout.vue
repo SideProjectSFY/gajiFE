@@ -141,6 +141,10 @@ onUnmounted(() => {
   leftColumnRef.value?.removeEventListener('scroll', handleScroll)
 })
 
+onUnmounted(() => {
+  leftColumnRef.value?.removeEventListener('scroll', handleScroll)
+})
+
 // PandaCSS Styles
 const containerStyle = css({
   display: 'flex',
@@ -172,15 +176,17 @@ const leftColumnStyle = css({
   zIndex: 10,
 })
 
-const stickySceneWrapperStyle = css({
-  position: 'sticky',
-  top: 0,
-  left: 0,
+const sceneWrapperStyle = css({
   width: '100%',
-  height: '100vh',
+  minHeight: '70vh',
+  marginTop: '1.5rem',
+  marginBottom: '2.5rem',
   overflow: 'hidden',
-  zIndex: 0,
-  pointerEvents: 'none',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  background: 'transparent',
+  borderRadius: 'lg',
 })
 
 const rightColumnStyle = css({
@@ -223,10 +229,7 @@ const sectionStyle = css({
 })
 
 const contentWrapperStyle = css({
-  position: 'relative',
-  zIndex: 1,
-  marginTop: '-100vh',
-  paddingBottom: '50vh',
+  //paddingTop: 'clamp(160px, 45vh - 120px, 320px)', // center the first text+object after takeover
 })
 
 const titleStyle = css({
@@ -291,21 +294,6 @@ const scrollDownButtonStyle = css({
   <div :class="containerStyle">
     <!-- LEFT COLUMN: The Experience (Scrollable) -->
     <div ref="leftColumnRef" :class="leftColumnStyle">
-      <div :class="stickySceneWrapperStyle">
-        <slot
-          name="stage"
-          :progress="scrollProgress"
-          :active-stage="currentStage"
-          :stage-blend="stageBlend"
-        >
-          <The3DAuthStage
-            :progress="scrollProgress"
-            :active-stage="currentStage"
-            :stage-blend="stageBlend"
-          />
-        </slot>
-      </div>
-
       <div :class="contentWrapperStyle">
         <section v-for="stage in stages" :key="stage.id" :class="sectionStyle">
           <div v-if="locale === 'ko'">
@@ -315,6 +303,20 @@ const scrollDownButtonStyle = css({
           <div v-else>
             <h2 :class="titleStyle">{{ stage.description }}</h2>
             <p :class="descStyle">{{ stage.title }}</p>
+          </div>
+          <div :class="sceneWrapperStyle">
+            <slot
+              name="stage"
+              :progress="scrollProgress"
+              :active-stage="stage.id"
+              :stage-blend="stage.id === currentStage ? stageBlend : 0"
+            >
+              <The3DAuthStage
+                :progress="scrollProgress"
+                :active-stage="stage.id"
+                :stage-blend="stage.id === currentStage ? stageBlend : 0"
+              />
+            </slot>
           </div>
         </section>
       </div>
