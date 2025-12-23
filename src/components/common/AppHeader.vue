@@ -607,7 +607,7 @@ const handleMenuKeydown = (event: KeyboardEvent): void => {
               css({ px: '4', mb: '3', fontSize: '0.875rem', fontWeight: '600', color: 'gray.600' })
             "
           >
-            🌐 Language
+            🌐 {{ t('nav.language') }}
           </div>
           <div :class="css({ display: 'flex', gap: '2', px: '4' })">
             <button
@@ -630,7 +630,7 @@ const handleMenuKeydown = (event: KeyboardEvent): void => {
               "
               @click="changeLanguage('ko')"
             >
-              한국어
+              {{ t('language.korean') }}
             </button>
             <button
               :class="
@@ -652,7 +652,7 @@ const handleMenuKeydown = (event: KeyboardEvent): void => {
               "
               @click="changeLanguage('en')"
             >
-              English
+              {{ t('language.english') }}
             </button>
           </div>
         </div>
