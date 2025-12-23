@@ -32,7 +32,7 @@ const route = useRoute()
 const { t } = useI18n()
 const { trackConversationStarted, trackMessageSent } = useAnalytics()
 const authStore = useAuthStore()
-const { error: showErrorToast } = useToast()
+const { error: showErrorToast, warning: showWarningToast } = useToast()
 
 // Loading states
 const isLoading = ref(true)
@@ -75,7 +75,7 @@ const canFork = computed(() => {
     isRootConversation.value &&
     !isLoading.value &&
     authStore.isAuthenticated &&
-    isConversationOwner.value
+    !isConversationOwner.value
   )
 })
 
@@ -181,6 +181,12 @@ const goBackToList = () => {
 }
 
 const toggleLike = async () => {
+  if (!authStore.isAuthenticated) {
+    showWarningToast(t('auth.loginRequired') || 'Please login to like conversations')
+    router.push({ name: 'Login', query: { redirect: route.fullPath } })
+    return
+  }
+
   const conversationId = route.params.id as string
   try {
     if (isLiked.value) {
@@ -332,28 +338,13 @@ const loadConversation = async (conversationId: string) => {
     }
 
     const fetchedMessages = Array.isArray(conversation.messages) ? conversation.messages : []
-    if (isForkedConversation.value && messagesContainer.value) {
-      messagesContainer.value.innerHTML = ''
-    }
+
     messages.value =
       isForkedConversation.value && fetchedMessages.length > 6
         ? fetchedMessages.slice(-6)
         : fetchedMessages
     await nextTick()
-    if (isForkedConversation.value && messagesContainer.value) {
-      const nodes = messagesContainer.value.querySelectorAll(
-        '[data-testid="user-message"], [data-testid="assistant-message"]'
-      )
-      nodes.forEach((node, index) => {
-        if (index < nodes.length - 6) {
-          node.setAttribute('data-testid', 'archived-message')
-        }
-      })
-      const nodeCount = messagesContainer.value.querySelectorAll(
-        '[data-testid="user-message"], [data-testid="assistant-message"]'
-      ).length
-      console.log('[ConversationChat] Message testid count after clamp:', nodeCount)
-    }
+
     console.log(
       '[ConversationChat] Loaded conversation',
       conversationId,
@@ -462,10 +453,17 @@ watch(
     :data-is-root="String(isRootConversation)"
     :data-depth="String(conversationDepth)"
     :data-has-been-forked="String(hasBeenForked)"
-    :class="css({ display: 'flex', flexDirection: 'column', minH: '100vh', bg: 'gray.50' })"
+    :class="
+      css({
+        display: 'flex',
+        flexDirection: 'column',
+        h: '100vh',
+        overflow: 'hidden',
+        bg: 'gray.50',
+      })
+    "
   >
     <AppHeader />
-    <div :class="css({ h: '16' })" />
 
     <div v-if="loadError" :class="css({ maxW: '720px', mx: 'auto', px: '6', py: '8' })">
       <div
@@ -496,7 +494,6 @@ watch(
     <!-- Conversations Sidebar -->
     <ConversationsSidebar
       v-model:visible="showSidebar"
-      data-testid="conversations-list"
       @select="(id) => console.log('Selected conversation:', id)"
     />
 
@@ -1050,6 +1047,7 @@ watch(
         </div>
 
         <!-- Input Area using ChatInput component -->
+        <!--TODO: Conversation Chat 에서 입력창 scroll 없애기-->
         <div
           v-if="aiError"
           :class="css({ color: 'red.700', px: '6', pb: '2', fontWeight: '600' })"
