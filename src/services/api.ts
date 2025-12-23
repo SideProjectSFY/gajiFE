@@ -44,6 +44,11 @@ api.interceptors.response.use(
 
     // Handle 401 errors (unauthorized)
     if (error.response?.status === 401 && !originalRequest._retry) {
+      // If the error comes from the login endpoint itself, do not attempt refresh
+      if (originalRequest.url?.includes('/auth/login')) {
+        return Promise.reject(error)
+      }
+
       originalRequest._retry = true
 
       const authStore = useAuthStore()
