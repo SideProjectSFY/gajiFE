@@ -88,7 +88,7 @@ const filteredResults = computed(() => {
 
 const hasMore = computed(() => {
   if (activeTab.value === 'all') {
-    return hasMoreBooks.value || hasMoreConversations.value || hasMoreUsers.value
+    return false
   }
   if (activeTab.value === 'book') {
     return hasMoreBooks.value
@@ -154,7 +154,10 @@ const performSearch = async () => {
         title: book.title,
         subtitle: book.genre,
         author: book.author,
-        description: `Scenarios: ${book.scenarioCount}, Conversations: ${book.conversationCount}`,
+        description: t('searchPage.bookDescription', {
+          scenarioCount: book.scenarioCount,
+          conversationCount: book.conversationCount,
+        }),
         trait: book.genre,
         coverImageUrl: book.coverImageUrl,
       })),
@@ -163,9 +166,10 @@ const performSearch = async () => {
         .map((conv: any) => ({
           id: conv.id,
           scenarioId: conv.scenarioId,
-          title: conv.title || 'Untitled Conversation',
-          description: conv.scenarioDescription || conv.bookTitle || 'No description',
-          author: 'Unknown',
+          title: conv.title || t('conversations.unknown.title'),
+          description:
+            conv.scenarioDescription || conv.bookTitle || t('conversations.noDescription'),
+          author: t('conversations.unknown.author'),
           likes: conv.likeCount || 0,
         })),
       users: response.users
@@ -269,6 +273,9 @@ const goToBookDetail = (bookId: string) => {
 
 // Infinite scroll handler
 const handleScroll = () => {
+  // Disable infinite scroll for 'all' tab
+  if (activeTab.value === 'all') return
+
   if (isLoadingMore.value || !hasMore.value) return
 
   const scrollPosition = window.innerHeight + window.scrollY
@@ -314,7 +321,10 @@ const loadMore = async () => {
             title: book.title,
             subtitle: book.genre,
             author: book.author,
-            description: `Scenarios: ${book.scenarioCount}, Conversations: ${book.conversationCount}`,
+            description: t('searchPage.bookDescription', {
+              scenarioCount: book.scenarioCount,
+              conversationCount: book.conversationCount,
+            }),
             trait: book.genre,
             coverImageUrl: book.coverImageUrl,
           }))
@@ -331,9 +341,10 @@ const loadMore = async () => {
             .map((conv: any) => ({
               id: conv.id,
               scenarioId: conv.scenarioId,
-              title: conv.title || 'Untitled Conversation',
-              description: conv.scenarioDescription || conv.bookTitle || 'No description',
-              author: 'Unknown',
+              title: conv.title || t('conversations.unknown.title'),
+              description:
+                conv.scenarioDescription || conv.bookTitle || t('conversations.noDescription'),
+              author: t('conversations.unknown.author'),
               likes: conv.likeCount || 0,
             }))
         )
@@ -377,7 +388,10 @@ const loadMore = async () => {
           title: book.title,
           subtitle: book.genre,
           author: book.author,
-          description: `Scenarios: ${book.scenarioCount}, Conversations: ${book.conversationCount}`,
+          description: t('searchPage.bookDescription', {
+            scenarioCount: book.scenarioCount,
+            conversationCount: book.conversationCount,
+          }),
           trait: book.genre,
           coverImageUrl: book.coverImageUrl,
         }))
@@ -396,9 +410,10 @@ const loadMore = async () => {
           .map((conv: any) => ({
             id: conv.id,
             scenarioId: conv.scenarioId,
-            title: conv.title || 'Untitled Conversation',
-            description: conv.scenarioDescription || conv.bookTitle || 'No description',
-            author: 'Unknown',
+            title: conv.title || t('conversations.unknown.title'),
+            description:
+              conv.scenarioDescription || conv.bookTitle || t('conversations.noDescription'),
+            author: t('conversations.unknown.author'),
             likes: conv.likeCount || 0,
           }))
       )
@@ -489,7 +504,6 @@ onUnmounted(() => {
 <template>
   <div :class="css({ minH: '100vh', display: 'flex', flexDirection: 'column' })">
     <AppHeader />
-    <div :class="css({ h: '20' })" />
 
     <main
       :class="
@@ -662,7 +676,8 @@ onUnmounted(() => {
             "
             @click="activeTab = 'conversation'"
           >
-            {{ t('searchPage.tabs.conversation') }}({{ conversationCount }}+)
+            {{ t('searchPage.tabs.conversation') }}({{ conversationCount
+            }}{{ hasMoreConversations ? '+' : '' }})
           </button>
           <button
             data-testid="tab-user"
@@ -684,7 +699,7 @@ onUnmounted(() => {
             "
             @click="activeTab = 'user'"
           >
-            {{ t('searchPage.tabs.user') }}({{ userCount }}+)
+            {{ t('searchPage.tabs.user') }}({{ userCount }}{{ hasMoreUsers ? '+' : '' }})
           </button>
         </div>
 
