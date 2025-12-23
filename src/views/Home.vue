@@ -34,9 +34,18 @@ const handleSearch = () => {
 </script>
 
 <template>
-  <div :class="css({ minH: '100vh', display: 'flex', flexDirection: 'column' })">
+  <div
+    :class="
+      css({
+        height: '100vh',
+        overflowY: 'auto',
+        overscrollBehavior: 'none',
+        display: 'flex',
+        flexDirection: 'column',
+      })
+    "
+  >
     <AppHeader />
-    <div :class="css({ h: '20' })" />
 
     <main
       :class="
