@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useAnalytics } from '@/composables/useAnalytics'
+import { useToast } from '@/composables/useToast'
 
 // Views
 import Home from '@/views/Home.vue'
@@ -144,9 +145,11 @@ const router = createRouter({
 // Navigation guard for authentication
 router.beforeEach((to, _from, next) => {
   const authStore = useAuthStore()
+  const { error } = useToast()
   const requiresAuth = to.meta.requiresAuth
 
   if (requiresAuth && !authStore.isAuthenticated) {
+    error('로그인이 필요한 페이지입니다.')
     next({ name: 'Login', query: { redirect: to.fullPath } })
   } else {
     next()
