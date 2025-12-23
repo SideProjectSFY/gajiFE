@@ -1,11 +1,14 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted, computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { css } from 'styled-system/css'
 import gsap from 'gsap'
 import ScrollTrigger from 'gsap/ScrollTrigger'
 import The3DAuthStage from './The3DAuthStage.vue'
 
 gsap.registerPlugin(ScrollTrigger)
+
+const { locale } = useI18n()
 
 const leftColumnRef = ref<HTMLElement | null>(null)
 const rightColumnRef = ref<HTMLElement | null>(null)
@@ -16,7 +19,15 @@ const stageBlend = ref(0)
 
 const EXPANSION_HEIGHT = 500
 
-const stages = [
+const props = defineProps<{
+  stages?: Array<{
+    id: number
+    title: string
+    description: string
+  }>
+}>()
+
+const defaultStages = [
   {
     id: 0,
     title: '모든 이야기는 작은 씨앗에서 시작됩니다.',
@@ -39,9 +50,17 @@ const stages = [
   },
 ]
 
+const stages = computed(() => props.stages || defaultStages)
+
 const scrollToTop = () => {
   if (leftColumnRef.value) {
     leftColumnRef.value.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+}
+
+const scrollDown = () => {
+  if (leftColumnRef.value) {
+    leftColumnRef.value.scrollBy({ top: window.innerHeight * 0.8, behavior: 'smooth' })
   }
 }
 
@@ -122,10 +141,6 @@ onUnmounted(() => {
   leftColumnRef.value?.removeEventListener('scroll', handleScroll)
 })
 
-onUnmounted(() => {
-  leftColumnRef.value?.removeEventListener('scroll', handleScroll)
-})
-
 // PandaCSS Styles
 const containerStyle = css({
   display: 'flex',
@@ -139,6 +154,7 @@ const leftColumnStyle = css({
   width: '50%',
   height: '100vh',
   overflowY: 'auto',
+  overscrollBehavior: 'none',
   position: 'relative',
   bg: '#052e16',
   backgroundImage:
@@ -156,23 +172,22 @@ const leftColumnStyle = css({
   zIndex: 10,
 })
 
-const sceneWrapperStyle = css({
+const stickySceneWrapperStyle = css({
+  position: 'sticky',
+  top: 0,
+  left: 0,
   width: '100%',
-  minHeight: '60vh',
-  marginTop: '1.5rem',
-  marginBottom: '2.5rem',
+  height: '100vh',
   overflow: 'hidden',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  background: 'transparent',
-  borderRadius: 'lg',
+  zIndex: 0,
+  pointerEvents: 'none',
 })
 
 const rightColumnStyle = css({
   width: '50%',
   height: '100vh',
   overflowY: 'auto',
+  overscrollBehavior: 'none',
   position: 'relative',
   bg: 'white',
   zIndex: 5,
@@ -184,9 +199,14 @@ const formWrapperStyle = css({
   minHeight: '100%',
   display: 'flex',
   flexDirection: 'column',
-  justifyContent: 'center',
+  // justifyContent: 'center', // Removed to prevent clipping
   margin: '0 auto',
   p: '6',
+})
+
+const formContentStyle = css({
+  width: '100%',
+  margin: 'auto 0', // Safe centering
 })
 
 const sectionStyle = css({
@@ -197,13 +217,16 @@ const sectionStyle = css({
   display: 'flex',
   flexDirection: 'column',
   gap: '0.75rem',
-  minHeight: '100vh',
+  minHeight: '80vh',
   justifyContent: 'center',
   alignContent: 'center',
 })
 
 const contentWrapperStyle = css({
-  //paddingTop: 'clamp(160px, 45vh - 120px, 320px)', // center the first text+object after takeover
+  position: 'relative',
+  zIndex: 1,
+  marginTop: '-100vh',
+  paddingBottom: '50vh',
 })
 
 const titleStyle = css({
@@ -239,26 +262,59 @@ const backToTopStyle = css({
     transform: 'translateY(-2px) translateX(-50%)',
   },
 })
+
+const scrollDownButtonStyle = css({
+  position: 'fixed',
+  bottom: '2rem',
+  left: '25%',
+  transform: 'translateX(-50%)',
+  zIndex: 100,
+  padding: '0.75rem',
+  bg: 'white/10',
+  backdropFilter: 'blur(4px)',
+  color: 'white',
+  borderRadius: 'full',
+  cursor: 'pointer',
+  transition: 'all 0.3s',
+  border: '1px solid rgba(255, 255, 255, 0.2)',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  _hover: {
+    bg: 'white/20',
+    transform: 'translateX(-50%) translateY(4px)',
+  },
+})
 </script>
 
 <template>
   <div :class="containerStyle">
     <!-- LEFT COLUMN: The Experience (Scrollable) -->
     <div ref="leftColumnRef" :class="leftColumnStyle">
+      <div :class="stickySceneWrapperStyle">
+        <slot
+          name="stage"
+          :progress="scrollProgress"
+          :active-stage="currentStage"
+          :stage-blend="stageBlend"
+        >
+          <The3DAuthStage
+            :progress="scrollProgress"
+            :active-stage="currentStage"
+            :stage-blend="stageBlend"
+          />
+        </slot>
+      </div>
+
       <div :class="contentWrapperStyle">
         <section v-for="stage in stages" :key="stage.id" :class="sectionStyle">
-          <div>
+          <div v-if="locale === 'ko'">
             <h2 :class="titleStyle">{{ stage.title }}</h2>
             <p :class="descStyle">{{ stage.description }}</p>
           </div>
-          <div :class="sceneWrapperStyle">
-            <slot name="stage">
-              <The3DAuthStage
-                :progress="scrollProgress"
-                :active-stage="stage.id"
-                :stage-blend="stage.id === currentStage ? stageBlend : 0"
-              />
-            </slot>
+          <div v-else>
+            <h2 :class="titleStyle">{{ stage.description }}</h2>
+            <p :class="descStyle">{{ stage.title }}</p>
           </div>
         </section>
       </div>
@@ -267,10 +323,21 @@ const backToTopStyle = css({
     <!-- RIGHT COLUMN: The Function (Sticky/Fixed) -->
     <div ref="rightColumnRef" :class="rightColumnStyle">
       <div :class="formWrapperStyle">
-        <slot name="form"></slot>
+        <div :class="formContentStyle">
+          <slot name="form"></slot>
+        </div>
       </div>
     </div>
 
     <button v-show="showBackToTop" @click="scrollToTop" :class="backToTopStyle">↑ Top</button>
+
+    <button
+      v-show="!showBackToTop"
+      @click="scrollDown"
+      :class="scrollDownButtonStyle"
+      aria-label="Scroll Down"
+    >
+      <i class="pi pi-chevron-down" style="font-size: 1.5rem"></i>
+    </button>
   </div>
 </template>
