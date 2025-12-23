@@ -8,12 +8,36 @@ import { useAnalytics } from '@/composables/useAnalytics'
 import LogoSvg from '@/assets/Logo.svg'
 import LanguageSwitcher from '@/components/common/LanguageSwitcher.vue'
 import AuthLayout from '@/components/auth/AuthLayout.vue'
+import The3DLoginStage from '@/components/auth/The3DLoginStage.vue'
 
 const router = useRouter()
 const route = useRoute()
 const { t } = useI18n()
 const authStore = useAuthStore()
 const { trackLogin } = useAnalytics()
+
+const loginStages = [
+  {
+    id: 0,
+    title: '펼쳐지지 않은 이야기',
+    description: 'The story yet to be written.',
+  },
+  {
+    id: 1,
+    title: '연결의 시작',
+    description: 'A handshake that welcomes you.',
+  },
+  {
+    id: 2,
+    title: '감정의 공명',
+    description: 'Feelings take shape and color.',
+  },
+  {
+    id: 3,
+    title: '마법 같은 순간',
+    description: 'Your imagination sparkles.',
+  },
+]
 
 const emailInputRef = ref<HTMLInputElement | null>(null)
 
@@ -98,7 +122,10 @@ onMounted(() => {
 </script>
 
 <template>
-  <AuthLayout>
+  <AuthLayout :stages="loginStages">
+    <template #stage="{ progress, activeStage, stageBlend }">
+      <The3DLoginStage :progress="progress" :active-stage="activeStage" :stage-blend="stageBlend" />
+    </template>
     <template #overlay>
       <div style="text-align: center; color: white">
         <div style="font-size: 2rem; font-weight: bold; margin-bottom: 1rem">
