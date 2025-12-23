@@ -177,6 +177,7 @@ const containerStyle = css({
   height: '100vh',
   overflow: 'hidden',
   bg: 'gray.50',
+  scrollbarGutter: 'stable',
 })
 
 const leftColumnStyle = css({
@@ -219,7 +220,7 @@ const sceneWrapperStyle = css({
 const rightColumnStyle = css({
   width: '50%',
   height: '100vh',
-  overflowY: 'auto',
+  overflowY: 'hidden',
   overscrollBehavior: 'none',
   position: 'relative',
   bg: 'white',
