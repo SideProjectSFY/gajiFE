@@ -103,16 +103,6 @@ const navigateToBook = (e: Event, bookId?: string): void => {
   }
 }
 
-// Helper to get random tags for UI fidelity (since backend doesn't provide them yet)
-const getTags = (conv: ConversationSummary) => {
-  const baseTags = [t('conversations.tags.character'), t('conversations.tags.situation')]
-  if (conv.bookTitle?.includes('Pride'))
-    return [...baseTags, t('conversations.tags.romance'), t('conversations.tags.classic')]
-  if (conv.bookTitle?.includes('1984'))
-    return [...baseTags, t('conversations.tags.dystopian'), t('conversations.tags.political')]
-  return [...baseTags, t('conversations.tags.event')]
-}
-
 const handleForkChat = async (scenarioId: string) => {
   if (!authStore.isAuthenticated) {
     showErrorToast('Please login to fork a scenario')
@@ -140,7 +130,6 @@ const handleForked = (forkedConversation: { id: string }) => {
 <template>
   <div :class="css({ minH: '100vh', display: 'flex', flexDirection: 'column', bg: 'white' })">
     <AppHeader />
-    <div :class="css({ h: '20' })" />
 
     <main
       :class="
@@ -264,6 +253,8 @@ const handleForked = (forkedConversation: { id: string }) => {
               transition: 'all 0.2s',
               display: 'flex',
               flexDirection: 'column',
+              minW: 0,
+              h: 'full',
               _hover: {
                 borderColor: 'green.500',
                 boxShadow: 'md',
@@ -365,7 +356,7 @@ const handleForked = (forkedConversation: { id: string }) => {
           </p>
 
           <!-- Tags -->
-          <div
+          <!-- <div
             :class="css({ display: 'flex', gap: '2', mb: '3', flexWrap: 'wrap', minH: '1.5rem' })"
           >
             <span
@@ -386,7 +377,7 @@ const handleForked = (forkedConversation: { id: string }) => {
             >
               {{ tag }}
             </span>
-          </div>
+          </div> -->
 
           <!-- Stats -->
           <div
