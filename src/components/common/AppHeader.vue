@@ -111,10 +111,6 @@ const handleMenuKeydown = (event: KeyboardEvent): void => {
   <header
     :class="
       css({
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        right: 0,
         bg: 'white',
         borderBottom: '1px solid',
         borderColor: 'gray.200',

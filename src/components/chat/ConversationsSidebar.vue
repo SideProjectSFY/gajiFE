@@ -44,6 +44,7 @@ onMounted(async () => {
 
 async function loadConversations(): Promise<void> {
   try {
+    console.log('[ConversationsSidebar] Loading conversations...')
     isLoading.value = true
 
     // Import API function
@@ -51,7 +52,9 @@ async function loadConversations(): Promise<void> {
     const { scenarioApi } = await import('@/services/scenarioApi')
 
     // Fetch actual conversations from API
+    console.log('[ConversationsSidebar] Calling listConversations')
     const conversationList = await listConversations(0, 20)
+    console.log('[ConversationsSidebar] listConversations returned:', conversationList.length)
 
     // Transform to component format
     conversations.value = await Promise.all(
@@ -61,7 +64,7 @@ async function loadConversations(): Promise<void> {
           return {
             id: conv.id,
             scenarioTitle: scenario.whatIfQuestion || scenario.title,
-            bookTitle: scenario.bookTitle,
+            bookTitle: scenario.bookTitle || t('chat.unknownBook'),
             lastMessage: t('chat.clickToViewMessages'),
             lastMessageAt: conv.updatedAt || conv.createdAt,
             messageCount: conv.messageCount || 0,
@@ -81,6 +84,7 @@ async function loadConversations(): Promise<void> {
         }
       })
     )
+    console.log('[ConversationsSidebar] Conversations loaded:', conversations.value.length)
   } catch (error) {
     console.error('Failed to load conversations:', error)
     // Fallback to empty array on error
@@ -324,102 +328,104 @@ const styles = {
 </script>
 
 <template>
-  <Teleport to="body">
-    <!-- Overlay -->
-    <Transition name="fade">
-      <div v-if="visible" :class="styles.overlay" aria-hidden="true" @click="closeSidebar" />
-    </Transition>
+  <div>
+    <Teleport to="body">
+      <!-- Overlay -->
+      <Transition name="fade">
+        <div v-if="visible" :class="styles.overlay" aria-hidden="true" @click="closeSidebar" />
+      </Transition>
 
-    <!-- Sidebar -->
-    <Transition name="slide">
-      <aside
-        v-if="visible"
-        :class="styles.sidebar"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="sidebar-title"
-        data-testid="conversations-sidebar"
-      >
-        <!-- Header -->
-        <header :class="styles.header">
-          <h2 id="sidebar-title" :class="styles.title">대화 목록</h2>
-          <button :class="styles.closeButton" aria-label="사이드바 닫기" @click="closeSidebar">
-            ✕
-          </button>
-        </header>
-
-        <!-- Content -->
-        <div :class="styles.content">
-          <!-- Loading State -->
-          <div v-if="isLoading" :class="styles.loadingContainer">
-            <div :class="styles.spinner" />
-            <p>불러오는 중...</p>
-          </div>
-
-          <!-- Empty State -->
-          <div v-else-if="conversations.length === 0" :class="styles.emptyContainer">
-            <span :class="styles.emptyIcon">📭</span>
-            <p :class="styles.emptyText">아직 대화가 없습니다</p>
-            <button :class="styles.newChatButton" @click="router.push('/books')">
-              <span>➕</span>
-              새 대화 시작
+      <!-- Sidebar -->
+      <Transition name="slide">
+        <aside
+          v-if="visible"
+          :class="styles.sidebar"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="sidebar-title"
+          data-testid="conversations-sidebar"
+        >
+          <!-- Header -->
+          <header :class="styles.header">
+            <h2 id="sidebar-title" :class="styles.title">대화 목록</h2>
+            <button :class="styles.closeButton" aria-label="사이드바 닫기" @click="closeSidebar">
+              ✕
             </button>
-          </div>
+          </header>
 
-          <!-- Conversations List -->
-          <ul
-            v-else
-            data-testid="conversations-list"
-            :class="styles.conversationList"
-            aria-label="대화 목록"
-          >
-            <li
-              v-for="conversation in conversations"
-              :key="conversation.id"
-              :class="[
-                styles.conversationItem,
-                conversation.id === currentConversationId && styles.activeItem,
-              ]"
-              :data-active="conversation.id === currentConversationId"
-              :data-testid="`conversation-item-${conversation.id}`"
-            >
-              <button
-                :class="styles.conversationButton"
-                @click="selectConversation(conversation.id)"
-                @keydown="handleKeydown($event, conversation.id)"
-              >
-                <!-- Header Row -->
-                <div :class="styles.itemHeader">
-                  <h3 :class="styles.itemTitle">
-                    {{ conversation.scenarioTitle }}
-                  </h3>
-                  <span :class="styles.timestamp">
-                    {{ formatTimestamp(conversation.lastMessageAt) }}
-                  </span>
-                </div>
+          <!-- Content -->
+          <div :class="styles.content">
+            <!-- Loading State -->
+            <div v-if="isLoading" :class="styles.loadingContainer">
+              <div :class="styles.spinner" />
+              <p>불러오는 중...</p>
+            </div>
 
-                <!-- Book Title -->
-                <p :class="styles.bookTitle">📚 {{ conversation.bookTitle }}</p>
-
-                <!-- Last Message Preview -->
-                <p :class="styles.lastMessage">
-                  {{ conversation.lastMessage || '메시지가 없습니다' }}
-                </p>
-
-                <!-- Meta Row -->
-                <div :class="styles.metaRow">
-                  <span :class="styles.metaItem"> 💬 {{ conversation.messageCount }} </span>
-                  <span v-if="conversation.type === 'FORKED'" :class="styles.forkedBadge">
-                    🔀 포크됨
-                  </span>
-                </div>
+            <!-- Empty State -->
+            <div v-else-if="conversations.length === 0" :class="styles.emptyContainer">
+              <span :class="styles.emptyIcon">📭</span>
+              <p :class="styles.emptyText">아직 대화가 없습니다</p>
+              <button :class="styles.newChatButton" @click="router.push('/books')">
+                <span>➕</span>
+                새 대화 시작
               </button>
-            </li>
-          </ul>
-        </div>
-      </aside>
-    </Transition>
-  </Teleport>
+            </div>
+
+            <!-- Conversations List -->
+            <ul
+              v-else
+              data-testid="conversations-list"
+              :class="styles.conversationList"
+              aria-label="대화 목록"
+            >
+              <li
+                v-for="conversation in conversations"
+                :key="conversation.id"
+                :class="[
+                  styles.conversationItem,
+                  conversation.id === currentConversationId && styles.activeItem,
+                ]"
+                :data-active="conversation.id === currentConversationId"
+                :data-testid="`conversation-item-${conversation.id}`"
+              >
+                <button
+                  :class="styles.conversationButton"
+                  @click="selectConversation(conversation.id)"
+                  @keydown="handleKeydown($event, conversation.id)"
+                >
+                  <!-- Header Row -->
+                  <div :class="styles.itemHeader">
+                    <h3 :class="styles.itemTitle">
+                      {{ conversation.scenarioTitle }}
+                    </h3>
+                    <span :class="styles.timestamp">
+                      {{ formatTimestamp(conversation.lastMessageAt) }}
+                    </span>
+                  </div>
+
+                  <!-- Book Title -->
+                  <p :class="styles.bookTitle">📚 {{ conversation.bookTitle }}</p>
+
+                  <!-- Last Message Preview -->
+                  <p :class="styles.lastMessage">
+                    {{ conversation.lastMessage || '메시지가 없습니다' }}
+                  </p>
+
+                  <!-- Meta Row -->
+                  <div :class="styles.metaRow">
+                    <span :class="styles.metaItem"> 💬 {{ conversation.messageCount }} </span>
+                    <span v-if="conversation.type === 'FORKED'" :class="styles.forkedBadge">
+                      🔀 포크됨
+                    </span>
+                  </div>
+                </button>
+              </li>
+            </ul>
+          </div>
+        </aside>
+      </Transition>
+    </Teleport>
+  </div>
 </template>
 
 <style scoped>

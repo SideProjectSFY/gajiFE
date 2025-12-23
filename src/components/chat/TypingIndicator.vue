@@ -44,6 +44,15 @@ const styles = {
   dot3: css({
     animationDelay: '0.4s',
   }),
+  spinner: css({
+    width: '14px',
+    height: '14px',
+    border: '2px solid #cbd5e1',
+    borderTopColor: '#64748b',
+    borderRadius: '50%',
+    animation: 'spin 1s linear infinite',
+    marginRight: '0.5rem',
+  }),
   // Screen reader only text
   srOnly: css({
     position: 'absolute',
@@ -60,28 +69,18 @@ const styles = {
 </script>
 
 <template>
-  <div
-    :class="styles.wrapper"
-    data-testid="typing-indicator"
-    aria-busy="true"
-  >
+  <div :class="styles.wrapper" data-testid="typing-indicator" aria-busy="true">
     <div :class="styles.bubble">
+      <div :class="styles.spinner" />
       <span :class="styles.text">AI가 생각하는 중</span>
-      <div
-        :class="styles.dotsContainer"
-        aria-hidden="true"
-      >
+      <div :class="styles.dotsContainer" aria-hidden="true">
         <div :class="[styles.dot, styles.dot1]" />
         <div :class="[styles.dot, styles.dot2]" />
         <div :class="[styles.dot, styles.dot3]" />
       </div>
     </div>
     <!-- Accessible announcement -->
-    <span
-      :class="styles.srOnly"
-      aria-live="polite"
-      aria-atomic="true"
-    >
+    <span :class="styles.srOnly" aria-live="polite" aria-atomic="true">
       AI가 응답을 생성하고 있습니다
     </span>
   </div>
@@ -109,6 +108,15 @@ const styles = {
   40% {
     transform: translateY(-6px);
     opacity: 1;
+  }
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
   }
 }
 </style>

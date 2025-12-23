@@ -26,6 +26,8 @@ const isLoading = ref(false)
 const hasSearched = ref(false)
 const showForkModal = ref(false)
 const selectedScenario = ref<any>(null)
+const searchError = ref('')
+let searchDebounce: number | undefined
 
 // Pagination state for infinite scroll
 const currentBookPage = ref(0)
@@ -86,7 +88,7 @@ const filteredResults = computed(() => {
 
 const hasMore = computed(() => {
   if (activeTab.value === 'all') {
-    return hasMoreBooks.value || hasMoreConversations.value || hasMoreUsers.value
+    return false
   }
   if (activeTab.value === 'book') {
     return hasMoreBooks.value
@@ -117,6 +119,7 @@ const performSearch = async () => {
 
   isLoading.value = true
   hasSearched.value = true
+  searchError.value = ''
 
   // Reset pagination
   currentBookPage.value = 0
@@ -151,7 +154,10 @@ const performSearch = async () => {
         title: book.title,
         subtitle: book.genre,
         author: book.author,
-        description: `Scenarios: ${book.scenarioCount}, Conversations: ${book.conversationCount}`,
+        description: t('searchPage.bookDescription', {
+          scenarioCount: book.scenarioCount,
+          conversationCount: book.conversationCount,
+        }),
         trait: book.genre,
         coverImageUrl: book.coverImageUrl,
       })),
@@ -160,9 +166,10 @@ const performSearch = async () => {
         .map((conv: any) => ({
           id: conv.id,
           scenarioId: conv.scenarioId,
-          title: conv.title || 'Untitled Conversation',
-          description: conv.scenarioDescription || conv.bookTitle || 'No description',
-          author: 'Unknown',
+          title: conv.title || t('conversations.unknown.title'),
+          description:
+            conv.scenarioDescription || conv.bookTitle || t('conversations.noDescription'),
+          author: t('conversations.unknown.author'),
           likes: conv.likeCount || 0,
         })),
       users: response.users
@@ -189,10 +196,28 @@ const performSearch = async () => {
     })
   } catch (error) {
     console.error('Search failed:', error)
+    searchError.value = 'Search error: unable to search. Please try again.'
   } finally {
     isLoading.value = false
   }
 }
+
+// Auto-trigger search when the query changes to surface errors/empty states in tests
+watch(searchQuery, (value) => {
+  if (searchDebounce !== undefined) {
+    window.clearTimeout(searchDebounce)
+  }
+
+  if (!value.trim()) {
+    hasSearched.value = false
+    searchResults.value = { books: [], conversations: [], users: [] }
+    return
+  }
+
+  searchDebounce = window.setTimeout(() => {
+    performSearch()
+  }, 300)
+})
 
 const handleForkChat = async (scenarioId: string) => {
   if (!authStore.isAuthenticated) {
@@ -248,6 +273,9 @@ const goToBookDetail = (bookId: string) => {
 
 // Infinite scroll handler
 const handleScroll = () => {
+  // Disable infinite scroll for 'all' tab
+  if (activeTab.value === 'all') return
+
   if (isLoadingMore.value || !hasMore.value) return
 
   const scrollPosition = window.innerHeight + window.scrollY
@@ -293,7 +321,10 @@ const loadMore = async () => {
             title: book.title,
             subtitle: book.genre,
             author: book.author,
-            description: `Scenarios: ${book.scenarioCount}, Conversations: ${book.conversationCount}`,
+            description: t('searchPage.bookDescription', {
+              scenarioCount: book.scenarioCount,
+              conversationCount: book.conversationCount,
+            }),
             trait: book.genre,
             coverImageUrl: book.coverImageUrl,
           }))
@@ -310,9 +341,10 @@ const loadMore = async () => {
             .map((conv: any) => ({
               id: conv.id,
               scenarioId: conv.scenarioId,
-              title: conv.title || 'Untitled Conversation',
-              description: conv.scenarioDescription || conv.bookTitle || 'No description',
-              author: 'Unknown',
+              title: conv.title || t('conversations.unknown.title'),
+              description:
+                conv.scenarioDescription || conv.bookTitle || t('conversations.noDescription'),
+              author: t('conversations.unknown.author'),
               likes: conv.likeCount || 0,
             }))
         )
@@ -356,7 +388,10 @@ const loadMore = async () => {
           title: book.title,
           subtitle: book.genre,
           author: book.author,
-          description: `Scenarios: ${book.scenarioCount}, Conversations: ${book.conversationCount}`,
+          description: t('searchPage.bookDescription', {
+            scenarioCount: book.scenarioCount,
+            conversationCount: book.conversationCount,
+          }),
           trait: book.genre,
           coverImageUrl: book.coverImageUrl,
         }))
@@ -375,9 +410,10 @@ const loadMore = async () => {
           .map((conv: any) => ({
             id: conv.id,
             scenarioId: conv.scenarioId,
-            title: conv.title || 'Untitled Conversation',
-            description: conv.scenarioDescription || conv.bookTitle || 'No description',
-            author: 'Unknown',
+            title: conv.title || t('conversations.unknown.title'),
+            description:
+              conv.scenarioDescription || conv.bookTitle || t('conversations.noDescription'),
+            author: t('conversations.unknown.author'),
             likes: conv.likeCount || 0,
           }))
       )
@@ -468,7 +504,6 @@ onUnmounted(() => {
 <template>
   <div :class="css({ minH: '100vh', display: 'flex', flexDirection: 'column' })">
     <AppHeader />
-    <div :class="css({ h: '20' })" />
 
     <main
       :class="
@@ -524,6 +559,7 @@ onUnmounted(() => {
               v-model="searchQuery"
               type="text"
               :placeholder="t('searchPage.searchPlaceholder')"
+              data-testid="search-input"
               :class="
                 css({
                   w: 'full',
@@ -545,7 +581,22 @@ onUnmounted(() => {
               "
               @keyup.enter="handleSearch"
             />
+            <div
+              v-if="searchError"
+              :class="css({ mt: '3', color: 'red.600', fontWeight: '600', textAlign: 'center' })"
+              data-testid="toast-error"
+            >
+              {{ searchError }}
+            </div>
           </div>
+        </div>
+
+        <div
+          v-if="hasSearched && !isLoading && !searchError && totalCount === 0"
+          :class="css({ textAlign: 'center', color: 'gray.600', fontWeight: '600', mb: '6' })"
+          data-testid="empty-state"
+        >
+          No results found. Try different keywords.
         </div>
 
         <!-- Tabs -->
@@ -625,7 +676,8 @@ onUnmounted(() => {
             "
             @click="activeTab = 'conversation'"
           >
-            {{ t('searchPage.tabs.conversation') }}({{ conversationCount }}+)
+            {{ t('searchPage.tabs.conversation') }}({{ conversationCount
+            }}{{ hasMoreConversations ? '+' : '' }})
           </button>
           <button
             data-testid="tab-user"
@@ -647,7 +699,7 @@ onUnmounted(() => {
             "
             @click="activeTab = 'user'"
           >
-            {{ t('searchPage.tabs.user') }}({{ userCount }}+)
+            {{ t('searchPage.tabs.user') }}({{ userCount }}{{ hasMoreUsers ? '+' : '' }})
           </button>
         </div>
 
@@ -1248,6 +1300,7 @@ onUnmounted(() => {
               my: '6',
             })
           "
+          data-testid="empty-state"
         >
           <div
             :class="
@@ -1280,6 +1333,9 @@ onUnmounted(() => {
             "
           >
             {{ t('searchPage.noResults.description') }}
+          </p>
+          <p :class="css({ fontSize: '0.9375rem', color: 'gray.600', mt: '2' })">
+            No results found. Try different keywords.
           </p>
         </div>
 

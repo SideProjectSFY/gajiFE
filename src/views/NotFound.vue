@@ -94,6 +94,25 @@ const styles = {
       transform: 'translateY(-2px)',
     },
   }),
+  searchBox: css({
+    marginTop: '2rem',
+    display: 'flex',
+    justifyContent: 'center',
+  }),
+  searchInput: css({
+    width: '100%',
+    maxWidth: '360px',
+    padding: '0.85rem 1rem',
+    border: '1px solid #d1d5db',
+    borderRadius: '0.5rem',
+    fontSize: '1rem',
+    outline: 'none',
+    backgroundColor: 'white',
+    _focus: {
+      borderColor: '#16a34a',
+      boxShadow: '0 0 0 3px rgba(22, 163, 74, 0.15)',
+    },
+  }),
 }
 </script>
 

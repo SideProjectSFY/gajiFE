@@ -1,6 +1,7 @@
 <!-- Chat Input Area Component -->
 <script setup lang="ts">
 import { ref, computed, nextTick } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { css } from '../../../styled-system/css'
 
 interface Props {
@@ -18,6 +19,7 @@ const props = withDefaults(defineProps<Props>(), {
 })
 
 const emit = defineEmits<Emits>()
+const { t } = useI18n()
 
 const message = ref('')
 const textareaRef = ref<HTMLTextAreaElement | null>(null)
@@ -91,6 +93,10 @@ const styles = {
     maxHeight: '120px',
     fontFamily: 'inherit',
     transition: 'border-color 0.2s, box-shadow 0.2s',
+    scrollbarWidth: 'none',
+    '&::-webkit-scrollbar': {
+      display: 'none',
+    },
     '&:focus': {
       outline: 'none',
       borderColor: 'blue.500',
@@ -141,22 +147,15 @@ const styles = {
 </script>
 
 <template>
-  <div
-    :class="styles.container"
-    data-testid="chat-input-container"
-  >
+  <div :class="styles.container" data-testid="chat-input-container">
     <div :class="styles.inputWrapper">
       <textarea
         ref="textareaRef"
         v-model="message"
         :class="styles.textarea"
         :disabled="isDisabled"
-        :placeholder="
-          loading
-            ? 'AI가 응답 중입니다...'
-            : '메시지를 입력하세요... (Enter: 전송, Shift+Enter: 줄바꿈)'
-        "
-        :aria-label="loading ? 'AI 응답 대기 중' : '메시지 입력'"
+        :placeholder="loading ? t('chat.input.loading') : t('chat.input.placeholder')"
+        :aria-label="loading ? t('chat.input.loading') : t('chat.input.placeholder')"
         :aria-disabled="isDisabled"
         data-testid="message-input"
         rows="1"
@@ -171,11 +170,7 @@ const styles = {
         data-testid="send-message-button"
         @click="sendMessage"
       >
-        <span
-          v-if="loading"
-          :class="styles.loadingSpinner"
-          aria-hidden="true"
-        />
+        <span v-if="loading" :class="styles.loadingSpinner" aria-hidden="true" />
         <span v-else>전송</span>
       </button>
     </div>

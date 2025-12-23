@@ -136,7 +136,6 @@ const filteredBooks = computed(() => {
 <template>
   <div :class="css({ minH: '100vh', display: 'flex', flexDirection: 'column', bg: 'gray.50' })">
     <AppHeader />
-    <div :class="css({ h: '20' })" />
 
     <main
       :class="
@@ -195,7 +194,7 @@ const filteredBooks = computed(() => {
                 },
               })
             "
-          >
+          />
           <span
             :class="
               css({

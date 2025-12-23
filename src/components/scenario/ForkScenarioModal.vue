@@ -88,15 +88,26 @@
           </button>
         </div>
       </form>
+
+      <!-- Loading Overlay -->
+      <div v-if="isSubmitting" :class="css(loadingOverlay)">
+        <Spinner size="large" />
+        <p :class="css(loadingText)">
+          {{ t('scenario.forking') }}<br />
+          {{ t('scenario.waitMessage') }}
+        </p>
+      </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { css } from 'styled-system/css'
 import api from '@/services/api'
 import type { BrowseScenario } from '@/types'
+import Spinner from '@/components/common/Spinner.vue'
 
 interface Props {
   isOpen: boolean
@@ -110,6 +121,7 @@ interface Emits {
 
 const props = defineProps<Props>()
 const emit = defineEmits<Emits>()
+const { t } = useI18n()
 
 const isSubmitting = ref(false)
 
@@ -266,6 +278,26 @@ const primaryButton = {
     bg: 'gray.300',
     cursor: 'not-allowed',
   },
+}
+
+const loadingOverlay = {
+  position: 'absolute' as const,
+  inset: 0,
+  bg: 'rgba(255, 255, 255, 0.9)',
+  display: 'flex',
+  flexDirection: 'column' as const,
+  alignItems: 'center',
+  justifyContent: 'center',
+  zIndex: 10,
+  borderRadius: 'lg',
+}
+
+const loadingText = {
+  mt: '4',
+  fontSize: '1rem',
+  fontWeight: '500',
+  color: 'gray.700',
+  textAlign: 'center' as const,
 }
 </script>
 

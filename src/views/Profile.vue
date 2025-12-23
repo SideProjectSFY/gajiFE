@@ -41,7 +41,9 @@ onMounted(async () => {
 
   try {
     // 1. Fetch User Profile
+    console.log('[Profile] Fetching user profile for:', username)
     const user = await userApi.getUserProfile(username)
+    console.log('[Profile] User profile fetched:', user.id)
     userProfile.value = {
       id: user.id,
       username: user.username,
@@ -56,6 +58,7 @@ onMounted(async () => {
     // Check if following
     if (authStore.user && authStore.user.id !== userId) {
       try {
+        console.log('[Profile] Checking following status')
         const myFollowing = await userApi.getFollowing(authStore.user.id)
         isFollowing.value = myFollowing.some((u: any) => u.id === userId)
       } catch (e) {
@@ -64,7 +67,9 @@ onMounted(async () => {
     }
 
     // Liked Books - fetch first page only
+    console.log('[Profile] Fetching liked books')
     const booksResponse = await bookApi.getLikedBooks(userId, 0, itemsPerPage)
+    console.log('[Profile] Liked books fetched')
     totalLikedBooks.value = booksResponse.totalElements || booksResponse.content.length
     allLikedBooks.value = booksResponse.content.map((b: any) => ({
       id: b.id,
@@ -75,11 +80,13 @@ onMounted(async () => {
     likedBooks.value = allLikedBooks.value.slice(0, 3)
 
     // Liked Conversations
+    console.log('[Profile] Fetching liked conversations')
     const likedConversationsResponse = await getConversations({
       userId,
       filter: 'liked',
       size: 100,
     })
+    console.log('[Profile] Liked conversations fetched')
     totalLikedConversations.value = likedConversationsResponse.length
     allLikedConversations.value = likedConversationsResponse.map((c: any) => ({
       id: c.id,
@@ -94,7 +101,9 @@ onMounted(async () => {
     likedConversations.value = allLikedConversations.value.slice(0, 3)
 
     // Following
+    console.log('[Profile] Fetching following')
     const following = await userApi.getFollowing(userId)
+    console.log('[Profile] Following fetched:', following.length)
     totalFollowing.value = following.length
     allFollowing.value = following.map((u: any) => ({
       id: u.id,
@@ -103,7 +112,9 @@ onMounted(async () => {
     }))
 
     // Followers
+    console.log('[Profile] Fetching followers')
     const followers = await userApi.getFollowers(userId)
+    console.log('[Profile] Followers fetched:', followers.length)
     totalFollowers.value = followers.length
     allFollowers.value = followers.map((u: any) => ({
       id: u.id,
@@ -112,7 +123,9 @@ onMounted(async () => {
     }))
 
     // My Conversations
+    console.log('[Profile] Fetching my conversations')
     const conversations = await getConversations({ userId, size: 100 })
+    console.log('[Profile] My conversations fetched')
     totalMyConversations.value = conversations.length
     allMyConversations.value = conversations.map((c: any) => ({
       id: c.id,
@@ -543,7 +556,6 @@ const saveBio = async () => {
 <template>
   <div :class="css({ display: 'flex', flexDirection: 'column', minH: '100vh', bg: 'gray.50' })">
     <AppHeader />
-    <div :class="css({ h: '20' })" />
 
     <!-- Main Content -->
     <main
@@ -937,14 +949,14 @@ const saveBio = async () => {
                   css({
                     px: '3',
                     py: '1.5',
-                    bg: 'gray.500',
+                    bg: 'green.500',
                     color: 'white',
                     border: 'none',
                     borderRadius: '0.375rem',
                     fontSize: '0.875rem',
                     fontWeight: '500',
                     cursor: 'pointer',
-                    _hover: { bg: 'gray.600' },
+                    _hover: { bg: 'green.600' },
                   })
                 "
                 @click="showFollowersModal = true"

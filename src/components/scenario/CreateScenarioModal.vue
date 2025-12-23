@@ -23,6 +23,40 @@
 
       <!-- Form -->
       <form :class="css({ spaceY: '5' })" @submit.prevent="handleSubmit">
+        <!-- Scenario Title -->
+        <div :class="css(formGroup)">
+          <label :class="css(formLabel)" for="scenario-title">
+            Scenario Title
+            <span :class="css(requiredMark)">*</span>
+          </label>
+          <input
+            id="scenario-title"
+            v-model="formData.scenarioTitle"
+            :class="css(formInput)"
+            placeholder="Enter scenario title"
+            data-testid="scenario-title-input"
+          />
+        </div>
+
+        <!-- What If Question -->
+        <div :class="css(formGroup)">
+          <div :class="css(validationRow)">
+            <label :class="css(formLabel)" for="what-if-question">
+              What If Question
+              <span :class="css(requiredMark)">*</span>
+            </label>
+            <span :class="css(charCount)">{{ formData.whatIfQuestion.length }}/10</span>
+          </div>
+          <textarea
+            id="what-if-question"
+            v-model="formData.whatIfQuestion"
+            :class="css(formTextarea)"
+            rows="3"
+            placeholder="Describe your what-if question"
+            data-testid="what-if-question-input"
+          />
+        </div>
+
         <!-- Character Properties -->
         <div :class="css(formGroup)">
           <div :class="css(validationRow)">
@@ -113,12 +147,21 @@
             type="submit"
             :class="css(primaryButton)"
             :disabled="!isFormValid || isSubmitting"
-            data-testid="create-scenario-button"
+            data-testid="submit-scenario-button"
           >
             {{ isSubmitting ? 'Creating...' : 'Create Scenario' }}
           </button>
         </div>
       </form>
+
+      <!-- Loading Overlay -->
+      <div v-if="isSubmitting" :class="css(loadingOverlay)">
+        <Spinner size="large" />
+        <p :class="css(loadingText)">
+          {{ t('scenario.creating') }}<br />
+          {{ t('scenario.waitMessage') }}
+        </p>
+      </div>
     </div>
   </div>
 </template>
@@ -126,11 +169,15 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { css } from 'styled-system/css'
 import { useToast } from '@/composables/useToast'
 import api from '@/services/api'
+import Spinner from '@/components/common/Spinner.vue'
 
 interface CreateScenarioForm {
+  scenarioTitle: string
+  whatIfQuestion: string
   characterChanges: string
   eventAlterations: string
   settingModifications: string
@@ -151,12 +198,15 @@ interface Emits {
 const props = defineProps<Props>()
 const emit = defineEmits<Emits>()
 const router = useRouter()
+const { t } = useI18n()
 const { success, error: showError } = useToast()
 
 const MIN_CHARS = 10
 const isSubmitting = ref(false)
 
 const formData = ref<CreateScenarioForm>({
+  scenarioTitle: '',
+  whatIfQuestion: '',
   characterChanges: '',
   eventAlterations: '',
   settingModifications: '',
@@ -164,6 +214,10 @@ const formData = ref<CreateScenarioForm>({
 })
 
 // Validation
+const isWhatIfValid = computed(() => {
+  return formData.value.whatIfQuestion.trim().length >= MIN_CHARS
+})
+
 const isCharacterChangesValid = computed(() => true)
 
 const isEventAlterationsValid = computed(() => true)
@@ -174,12 +228,15 @@ const hasAtLeastOneValidType = computed(() => {
   return (
     formData.value.characterChanges.trim().length >= MIN_CHARS ||
     formData.value.eventAlterations.trim().length >= MIN_CHARS ||
-    formData.value.settingModifications.trim().length >= MIN_CHARS
+    formData.value.settingModifications.trim().length >= MIN_CHARS ||
+    isWhatIfValid.value
   )
 })
 
 const isFormValid = computed(() => {
   return (
+    formData.value.scenarioTitle.trim().length > 0 &&
+    isWhatIfValid.value &&
     isCharacterChangesValid.value &&
     isEventAlterationsValid.value &&
     isSettingModificationsValid.value &&
@@ -189,6 +246,8 @@ const isFormValid = computed(() => {
 
 const handleClose = () => {
   formData.value = {
+    scenarioTitle: '',
+    whatIfQuestion: '',
     characterChanges: '',
     eventAlterations: '',
     settingModifications: '',
@@ -204,14 +263,12 @@ const handleSubmit = async () => {
   try {
     // Create scenario via API
     const payload = {
-      bookId: parseInt(props.bookId),
-      title: `New Scenario for ${props.bookTitle}`,
-      description: formData.value.description,
-      parameters: {
-        character_changes: formData.value.characterChanges,
-        event_alterations: formData.value.eventAlterations,
-        setting_modifications: formData.value.settingModifications,
-      },
+      novelId: props.bookId,
+      scenarioTitle: formData.value.scenarioTitle,
+      whatIfQuestion: formData.value.whatIfQuestion,
+      characterChanges: formData.value.characterChanges,
+      eventAlterations: formData.value.eventAlterations,
+      settingModifications: formData.value.settingModifications,
       scenarioType: determineScenarioType(),
       isPrivate: false,
     }
@@ -310,6 +367,21 @@ const requiredMark = {
   ml: '1',
 }
 
+const formInput = {
+  w: 'full',
+  p: '3',
+  border: '1px solid',
+  borderColor: 'gray.300',
+  borderRadius: 'md',
+  fontSize: '0.875rem',
+  _focus: {
+    outline: 'none',
+    borderColor: 'blue.500',
+    ring: '2px',
+    ringColor: 'blue.200',
+  },
+}
+
 const formTextarea = {
   w: 'full',
   p: '3',
@@ -329,11 +401,6 @@ const validationRow = {
   display: 'flex',
   justifyContent: 'space-between',
   alignItems: 'center',
-}
-
-const errorText = {
-  fontSize: '0.75rem',
-  color: 'red.600',
 }
 
 const charCount = {
@@ -393,6 +460,26 @@ const primaryButton = {
     bg: 'gray.300',
     cursor: 'not-allowed',
   },
+}
+
+const loadingOverlay = {
+  position: 'absolute' as const,
+  inset: 0,
+  bg: 'rgba(255, 255, 255, 0.9)',
+  display: 'flex',
+  flexDirection: 'column' as const,
+  alignItems: 'center',
+  justifyContent: 'center',
+  zIndex: 10,
+  borderRadius: 'lg',
+}
+
+const loadingText = {
+  mt: '4',
+  fontSize: '1rem',
+  fontWeight: '500',
+  color: 'gray.700',
+  textAlign: 'center' as const,
 }
 </script>
 

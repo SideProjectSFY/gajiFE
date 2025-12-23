@@ -1,63 +1,55 @@
 <template>
-  <div class="liked-feed-page">
-    <div class="page-header">
-      <h1>Liked Conversations</h1>
-      <p>{{ totalLiked }} conversations you've liked</p>
-    </div>
+  <div :class="css({ minH: '100vh', display: 'flex', flexDirection: 'column', bg: 'gray.50' })">
+    <AppHeader />
 
-    <div
-      v-if="isLoading"
-      class="loading-state"
-    >
-      <Spinner size="large" />
-      <span>Loading liked conversations...</span>
-    </div>
+    <main :class="css({ flex: 1, maxW: '1200px', w: 'full', mx: 'auto', px: '4', py: '8' })">
+      <div class="page-header">
+        <h1>Liked Conversations</h1>
+        <p>{{ totalLiked }} conversations you've liked</p>
+      </div>
 
-    <div
-      v-else-if="conversations.length === 0"
-      class="empty-state"
-    >
-      <svg
-        class="empty-icon"
-        width="80"
-        height="80"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="2"
-      >
-        <path
-          d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"
+      <div v-if="isLoading" class="loading-state">
+        <Spinner size="large" />
+        <span>Loading liked conversations...</span>
+      </div>
+
+      <div v-else-if="conversations.length === 0" class="empty-state">
+        <svg
+          class="empty-icon"
+          width="80"
+          height="80"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+        >
+          <path
+            d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"
+          />
+        </svg>
+        <h2>No liked conversations yet</h2>
+        <p>Like conversations to save them here for quick access</p>
+        <router-link to="/scenarios" class="btn-primary"> Discover Conversations </router-link>
+      </div>
+
+      <div v-else class="conversation-grid">
+        <ConversationCard
+          v-for="conversation in conversations"
+          :key="conversation.id"
+          :conversation="conversation"
+          @like-change="handleLikeChange(conversation.id, $event)"
         />
-      </svg>
-      <h2>No liked conversations yet</h2>
-      <p>Like conversations to save them here for quick access</p>
-      <router-link
-        to="/scenarios"
-        class="btn-primary"
-      >
-        Discover Conversations
-      </router-link>
-    </div>
 
-    <div
-      v-else
-      class="conversation-grid"
-    >
-      <ConversationCard
-        v-for="conversation in conversations"
-        :key="conversation.id"
-        :conversation="conversation"
-        @like-change="handleLikeChange(conversation.id, $event)"
-      />
+        <Pagination
+          v-if="totalPages > 1"
+          :current-page="currentPage"
+          :total-pages="totalPages"
+          @page-change="handlePageChange"
+        />
+      </div>
+    </main>
 
-      <Pagination
-        v-if="totalPages > 1"
-        :current-page="currentPage"
-        :total-pages="totalPages"
-        @page-change="handlePageChange"
-      />
-    </div>
+    <AppFooter />
   </div>
 </template>
 
@@ -66,6 +58,9 @@ import { ref, onMounted } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { useRouter } from 'vue-router'
 import { useToast } from '@/composables/useToast'
+import { css } from '../../styled-system/css'
+import AppHeader from '@/components/common/AppHeader.vue'
+import AppFooter from '@/components/common/AppFooter.vue'
 import api from '@/services/api'
 import ConversationCard from '@/components/common/ConversationCard.vue'
 import Spinner from '@/components/common/Spinner.vue'

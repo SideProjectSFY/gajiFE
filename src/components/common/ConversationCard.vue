@@ -1,8 +1,5 @@
 <template>
-  <div
-    class="conversation-card"
-    @click="navigateToConversation"
-  >
+  <div class="conversation-card" @click="navigateToConversation">
     <div class="card-header">
       <h3>{{ conversation.title }}</h3>
       <LikeButton
@@ -47,7 +44,9 @@ const emit = defineEmits<{
 const router = useRouter()
 
 const formatDate = (date: string): string => {
+  if (!date) return ''
   const d = new Date(date)
+  if (isNaN(d.getTime())) return ''
   return d.toLocaleDateString('en-US', {
     year: 'numeric',
     month: 'short',

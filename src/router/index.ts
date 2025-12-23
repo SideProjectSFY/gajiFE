@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useAnalytics } from '@/composables/useAnalytics'
+import { useToast } from '@/composables/useToast'
 
 // Views
 import Home from '@/views/Home.vue'
@@ -11,6 +12,7 @@ import Conversations from '@/views/Conversations.vue'
 import Login from '@/views/Login.vue'
 import Register from '@/views/Register.vue'
 import ConversationChat from '@/views/ConversationChat.vue'
+import ScenarioDetailPage from '@/views/ScenarioDetailPage.vue'
 import Profile from '@/views/Profile.vue'
 import ProfileEdit from '@/views/ProfileEdit.vue'
 import NotFound from '@/views/NotFound.vue'
@@ -18,6 +20,7 @@ import FollowerList from '@/views/FollowerList.vue'
 import FollowingList from '@/views/FollowingList.vue'
 import LikedConversations from '@/views/LikedConversations.vue'
 import SearchPage from '@/views/SearchPage.vue'
+import Logout from '@/views/Logout.vue'
 
 const routes: RouteRecordRaw[] = [
   {
@@ -69,6 +72,18 @@ const routes: RouteRecordRaw[] = [
     meta: { requiresAuth: false },
   },
   {
+    path: '/scenarios',
+    name: 'Scenarios',
+    component: SearchPage,
+    meta: { requiresAuth: false },
+  },
+  {
+    path: '/scenarios/:id',
+    name: 'ScenarioDetail',
+    component: ScenarioDetailPage,
+    meta: { requiresAuth: true },
+  },
+  {
     path: '/conversations/:id',
     name: 'ConversationChat',
     component: ConversationChat,
@@ -105,6 +120,12 @@ const routes: RouteRecordRaw[] = [
     meta: { requiresAuth: true },
   },
   {
+    path: '/logout',
+    name: 'Logout',
+    component: Logout,
+    meta: { requiresAuth: false },
+  },
+  {
     path: '/404',
     name: 'NotFound',
     component: NotFound,
@@ -124,9 +145,11 @@ const router = createRouter({
 // Navigation guard for authentication
 router.beforeEach((to, _from, next) => {
   const authStore = useAuthStore()
+  const { error } = useToast()
   const requiresAuth = to.meta.requiresAuth
 
   if (requiresAuth && !authStore.isAuthenticated) {
+    error('로그인이 필요한 페이지입니다.')
     next({ name: 'Login', query: { redirect: to.fullPath } })
   } else {
     next()

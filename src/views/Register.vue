@@ -7,6 +7,7 @@ import { useAuthStore } from '@/stores/auth'
 import { useAnalytics } from '@/composables/useAnalytics'
 import LogoSvg from '@/assets/Logo.svg'
 import LanguageSwitcher from '@/components/common/LanguageSwitcher.vue'
+import AuthLayout from '@/components/auth/AuthLayout.vue'
 
 const router = useRouter()
 const { t } = useI18n()
@@ -84,7 +85,7 @@ const passwordStrengthColor = computed(() => {
 })
 
 const validateUsername = (): void => {
-  const usernameRegex = /^[a-zA-Z0-9_]+$/
+  const usernameRegex = /^[a-zA-Z0-9_가-힣]+$/
   if (!form.username) {
     errors.username = 'register.errors.usernameRequired'
   } else if (form.username.length < 3) {
@@ -194,18 +195,8 @@ onMounted(() => {
 </script>
 
 <template>
-  <div style="min-height: 100vh; display: flex; background-color: white">
-    <!-- Left Section: Brand Area -->
-    <div
-      style="
-        flex: 1;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        background: linear-gradient(135deg, #4a5568 0%, #2d3748 100%);
-        padding: 3rem;
-      "
-    >
+  <AuthLayout>
+    <template #overlay>
       <div style="text-align: center; color: white">
         <div style="font-size: 2rem; font-weight: bold; margin-bottom: 1rem">
           {{ t('register.brandTitle') }}
@@ -214,28 +205,25 @@ onMounted(() => {
           {{ t('register.brandSubtitle') }}
         </div>
       </div>
-    </div>
-
-    <!-- Right Section: Register Form -->
-    <div
-      style="
-        flex: 1;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        padding: 3rem;
-        background-color: #f9fafb;
-        position: relative;
-      "
-    >
+    </template>
+    <template #form>
       <!-- Language Switcher -->
       <div style="position: absolute; top: 1.5rem; right: 1.5rem">
         <LanguageSwitcher />
       </div>
 
-      <div style="width: 100%; max-width: 420px">
+      <div style="width: 100%; max-width: 420px; margin: 0 auto">
         <!-- Logo -->
-        <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 2rem">
+        <div
+          style="
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 2rem;
+            cursor: pointer;
+          "
+          @click="router.push('/')"
+        >
           <LogoSvg style="width: 2rem; height: 2rem; fill: #1f7d51" />
           <span style="font-size: 1.25rem; font-weight: bold; color: #1f2937">Gaji</span>
         </div>
@@ -570,8 +558,8 @@ onMounted(() => {
           </router-link>
         </p>
       </div>
-    </div>
-  </div>
+    </template>
+  </AuthLayout>
 </template>
 
 <style scoped>

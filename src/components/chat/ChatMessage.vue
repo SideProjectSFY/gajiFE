@@ -23,7 +23,9 @@ const { copy, isSupported: isClipboardSupported } = useClipboard()
 
 // Format timestamp
 const formattedTime = computed(() => {
+  if (!props.message.timestamp) return ''
   const date = new Date(props.message.timestamp)
+  if (isNaN(date.getTime())) return ''
   return date.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })
 })
 

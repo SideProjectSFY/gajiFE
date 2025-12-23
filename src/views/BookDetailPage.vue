@@ -12,6 +12,7 @@ import CreateScenarioModal from '../components/scenario/CreateScenarioModal.vue'
 import { useAnalytics } from '@/composables/useAnalytics'
 import { useAuthStore } from '@/stores/auth'
 import { bookApi } from '@/services/bookApi'
+import api from '@/services/api'
 import type { BooksResponse } from '@/types/book'
 
 const route = useRoute()
@@ -25,66 +26,16 @@ const loading = ref(true)
 const error = ref('')
 const book = ref<BooksResponse['content'][0] | null>(null)
 const bookId = route.params.id as string
+const isLiked = ref(false)
+const isLiking = ref(false)
 
 // Scenario form state
-const MIN_CHARS = 10
-const scenarioForm = ref({
-  characterChanges: '',
-  eventAlterations: '',
-  settingModifications: '',
-  description: '',
-})
+const showScenarioModal = ref(false)
 
 // Mock characters data (temporary until backend provides this)
 const characters = ref<any[]>([])
 const relationships = ref<any[]>([])
 const selectedCharacter = ref<number | null>(null)
-const showScenarioModal = ref(false)
-
-// Validation computed properties
-const isCharacterChangesValid = computed(() => {
-  const length = scenarioForm.value.characterChanges.trim().length
-  return length === 0 || length >= MIN_CHARS
-})
-
-const isEventAlterationsValid = computed(() => {
-  const length = scenarioForm.value.eventAlterations.trim().length
-  return length === 0 || length >= MIN_CHARS
-})
-
-const isSettingModificationsValid = computed(() => {
-  const length = scenarioForm.value.settingModifications.trim().length
-  return length === 0 || length >= MIN_CHARS
-})
-
-const hasAtLeastOneValidType = computed(() => {
-  return (
-    scenarioForm.value.characterChanges.trim().length >= MIN_CHARS ||
-    scenarioForm.value.eventAlterations.trim().length >= MIN_CHARS ||
-    scenarioForm.value.settingModifications.trim().length >= MIN_CHARS
-  )
-})
-
-const isFormValid = computed(() => {
-  return (
-    isCharacterChangesValid.value &&
-    isEventAlterationsValid.value &&
-    isSettingModificationsValid.value &&
-    hasAtLeastOneValidType.value
-  )
-})
-
-const showValidationError = computed(() => {
-  const hasTyped =
-    scenarioForm.value.characterChanges.length > 0 ||
-    scenarioForm.value.eventAlterations.length > 0 ||
-    scenarioForm.value.settingModifications.length > 0
-  return hasTyped && !hasAtLeastOneValidType.value
-})
-
-const getCharCount = (text: string) => {
-  return text.trim().length
-}
 
 // Fetch book data from API
 const fetchBook = async () => {
@@ -98,6 +49,16 @@ const fetchBook = async () => {
     book.value = data
     console.log('[BookDetailPage] book.value set:', book.value)
 
+    // Check like status
+    if (authStore.isAuthenticated && authStore.user?.id) {
+      try {
+        const likedBooks = await bookApi.getLikedBooks(authStore.user.id)
+        isLiked.value = likedBooks.content.some((b: any) => b.id === bookId)
+      } catch (e) {
+        console.error('Failed to check like status', e)
+      }
+    }
+
     // Track book view
     try {
       trackBookViewed(String(data.id), data.title)
@@ -108,29 +69,22 @@ const fetchBook = async () => {
 
     // TODO: Fetch characters and relationships from backend
     // For now, using mock data for testing
-    characters.value = [
-      {
-        id: 1,
-        name: 'Harry Potter',
-        description: 'The Boy Who Lived',
-        isFeatured: true,
-        tags: ['Brave', 'Wizard'],
-        conversations: 150,
-      },
-      {
-        id: 2,
-        name: 'Hermione Granger',
-        description: 'Brightest witch of her age',
-        isFeatured: true,
-        tags: ['Intelligent', 'Loyal'],
-        conversations: 120,
-      },
-    ]
-    relationships.value = []
+    // characters.value = []
+    // relationships.value = []
+    // if (characters.value.length > 0) {
+    //   selectedCharacter.value = characters.value[0].id
+    // }
     console.log('[BookDetailPage] Book loaded successfully')
+
+    // Initialize graph after data is loaded
+    initializeGraph()
   } catch (err: any) {
     console.error('[BookDetailPage] Failed to fetch book:', err, err.message, err.stack)
-    error.value = 'Failed to load book details'
+    if (err?.response?.status === 404 || err?.response?.status === 400) {
+      error.value = 'Book not found or does not exist (404)'
+    } else {
+      error.value = 'Failed to load book details'
+    }
   } finally {
     loading.value = false
     console.log(
@@ -144,20 +98,46 @@ const fetchBook = async () => {
   }
 }
 
+const handleLike = async () => {
+  if (!authStore.isAuthenticated) {
+    router.push('/login')
+    return
+  }
+
+  if (isLiking.value) return
+
+  isLiking.value = true
+  const previousState = isLiked.value
+
+  try {
+    // Optimistic update
+    isLiked.value = !previousState
+
+    if (previousState) {
+      await bookApi.unlikeBook(bookId)
+      if (book.value) book.value.likeCount = (book.value.likeCount || 0) - 1
+    } else {
+      await bookApi.likeBook(bookId)
+      if (book.value) book.value.likeCount = (book.value.likeCount || 0) + 1
+    }
+  } catch (err) {
+    console.error('Failed to toggle like:', err)
+    isLiked.value = previousState // Revert
+    // Revert count
+    if (book.value) {
+      book.value.likeCount = previousState
+        ? (book.value.likeCount || 0) + 1
+        : (book.value.likeCount || 0) - 1
+    }
+  } finally {
+    isLiking.value = false
+  }
+}
+
 // Load book data on mount
 onMounted(() => {
   fetchBook()
 })
-
-const getCharCountDisplay = (text: string, fieldName: string) => {
-  const count = getCharCount(text)
-  const isValid = count === 0 || count >= MIN_CHARS
-  return {
-    text: `${count}/${MIN_CHARS}`,
-    isValid,
-    showCheck: count >= MIN_CHARS,
-  }
-}
 
 // SVG Graph State
 const svgWidth = 400
@@ -189,11 +169,13 @@ const initializeGraph = () => {
       id: name,
       x: centerX + radius * Math.cos(angle),
       y: centerY + radius * Math.sin(angle),
-      type: book.value.characters.find((c) => c.name === name)?.isFeatured ? 'main' : 'minor',
+      type: (book.value as any)?.characters?.find((c: any) => c.name === name)?.isFeatured
+        ? 'main'
+        : 'minor',
     }
   })
 
-  edges.value = relationships
+  edges.value = relationships.value
 }
 
 const getNodePosition = (nodeName: string) => {
@@ -218,8 +200,12 @@ const getEdgeLabel = (label: string) => {
 }
 
 const toggleCharacterSelection = (characterId: number) => {
+  console.log('[BookDetailPage] toggleCharacterSelection called with:', characterId)
+  console.log('[BookDetailPage] authStore.isAuthenticated:', authStore.isAuthenticated)
+
   // Check if user is authenticated
   if (!authStore.isAuthenticated) {
+    console.log('[BookDetailPage] User not authenticated, redirecting...')
     // Redirect to login page
     router.push('/login')
     return
@@ -230,6 +216,7 @@ const toggleCharacterSelection = (characterId: number) => {
   } else {
     selectedCharacter.value = characterId
   }
+  console.log('[BookDetailPage] selectedCharacter:', selectedCharacter.value)
 }
 
 const openScenarioModal = () => {
@@ -243,14 +230,13 @@ const closeScenarioModal = () => {
 
 const handleScenarioCreated = (data: any) => {
   console.log('Scenario created:', data)
-  // TODO: Navigate to conversation or refresh scenarios
+  closeScenarioModal()
 }
 </script>
 
 <template>
   <div :class="css({ minH: '100vh', display: 'flex', flexDirection: 'column', bg: 'gray.50' })">
     <AppHeader />
-    <div :class="css({ h: '20' })" />
 
     <main
       :class="
@@ -450,15 +436,19 @@ const handleScenarioCreated = (data: any) => {
                   💬 {{ t('books.stats.conversations') }}
                 </div>
                 <div :class="css({ fontSize: '1.125rem', fontWeight: 'bold', color: 'gray.900' })">
-                  {{ book.conversationCount.toLocaleString() }}
+                  {{ book.conversationCount?.toLocaleString() ?? 0 }}
                 </div>
               </div>
               <div>
                 <div :class="css({ fontSize: '0.75rem', color: 'gray.500', mb: '1' })">
                   ❤️ {{ t('books.stats.likes') }}
                 </div>
-                <div :class="css({ fontSize: '1.125rem', fontWeight: 'bold', color: 'gray.900' })">
-                  {{ book.likeCount ?? 0 }}
+                <div :class="css({ display: 'flex', alignItems: 'center', gap: '2' })">
+                  <div
+                    :class="css({ fontSize: '1.125rem', fontWeight: 'bold', color: 'gray.900' })"
+                  >
+                    {{ book.likeCount ?? 0 }}
+                  </div>
                 </div>
               </div>
             </div>
@@ -690,6 +680,7 @@ const handleScenarioCreated = (data: any) => {
                 <div
                   v-for="character in characters"
                   :key="character.id"
+                  data-testid="character-card"
                   :class="
                     css({
                       borderRadius: '0.5rem',
@@ -835,428 +826,14 @@ const handleScenarioCreated = (data: any) => {
     </main>
 
     <!-- Scenario Creation Modal -->
-    <div
+    <CreateScenarioModal
       v-if="showScenarioModal"
-      :class="
-        css({
-          position: 'fixed',
-          inset: 0,
-          bg: 'rgba(0, 0, 0, 0.5)',
-          display: 'flex',
-          alignItems: 'flex-start',
-          justifyContent: 'center',
-          zIndex: 50,
-          px: '4',
-          pt: '24',
-          overflowY: 'auto',
-        })
-      "
-      @click="closeScenarioModal"
-    >
-      <div
-        :class="
-          css({
-            bg: 'white',
-            borderRadius: '1rem',
-            p: '5',
-            maxW: 'xl',
-            w: 'full',
-            overflowY: 'hidden',
-          })
-        "
-        @click.stop
-      >
-        <!-- Modal Header -->
-        <div :class="css({ mb: '5' })">
-          <h2
-            :class="
-              css({
-                fontSize: '1.375rem',
-                fontWeight: 'bold',
-                color: 'gray.900',
-                mb: '2',
-              })
-            "
-          >
-            {{ t('books.scenario.createTitle') }}
-          </h2>
-          <p :class="css({ fontSize: '0.875rem', color: 'gray.600' })">
-            {{ t('books.scenario.createSubtitle') }}
-          </p>
-        </div>
-
-        <!-- Character Info -->
-        <div
-          v-if="selectedCharacter"
-          :class="
-            css({
-              bg: 'gray.50',
-              borderRadius: '0.5rem',
-              p: '3',
-              mb: '4',
-            })
-          "
-        >
-          <div :class="css({ display: 'flex', alignItems: 'center', gap: '3', mb: '3' })">
-            <div
-              :class="
-                css({
-                  w: '12',
-                  h: '12',
-                  borderRadius: 'full',
-                  bg: 'gray.200',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '1.5rem',
-                })
-              "
-            >
-              👤
-            </div>
-            <div>
-              <h3 :class="css({ fontSize: '1.125rem', fontWeight: 'bold', color: 'gray.900' })">
-                {{ characters.find((c) => c.id === selectedCharacter)?.name }}
-              </h3>
-              <p :class="css({ fontSize: '0.875rem', color: 'gray.600' })">
-                {{ book.title }} by {{ book.author }}
-              </p>
-            </div>
-          </div>
-          <p :class="css({ fontSize: '0.875rem', color: 'gray.700', lineHeight: '1.6' })">
-            {{ characters.find((c) => c.id === selectedCharacter)?.description }}
-          </p>
-        </div>
-
-        <!-- Scenario Settings -->
-        <div :class="css({ mb: '5' })">
-          <h3
-            :class="
-              css({
-                fontSize: '1rem',
-                fontWeight: '600',
-                color: 'gray.900',
-                mb: '3',
-              })
-            "
-          >
-            {{ t('books.scenario.changesTitle') }}
-          </h3>
-
-          <!-- Character Property -->
-          <div
-            :class="
-              css({
-                bg: 'white',
-                border: '1px solid',
-                borderColor: 'gray.200',
-                borderRadius: '0.5rem',
-                p: '4',
-                mb: '3',
-              })
-            "
-          >
-            <div :class="css({ display: 'flex', justifyContent: 'space-between', mb: '2' })">
-              <h4
-                :class="
-                  css({ fontSize: '0.9375rem', fontWeight: '600', color: 'gray.900', mb: '2' })
-                "
-              >
-                {{ t('books.scenario.characterProperty') }}
-              </h4>
-              <span
-                :class="
-                  css({
-                    fontSize: '0.75rem',
-                    color: getCharCountDisplay(scenarioForm.characterChanges, 'characterChanges')
-                      .isValid
-                      ? 'gray.500'
-                      : 'red.500',
-                  })
-                "
-              >
-                {{ getCharCountDisplay(scenarioForm.characterChanges, 'characterChanges').text }}
-                <span
-                  v-if="
-                    getCharCountDisplay(scenarioForm.characterChanges, 'characterChanges').showCheck
-                  "
-                  :class="css({ color: 'green.500', ml: '1' })"
-                >
-                  ✓
-                </span>
-              </span>
-            </div>
-            <textarea
-              v-model="scenarioForm.characterChanges"
-              data-testid="character-changes-textarea"
-              placeholder="e.g., Change personality from reserved to outgoing"
-              :class="
-                css({
-                  w: 'full',
-                  px: '3',
-                  py: '2',
-                  border: '1px solid',
-                  borderColor: isCharacterChangesValid ? 'gray.300' : 'red.300',
-                  borderRadius: '0.5rem',
-                  fontSize: '0.875rem',
-                  minH: '16',
-                  outline: 'none',
-                  resize: 'vertical',
-                  _focus: {
-                    borderColor: 'green.500',
-                    boxShadow: '0 0 0 3px rgba(34, 197, 94, 0.1)',
-                  },
-                })
-              "
-            />
-          </div>
-
-          <!-- Event Alterations -->
-          <div
-            :class="
-              css({
-                bg: 'white',
-                border: '1px solid',
-                borderColor: 'gray.200',
-                borderRadius: '0.5rem',
-                p: '4',
-                mb: '3',
-              })
-            "
-          >
-            <div :class="css({ display: 'flex', justifyContent: 'space-between', mb: '2' })">
-              <h4 :class="css({ fontSize: '1rem', fontWeight: '600', color: 'gray.900', mb: '3' })">
-                {{ t('books.scenario.eventAlterations') }}
-              </h4>
-              <span
-                :class="
-                  css({
-                    fontSize: '0.75rem',
-                    color: getCharCountDisplay(scenarioForm.eventAlterations, 'eventAlterations')
-                      .isValid
-                      ? 'gray.500'
-                      : 'red.500',
-                  })
-                "
-              >
-                {{ getCharCountDisplay(scenarioForm.eventAlterations, 'eventAlterations').text }}
-                <span
-                  v-if="
-                    getCharCountDisplay(scenarioForm.eventAlterations, 'eventAlterations').showCheck
-                  "
-                  :class="css({ color: 'green.500', ml: '1' })"
-                >
-                  ✓
-                </span>
-              </span>
-            </div>
-            <textarea
-              v-model="scenarioForm.eventAlterations"
-              data-testid="event-alterations-textarea"
-              placeholder="e.g., Character survives the confrontation"
-              :class="
-                css({
-                  w: 'full',
-                  px: '3',
-                  py: '2',
-                  border: '1px solid',
-                  borderColor: isEventAlterationsValid ? 'gray.300' : 'red.300',
-                  borderRadius: '0.5rem',
-                  fontSize: '0.875rem',
-                  minH: '20',
-                  outline: 'none',
-                  resize: 'vertical',
-                  _focus: {
-                    borderColor: 'green.500',
-                    boxShadow: '0 0 0 3px rgba(34, 197, 94, 0.1)',
-                  },
-                })
-              "
-            />
-          </div>
-
-          <!-- Setting Modifications -->
-          <div
-            :class="
-              css({
-                bg: 'white',
-                border: '1px solid',
-                borderColor: 'gray.200',
-                borderRadius: '0.5rem',
-                p: '4',
-              })
-            "
-          >
-            <div :class="css({ display: 'flex', justifyContent: 'space-between', mb: '2' })">
-              <h4 :class="css({ fontSize: '1rem', fontWeight: '600', color: 'gray.900', mb: '3' })">
-                {{ t('books.scenario.settingModifications') }}
-              </h4>
-              <span
-                :class="
-                  css({
-                    fontSize: '0.75rem',
-                    color: getCharCountDisplay(
-                      scenarioForm.settingModifications,
-                      'settingModifications'
-                    ).isValid
-                      ? 'gray.500'
-                      : 'red.500',
-                  })
-                "
-              >
-                {{
-                  getCharCountDisplay(scenarioForm.settingModifications, 'settingModifications')
-                    .text
-                }}
-                <span
-                  v-if="
-                    getCharCountDisplay(scenarioForm.settingModifications, 'settingModifications')
-                      .showCheck
-                  "
-                  :class="css({ color: 'green.500', ml: '1' })"
-                >
-                  ✓
-                </span>
-              </span>
-            </div>
-            <textarea
-              v-model="scenarioForm.settingModifications"
-              data-testid="setting-modifications-textarea"
-              placeholder="e.g., Story takes place in modern times instead of 1920s"
-              :class="
-                css({
-                  w: 'full',
-                  px: '3',
-                  py: '2',
-                  border: '1px solid',
-                  borderColor: isSettingModificationsValid ? 'gray.300' : 'red.300',
-                  borderRadius: '0.5rem',
-                  fontSize: '0.875rem',
-                  minH: '20',
-                  outline: 'none',
-                  resize: 'vertical',
-                  _focus: {
-                    borderColor: 'green.500',
-                    boxShadow: '0 0 0 3px rgba(34, 197, 94, 0.1)',
-                  },
-                })
-              "
-            />
-          </div>
-
-          <!-- Validation Error Message -->
-          <div
-            v-if="showValidationError"
-            :class="
-              css({
-                mt: '3',
-                p: '3',
-                bg: 'red.50',
-                border: '1px solid',
-                borderColor: 'red.200',
-                borderRadius: '0.5rem',
-                fontSize: '0.875rem',
-                color: 'red.700',
-              })
-            "
-          >
-            {{ t('books.scenario.validationError') }}
-          </div>
-        </div>
-
-        <!-- Description -->
-        <div :class="css({ mb: '5' })">
-          <label
-            for="scenario-description"
-            :class="
-              css({
-                display: 'block',
-                fontSize: '0.8125rem',
-                fontWeight: '500',
-                color: 'gray.700',
-                mb: '2',
-              })
-            "
-          >
-            {{ t('books.scenario.descriptionLabel') }}
-          </label>
-          <textarea
-            id="scenario-description"
-            v-model="scenarioForm.description"
-            data-testid="scenario-description-textarea"
-            :class="
-              css({
-                w: 'full',
-                px: '3',
-                py: '2',
-                border: '1px solid',
-                borderColor: 'gray.300',
-                borderRadius: '0.5rem',
-                fontSize: '0.875rem',
-                minH: '20',
-                outline: 'none',
-                _focus: {
-                  borderColor: 'green.500',
-                  boxShadow: '0 0 0 3px rgba(34, 197, 94, 0.1)',
-                },
-              })
-            "
-            :placeholder="t('books.scenario.descriptionPlaceholder')"
-          />
-        </div>
-
-        <!-- Action Buttons -->
-        <div :class="css({ display: 'flex', gap: '3' })">
-          <button
-            data-testid="create-scenario-button"
-            :disabled="!isFormValid"
-            :class="
-              css({
-                flex: 1,
-                px: '4',
-                py: '2.5',
-                bg: isFormValid ? 'green.500' : 'gray.300',
-                color: 'white',
-                border: 'none',
-                borderRadius: '0.5rem',
-                fontSize: '0.875rem',
-                fontWeight: '600',
-                cursor: isFormValid ? 'pointer' : 'not-allowed',
-                transition: 'all 0.2s',
-                _hover: isFormValid ? { bg: 'green.600' } : {},
-                opacity: isFormValid ? '1' : '0.6',
-              })
-            "
-            @click="createScenario"
-          >
-            {{ t('books.detail.createScenario') }}
-          </button>
-          <button
-            data-testid="cancel-button"
-            :class="
-              css({
-                flex: 1,
-                px: '4',
-                py: '2.5',
-                bg: 'white',
-                color: 'gray.700',
-                border: '1px solid',
-                borderColor: 'gray.300',
-                borderRadius: '0.5rem',
-                fontSize: '0.875rem',
-                fontWeight: '600',
-                cursor: 'pointer',
-                transition: 'all 0.2s',
-                _hover: { bg: 'gray.50' },
-              })
-            "
-            @click="closeScenarioModal"
-          >
-            {{ t('common.cancel') }}
-          </button>
-        </div>
-      </div>
-    </div>
+      :is-open="showScenarioModal"
+      :book-title="book?.title || ''"
+      :book-id="bookId"
+      @close="closeScenarioModal"
+      @created="handleScenarioCreated"
+    />
 
     <AppFooter />
   </div>

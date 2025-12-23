@@ -7,12 +7,37 @@ import { useAuthStore } from '@/stores/auth'
 import { useAnalytics } from '@/composables/useAnalytics'
 import LogoSvg from '@/assets/Logo.svg'
 import LanguageSwitcher from '@/components/common/LanguageSwitcher.vue'
+import AuthLayout from '@/components/auth/AuthLayout.vue'
+import The3DLoginStage from '@/components/auth/The3DLoginStage.vue'
 
 const router = useRouter()
 const route = useRoute()
 const { t } = useI18n()
 const authStore = useAuthStore()
 const { trackLogin } = useAnalytics()
+
+const loginStages = [
+  {
+    id: 0,
+    title: '펼쳐지지 않은 이야기',
+    description: 'The story yet to be written.',
+  },
+  {
+    id: 1,
+    title: '연결의 시작',
+    description: 'A handshake that welcomes you.',
+  },
+  {
+    id: 2,
+    title: '감정의 공명',
+    description: 'Feelings take shape and color.',
+  },
+  {
+    id: 3,
+    title: '마법 같은 순간',
+    description: 'Your imagination sparkles.',
+  },
+]
 
 const emailInputRef = ref<HTMLInputElement | null>(null)
 
@@ -97,18 +122,11 @@ onMounted(() => {
 </script>
 
 <template>
-  <div style="min-height: 100vh; display: flex; background-color: white">
-    <!-- Left Section: Brand Area -->
-    <div
-      style="
-        flex: 1;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        background: linear-gradient(135deg, #4a5568 0%, #2d3748 100%);
-        padding: 3rem;
-      "
-    >
+  <AuthLayout :stages="loginStages">
+    <template #stage="{ progress, activeStage, stageBlend }">
+      <The3DLoginStage :progress="progress" :active-stage="activeStage" :stage-blend="stageBlend" />
+    </template>
+    <template #overlay>
       <div style="text-align: center; color: white">
         <div style="font-size: 2rem; font-weight: bold; margin-bottom: 1rem">
           {{ t('login.brandTitle') }}
@@ -117,38 +135,40 @@ onMounted(() => {
           {{ t('login.brandSubtitle') }}
         </div>
       </div>
-    </div>
-
-    <!-- Right Section: Login Form -->
-    <div
-      style="
-        flex: 1;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        padding: 3rem;
-        background-color: #f9fafb;
-        position: relative;
-      "
-    >
+    </template>
+    <template #form>
       <!-- Language Switcher -->
       <div style="position: absolute; top: 1.5rem; right: 1.5rem">
         <LanguageSwitcher />
       </div>
 
-      <div style="width: 100%; max-width: 420px">
+      <div style="width: 100%; max-width: 420px; margin: 0 auto">
         <!-- Logo -->
-        <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 2rem">
+        <div
+          style="
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 2rem;
+            cursor: pointer;
+          "
+          @click="router.push('/')"
+        >
           <LogoSvg style="width: 2rem; height: 2rem; fill: #1f7d51" />
           <span style="font-size: 1.25rem; font-weight: bold; color: #1f2937">Gaji</span>
         </div>
 
-        <h1 style="font-size: 1.75rem; font-weight: bold; margin-bottom: 0.5rem; color: #111827">
+        <h1
+          style="
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+            color: #111827;
+            margin-bottom: 2rem;
+          "
+        >
           {{ t('login.title') }}
         </h1>
-        <p style="color: #6b7280; margin-bottom: 2rem; font-size: 0.875rem">
-          {{ t('login.subtitle') }}
-        </p>
 
         <form
           style="display: flex; flex-direction: column; gap: 1.25rem"
@@ -316,8 +336,8 @@ onMounted(() => {
           </router-link>
         </p>
       </div>
-    </div>
-  </div>
+    </template>
+  </AuthLayout>
 </template>
 
 <style scoped>

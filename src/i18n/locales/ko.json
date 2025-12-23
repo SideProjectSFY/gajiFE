@@ -147,7 +147,16 @@
       "backToBookList": "책 목록으로 돌아가기",
       "byAuthorGenre": "{author} 지음 • {genre}",
       "selectCharacterButton": "캐릭터 선택",
-      "createCharacterScenario": "{name} 시나리오 생성"
+      "createCharacterScenario": "{name} 시나리오 생성",
+      "featured": "주요 인물",
+      "conversationsStarted": "{count}개의 대화 시작됨",
+      "legend": {
+        "mainCharacter": "주요 인물",
+        "minorCharacter": "주변 인물",
+        "strongBond": "강한 유대",
+        "weakConnect": "약한 연결",
+        "meanConflict": "갈등 관계"
+      }
     },
     "scenario": {
       "createTitle": "새 시나리오 만들기",
@@ -213,7 +222,8 @@
     "by": "저자:",
     "unknown": {
       "book": "알 수 없는 책",
-      "author": "알 수 없는 저자"
+      "author": "알 수 없는 저자",
+      "title": "제목 없는 대화"
     },
     "noDescription": "이 대화에 대한 설명이 없습니다.",
     "messageCount": "대화",
@@ -306,7 +316,11 @@
     "askAnything": "캐릭터에게 무엇이든 물어보세요",
     "messageList": "대화 메시지 목록",
     "clickToViewMessages": "클릭하여 메시지 보기",
-    "unknownBook": "알 수 없는 책"
+    "unknownBook": "알 수 없는 책",
+    "input": {
+      "loading": "AI가 응답 중입니다...",
+      "placeholder": "메시지를 입력하세요... (Enter: 전송, Shift+Enter: 줄바꿈)"
+    }
   },
   "searchPage": {
     "searchPlaceholder": "책, 캐릭터, 대화 검색...",
@@ -329,6 +343,7 @@
     "loginToFollow": "사용자를 팔로우하려면 로그인하세요",
     "follow": "팔로우",
     "unfollow": "언팔로우",
+    "bookDescription": "시나리오: {scenarioCount}, 대화: {conversationCount}",
     "noResults": {
       "title": "검색 결과가 없습니다",
       "description": "다른 키워드로 검색해보세요"
@@ -397,5 +412,14 @@
       "medium": "보통",
       "strong": "강함"
     }
+  },
+  "auth": {
+    "loginRequired": "로그인이 필요합니다",
+    "loginToLike": "좋아요를 누르려면 로그인해주세요"
+  },
+  "scenario": {
+    "creating": "시나리오 생성 중...",
+    "forking": "시나리오 포크 중...",
+    "waitMessage": "약 20초 정도 소요됩니다."
   }
 }

@@ -10,7 +10,6 @@ const { t } = useI18n()
 <template>
   <div :class="css({ minH: '100vh', display: 'flex', flexDirection: 'column', bg: 'gray.50' })">
     <AppHeader />
-    <div :class="css({ h: '20' })" />
 
     <main
       :class="
