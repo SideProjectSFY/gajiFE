@@ -331,6 +331,7 @@ onMounted(() => {
   max-width: 64rem;
   margin: 0 auto;
   padding: 2rem 1.5rem;
+  scrollbar-gutter: stable;
 }
 
 .loading-state,
