@@ -19,6 +19,8 @@ const { trackProfileViewed } = useAnalytics()
 const authStore = useAuthStore()
 const { success: showSuccessToast, error: showErrorToast } = useToast()
 
+const containerRef = ref<HTMLElement | null>(null)
+
 // User profile data
 const userProfile = ref({
   id: '',
@@ -554,7 +556,17 @@ const saveBio = async () => {
 </script>
 
 <template>
-  <div :class="css({ display: 'flex', flexDirection: 'column', minH: '100vh', bg: 'gray.50' })">
+  <div
+    :class="
+      css({
+        display: 'flex',
+        flexDirection: 'column',
+        minH: '100vh',
+        bg: 'gray.50',
+        scrollbarGutter: 'stable',
+      })
+    "
+  >
     <AppHeader />
 
     <!-- Main Content -->
@@ -1228,6 +1240,7 @@ const saveBio = async () => {
               "
             >
               <button
+                v-if="authStore.user && authStore.user.username === userProfile.username"
                 :class="
                   css({
                     position: 'absolute',
@@ -1593,6 +1606,7 @@ const saveBio = async () => {
               "
             >
               <button
+                v-if="authStore.user && authStore.user.username === userProfile.username"
                 :class="
                   css({
                     position: 'absolute',
@@ -1768,8 +1782,8 @@ const saveBio = async () => {
               css({
                 px: '3',
                 py: '1.5',
-                bg: followersPage === page ? 'gray.500' : 'gray.200',
-                color: followersPage === page ? 'white' : 'gray.700',
+                bg: followersPage === page ? 'green.500' : 'green.200',
+                color: followersPage === page ? 'white' : 'green.700',
                 border: 'none',
                 borderRadius: '0.375rem',
                 fontSize: '0.875rem',
@@ -1866,31 +1880,6 @@ const saveBio = async () => {
               "
               @click="goToConversation(conv.id)"
             >
-              <button
-                :class="
-                  css({
-                    position: 'absolute',
-                    top: '2',
-                    right: '2',
-                    w: '8',
-                    h: '8',
-                    bg: 'red.500',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '50%',
-                    fontSize: '0.875rem',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    _hover: { bg: 'red.600' },
-                  })
-                "
-                title="Delete this conversation"
-                @click.stop="requestDelete('myConversation', String(conv.id), String(conv.title))"
-              >
-                🗑️
-              </button>
               <div :class="css({ display: 'flex', gap: '3', mb: '3' })">
                 <div
                   :class="
