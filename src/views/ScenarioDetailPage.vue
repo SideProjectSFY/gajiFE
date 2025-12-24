@@ -297,10 +297,12 @@ const handleStartConversation = async () => {
   try {
     // TODO: Allow user to select character
     // For now, use a default character VectorDB ID
+    const characterVectordbId = 'default-character-id'; // TODO: Get from character selection
+    
     const response = await api.post(`/conversations`, {
       scenarioId: scenarioId,
       scenarioType: scenario.value.scenario_type,
-      characterVectordbId: 'default-character-id', // TODO: Get from character selection
+      characterVectordbId: characterVectordbId,
     })
 
     const conversationId = response.data.id

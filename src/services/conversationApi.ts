@@ -408,34 +408,53 @@ export async function sendMessage(
     { content }
   )
 
-  // Try a single quick poll; fall back to placeholder response to keep UX snappy in tests
-  try {
-    const pollResponse = await api.get<PollResponse>(
-      `/conversations/${conversationId}/messages/poll`
-    )
+  // Poll for AI response with retries (up to 30 seconds)
+  const maxRetries = 30 // 30 attempts
+  const retryDelay = 1000 // 1 second between attempts
+  
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      const pollResponse = await api.get<PollResponse>(
+        `/conversations/${conversationId}/messages/poll`
+      )
 
-    if (pollResponse.data.status === 'completed' && pollResponse.data.content) {
-      return {
-        userMessage: {
-          id: submitResponse.data.id,
-          conversationId: submitResponse.data.conversationId,
-          role: 'user',
-          content: submitResponse.data.content,
-          timestamp: submitResponse.data.createdAt,
-        },
-        assistantMessage: {
-          id: pollResponse.data.messageId || `local-${Date.now()}`,
-          conversationId,
-          role: 'assistant',
-          content: pollResponse.data.content,
-          timestamp: new Date().toISOString(),
-        },
+      if (pollResponse.data.status === 'completed' && pollResponse.data.content) {
+        return {
+          userMessage: {
+            id: submitResponse.data.id,
+            conversationId: submitResponse.data.conversationId,
+            role: 'user',
+            content: submitResponse.data.content,
+            timestamp: submitResponse.data.createdAt,
+          },
+          assistantMessage: {
+            id: pollResponse.data.messageId || `local-${Date.now()}`,
+            conversationId,
+            role: 'assistant',
+            content: pollResponse.data.content,
+            timestamp: new Date().toISOString(),
+          },
+        }
+      } else if (pollResponse.data.status === 'failed') {
+        // If AI generation failed, break early
+        console.error('AI generation failed:', pollResponse.data.error)
+        break
+      }
+      
+      // Status is 'processing' or 'queued', wait and retry
+      if (attempt < maxRetries - 1) {
+        await new Promise(resolve => setTimeout(resolve, retryDelay))
+      }
+    } catch (error) {
+      console.warn(`AI poll attempt ${attempt + 1} failed:`, error)
+      if (attempt < maxRetries - 1) {
+        await new Promise(resolve => setTimeout(resolve, retryDelay))
       }
     }
-  } catch (error) {
-    console.warn('AI poll failed, falling back to placeholder response', error)
   }
 
+  // If we exhaust all retries, return placeholder
+  console.warn('AI response timed out after', maxRetries, 'attempts')
   return {
     userMessage: {
       id: submitResponse.data.id,
@@ -448,7 +467,7 @@ export async function sendMessage(
       id: `local-${Date.now()}`,
       conversationId,
       role: 'assistant',
-      content: 'AI is thinking... (placeholder response)',
+      content: 'AI response timed out. Please try again.',
       timestamp: new Date().toISOString(),
     },
   }
