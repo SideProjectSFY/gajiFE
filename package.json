@@ -24,6 +24,7 @@
     "test:e2e:webkit": "playwright test --project=webkit"
   },
   "dependencies": {
+    "@sentry/vue": "^10.32.1",
     "@tresjs/cientos": "^5.2.0",
     "@tresjs/core": "^5.2.0",
     "@vueuse/core": "^10.7.0",
