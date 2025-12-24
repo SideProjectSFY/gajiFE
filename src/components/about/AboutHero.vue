@@ -10,28 +10,22 @@ gsap.registerPlugin(ScrollTrigger)
 
 const { t } = useI18n()
 
-const titleRef = ref(null)
 const subtitleRef = ref(null)
 const boxRef = ref(null)
 
 onMounted(() => {
-  const tl = gsap.timeline({
+  // Apple-style scroll-away effect for subtitle
+  gsap.to(subtitleRef.value, {
     scrollTrigger: {
-      trigger: titleRef.value,
+      trigger: subtitleRef.value,
       scroller: '#about-scroller',
-      start: 'top top', // Adjusted for mobile: start when element hits top
+      start: 'top top',
       end: 'bottom top',
       scrub: true,
     },
-  })
-
-  // Apple-style scroll-away effect: Blur + Fade + Scale Up
-  tl.to([titleRef.value, subtitleRef.value], {
     opacity: 0,
-    filter: 'blur(10px)',
     scale: 1.1,
     y: -50,
-    stagger: 0.1,
   })
 
   // The box fades out slightly later
@@ -45,7 +39,6 @@ onMounted(() => {
     },
     opacity: 0,
     y: -30,
-    filter: 'blur(5px)',
   })
 })
 
@@ -80,18 +73,6 @@ const contentWrapperStyle = css({
   px: '6',
 })
 
-const titleStyle = css({
-  fontSize: { base: '4rem', md: '6rem', lg: '8rem' }, // Massive modern typography
-  fontWeight: '900',
-  letterSpacing: '-0.04em',
-  lineHeight: '0.9',
-  mb: '8',
-  textTransform: 'uppercase',
-  background: 'linear-gradient(to right, #166534, #15803d)', // Gradient text
-  backgroundClip: 'text',
-  color: 'transparent',
-})
-
 const subtitleStyle = css({
   fontSize: { base: '1.25rem', md: '1.5rem' },
   fontWeight: 'medium',
@@ -103,14 +84,16 @@ const subtitleStyle = css({
 })
 
 const descriptionBoxStyle = css({
-  backdropFilter: 'blur(12px)',
-  bg: 'rgba(255, 255, 255, 0.6)',
+  position: 'relative',
+  zIndex: 10,
+  bg: 'rgba(255, 255, 255, 0.95)',
   border: '1px solid rgba(255, 255, 255, 0.5)',
   borderRadius: '2xl',
   p: { base: '8', md: '10' },
   boxShadow: '0 20px 40px -10px rgba(0, 0, 0, 0.05)',
   maxW: '800px',
   mx: 'auto',
+  mb: '16',
   transition: 'transform 0.3s ease',
   _hover: {
     transform: 'translateY(-5px)',
@@ -139,23 +122,18 @@ const descriptionTextStyle = css({
     <div :class="scenePlaceholderStyle">
       <The3DHeroStage />
     </div>
+    <!-- Glassmorphism Info Box -->
+    <div ref="boxRef" :class="descriptionBoxStyle">
+      <h2 :class="descriptionTitleStyle">
+        {{ t('about.whatIsGaji.title') }}
+      </h2>
+      <p :class="descriptionTextStyle" v-html="t('about.whatIsGaji.description')" />
+    </div>
 
     <div :class="contentWrapperStyle">
-      <h1 ref="titleRef" :class="titleStyle">
-        {{ t('about.title') }}
-      </h1>
-
       <p ref="subtitleRef" :class="subtitleStyle">
         {{ t('about.subtitle') }}
       </p>
-
-      <!-- Glassmorphism Info Box -->
-      <div ref="boxRef" :class="descriptionBoxStyle">
-        <h2 :class="descriptionTitleStyle">
-          {{ t('about.whatIsGaji.title') }}
-        </h2>
-        <p :class="descriptionTextStyle" v-html="t('about.whatIsGaji.description')" />
-      </div>
     </div>
   </section>
 </template>
