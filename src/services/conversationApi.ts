@@ -381,6 +381,9 @@ export interface SendMessageResponse {
     content: string
     timestamp: string
   }
+  // 턴 정보
+  turnCount?: number
+  maxTurns?: number
 }
 
 interface MessageResponse {
@@ -396,6 +399,9 @@ interface PollResponse {
   content?: string
   messageId?: string
   error?: string
+  // 턴 정보
+  turnCount?: number
+  maxTurns?: number
 }
 
 export async function sendMessage(
@@ -434,6 +440,9 @@ export async function sendMessage(
             content: pollResponse.data.content,
             timestamp: new Date().toISOString(),
           },
+          // 턴 정보 포함
+          turnCount: pollResponse.data.turnCount,
+          maxTurns: pollResponse.data.maxTurns,
         }
       } else if (pollResponse.data.status === 'failed') {
         // If AI generation failed, break early
