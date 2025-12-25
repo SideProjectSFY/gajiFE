@@ -188,6 +188,7 @@ interface Props {
   isOpen: boolean
   bookTitle: string
   bookId: string
+  selectedCharacterVectordbId?: string // VectorDB ID of the selected character (e.g., "creature_84")
 }
 
 interface Emits {
@@ -280,6 +281,7 @@ const handleSubmit = async () => {
     const conversationPayload = {
       scenarioId: scenarioId,
       title: `Conversation: ${props.bookTitle}`,
+      characterVectordbId: props.selectedCharacterVectordbId, // Use selected character
     }
 
     const conversationResponse = await api.post('/conversations', conversationPayload)

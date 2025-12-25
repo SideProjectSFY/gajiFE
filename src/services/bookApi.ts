@@ -96,4 +96,14 @@ export const bookApi = {
   async unbookmarkBook(bookId: string): Promise<void> {
     await api.delete(`/books/${bookId}/bookmark`)
   },
+
+  /**
+   * Get characters by book ID
+   * @param bookId Book UUID
+   * @returns Promise with characters array
+   */
+  async getCharactersByBookId(bookId: string): Promise<any[]> {
+    const response = await api.get(`/novels/${bookId}/characters`)
+    return response.data
+  },
 }

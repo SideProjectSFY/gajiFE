@@ -67,13 +67,45 @@ const fetchBook = async () => {
       console.error('[BookDetailPage] trackBookViewed failed:', trackErr)
     }
 
-    // TODO: Fetch characters and relationships from backend
-    // For now, using mock data for testing
-    // characters.value = []
-    // relationships.value = []
-    // if (characters.value.length > 0) {
-    //   selectedCharacter.value = characters.value[0].id
-    // }
+    // Fetch characters from backend
+    try {
+      const fetchedCharacters = await bookApi.getCharactersByBookId(bookId)
+      
+      // Transform backend response to UI format
+      const transformedCharacters = (fetchedCharacters || []).map((char: any) => {
+        // Get full persona (Ko > En > description)
+        let fullDescription = char.personaKo || char.personaEn || char.description || 'No description available'
+        
+        // Extract first sentence for card display (한국어: 마침표/느낌표/물음표, 영어: period)
+        let shortDescription = fullDescription
+        const firstSentenceMatch = fullDescription.match(/^[^.!?。]+[.!?。]/)
+        if (firstSentenceMatch) {
+          shortDescription = firstSentenceMatch[0].trim()
+        } else {
+          // If no sentence ending found, take first 100 characters
+          shortDescription = fullDescription.substring(0, 100) + (fullDescription.length > 100 ? '...' : '')
+        }
+        
+        return {
+          id: char.id,
+          name: char.commonName || 'Unknown',
+          isFeatured: char.isMainCharacter || false,
+          description: shortDescription,
+          vectordbCharacterId: char.vectordbCharacterId, // CRITICAL: For AI chat
+          tags: [], // Backend doesn't provide tags yet
+          conversations: 0 // Backend doesn't provide conversation count yet
+        }
+      })
+      
+      characters.value = transformedCharacters
+      if (characters.value.length > 0) {
+        selectedCharacter.value = characters.value[0].id
+      }
+    } catch (charErr: any) {
+      console.error('[BookDetailPage] Failed to fetch characters:', charErr)
+      // Don't fail the whole page if characters fail to load
+      characters.value = []
+    }
     console.log('[BookDetailPage] Book loaded successfully')
 
     // Initialize graph after data is loaded
@@ -831,6 +863,7 @@ const handleScenarioCreated = (data: any) => {
       :is-open="showScenarioModal"
       :book-title="book?.title || ''"
       :book-id="bookId"
+      :selected-character-vectordb-id="characters.find(c => c.id === selectedCharacter)?.vectordbCharacterId"
       @close="closeScenarioModal"
       @created="handleScenarioCreated"
     />
