@@ -48,6 +48,10 @@ const aiError = ref('')
 const forkError = ref('')
 const conversationOwnerId = ref<string | null>(null)
 
+// 턴 정보
+const turnCount = ref<number>(0)
+const maxTurns = ref<number>(5)
+
 // Scenario info from API
 const scenarioInfo = ref<CreateScenarioResponse | null>(null)
 const conversationDepth = ref<number>(0)
@@ -59,8 +63,8 @@ const isForkedConversation = ref<boolean>(false)
 // Messages state - typed properly
 const messages = ref<Message[]>([])
 const displayMessages = computed(() => {
-  const list = messages.value
-  return list.length > 6 ? list.slice(-6) : list
+  // 기준 대화에서 복사된 메시지를 포함하여 전체 대화 표시
+  return messages.value
 })
 
 const messagesContainer = ref<HTMLDivElement | null>(null)
@@ -68,6 +72,32 @@ const messagesContainer = ref<HTMLDivElement | null>(null)
 const isConversationOwner = computed(() => {
   if (!conversationOwnerId.value) return true
   return conversationOwnerId.value === authStore.user?.id
+})
+
+// 시나리오 소유자인지 확인 (기준 대화 저장 버튼 표시용)
+const isScenarioOwner = computed(() => {
+  if (!scenarioInfo.value?.userId) return false
+  return scenarioInfo.value.userId === authStore.user?.id
+})
+
+// 기준 대화로 저장 가능한지 확인
+// 조건: 시나리오 소유자 + Root 시나리오 + 대화 소유자 + 메시지가 있음
+const canSaveAsReference = computed(() => {
+  return (
+    isScenarioOwner.value &&
+    isConversationOwner.value &&
+    !isForkedConversation.value &&
+    messages.value.length > 0 &&
+    scenarioInfo.value?.scenarioType === 'ROOT'
+  )
+})
+
+// 기준 대화 저장 상태
+const isSavingReference = ref(false)
+const isReferenceSaved = computed(() => {
+  if (!scenarioInfo.value) return false
+  const refId = (scenarioInfo.value as any).referenceConversationId
+  return refId === route.params.id
 })
 
 const canFork = computed(() => {
@@ -97,13 +127,7 @@ const scrollToBottom = (smooth = true) => {
 watch(
   () => messages.value.length,
   () => {
-    const clamp =
-      isForkedConversation.value ||
-      hasBeenForked.value ||
-      !!localStorage.getItem(`fork-parent-${route.params.id}`)
-    if (clamp && messages.value.length > 6) {
-      messages.value = messages.value.slice(-6)
-    }
+    // 기준 대화에서 복사된 메시지 포함, 전체 대화 유지
     scrollToBottom()
   }
 )
@@ -169,6 +193,14 @@ const handleSendMessage = async (messageContent: string) => {
     messages.value.push(assistantMessage)
     isTyping.value = false
     scrollToBottom()
+    
+    // 턴 정보 업데이트
+    if (response.turnCount !== undefined) {
+      turnCount.value = response.turnCount
+    }
+    if (response.maxTurns !== undefined) {
+      maxTurns.value = response.maxTurns
+    }
   } catch (error) {
     console.error('Failed to send message:', error)
     isTyping.value = false
@@ -260,9 +292,7 @@ const confirmFork = async () => {
     if (!conversationDepth.value || conversationDepth.value < 1) {
       conversationDepth.value = 1
     }
-    if (messages.value.length > 6) {
-      messages.value = messages.value.slice(-6)
-    }
+    // 기준 대화에서 복사된 메시지 포함, 전체 대화 유지
   } catch (error) {
     console.error('Failed to fork conversation:', error)
     forkError.value = 'Network error while forking. Please try again.'
@@ -275,6 +305,42 @@ const confirmFork = async () => {
 const viewOriginalConversation = () => {
   if (!forkParentId.value) return
   router.push(`/conversations/${forkParentId.value}`)
+}
+
+// 기준 대화로 저장
+const saveAsReferenceConversation = async () => {
+  if (!canSaveAsReference.value || isSavingReference.value) return
+  
+  const scenarioId = currentScenarioId.value || scenarioInfo.value?.id
+  const conversationId = route.params.id as string
+  
+  if (!scenarioId) {
+    showErrorToast('시나리오 정보를 찾을 수 없습니다.')
+    return
+  }
+  
+  isSavingReference.value = true
+  try {
+    // api 인스턴스 사용 (X-User-Id 헤더 자동 포함)
+    const { default: api } = await import('@/services/api')
+    await api.post(`/scenarios/${scenarioId}/reference-conversation`, { 
+      conversationId 
+    })
+    
+    // 성공 시 scenarioInfo 업데이트
+    if (scenarioInfo.value) {
+      (scenarioInfo.value as any).referenceConversationId = conversationId
+    }
+    
+    // 성공 토스트
+    const { success } = await import('@/composables/useToast').then(m => m.useToast())
+    success('✅ 이 대화가 기준 대화로 저장되었습니다. 다른 사용자가 포크할 때 이 대화 내용이 복사됩니다.')
+  } catch (error) {
+    console.error('Failed to save reference conversation:', error)
+    showErrorToast('기준 대화 저장에 실패했습니다.')
+  } finally {
+    isSavingReference.value = false
+  }
 }
 
 // Load conversation data
@@ -339,10 +405,30 @@ const loadConversation = async (conversationId: string) => {
 
     const fetchedMessages = Array.isArray(conversation.messages) ? conversation.messages : []
 
-    messages.value =
-      isForkedConversation.value && fetchedMessages.length > 6
-        ? fetchedMessages.slice(-6)
-        : fetchedMessages
+    // 기준 대화에서 복사된 메시지 포함, 전체 대화 표시
+    messages.value = fetchedMessages
+    
+    // 턴 수 계산 (사용자 메시지 수 = 턴 수)
+    const userMessageCount = fetchedMessages.filter((msg: any) => msg.role === 'user').length
+    turnCount.value = userMessageCount
+    
+    // 포크된 대화인 경우 maxTurns 조정: 기존 대화 + 5턴 추가
+    // 포크 시점의 턴 수를 저장하고 거기에 5턴을 더함
+    const storedBaseTurns = localStorage.getItem(`fork-base-turns-${conversationId}`)
+    if (isForkedConversation.value || forkParentId.value || storedBaseTurns) {
+      if (storedBaseTurns) {
+        // 저장된 기본 턴 수가 있으면 그것 + 5
+        maxTurns.value = parseInt(storedBaseTurns) + 5
+      } else if (userMessageCount > 0) {
+        // 처음 로드 시 현재 턴 수를 기본 턴 수로 저장 (복사된 대화)
+        localStorage.setItem(`fork-base-turns-${conversationId}`, String(userMessageCount))
+        maxTurns.value = userMessageCount + 5
+      }
+    } else {
+      // Root 시나리오는 기본 5턴
+      maxTurns.value = 5
+    }
+    
     await nextTick()
 
     console.log(
@@ -662,6 +748,50 @@ watch(
               {{ isLiked ? t('chat.liked') : t('chat.like') }}
             </span>
           </button>
+          
+          <!-- 기준 대화로 저장 버튼 (시나리오 소유자만 표시) -->
+          <button
+            v-if="canSaveAsReference"
+            :class="
+              css({
+                w: 'full',
+                mt: '2',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '2',
+                py: '2',
+                px: '4',
+                borderRadius: '0.5rem',
+                border: '1px solid',
+                borderColor: isReferenceSaved ? 'green.300' : 'blue.200',
+                bg: isReferenceSaved ? 'green.50' : 'blue.50',
+                color: isReferenceSaved ? 'green.700' : 'blue.700',
+                cursor: isReferenceSaved || isSavingReference ? 'default' : 'pointer',
+                transition: 'all 0.2s',
+                opacity: isSavingReference ? 0.7 : 1,
+                _hover: isReferenceSaved || isSavingReference ? {} : {
+                  bg: 'blue.100',
+                  borderColor: 'blue.300',
+                },
+              })
+            "
+            :disabled="isReferenceSaved || isSavingReference"
+            @click="saveAsReferenceConversation"
+          >
+            <span>{{ isReferenceSaved ? '✅' : isSavingReference ? '⏳' : '💾' }}</span>
+            <span :class="css({ fontSize: '0.875rem', fontWeight: '600' })">
+              {{ isReferenceSaved ? '기준 대화로 저장됨' : isSavingReference ? '저장 중...' : '기준 대화로 저장' }}
+            </span>
+          </button>
+          
+          <!-- 기준 대화 안내 메시지 -->
+          <p
+            v-if="canSaveAsReference && !isReferenceSaved"
+            :class="css({ fontSize: '0.75rem', color: 'gray.500', mt: '2', textAlign: 'center' })"
+          >
+            저장하면 다른 사용자가 포크할 때 이 대화 내용이 함께 복사됩니다
+          </p>
         </div>
 
         <!-- Scenario Details -->
@@ -1055,7 +1185,53 @@ watch(
         >
           {{ aiError }}
         </div>
-        <ChatInput :disabled="isLoading" :loading="isTyping" @send="handleSendMessage" />
+        
+        <!-- 턴 정보 표시 -->
+        <div
+          v-if="turnCount > 0"
+          :class="
+            css({
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              gap: '2',
+              py: '2',
+              px: '4',
+            })
+          "
+        >
+          <div
+            :class="
+              css({
+                display: 'flex',
+                alignItems: 'center',
+                gap: '2',
+                px: '3',
+                py: '1',
+                bg: turnCount >= maxTurns ? 'red.50' : 'blue.50',
+                borderRadius: 'full',
+                border: '1px solid',
+                borderColor: turnCount >= maxTurns ? 'red.200' : 'blue.200',
+              })
+            "
+          >
+            <span :class="css({ fontSize: '0.75rem', color: turnCount >= maxTurns ? 'red.700' : 'blue.700' })">
+              💬 대화 {{ turnCount }}/{{ maxTurns }} 턴
+            </span>
+            <span
+              v-if="turnCount >= maxTurns"
+              :class="css({ fontSize: '0.7rem', color: 'red.600' })"
+            >
+              (최대 도달)
+            </span>
+          </div>
+        </div>
+        
+        <ChatInput 
+          :disabled="isLoading || turnCount >= maxTurns" 
+          :loading="isTyping" 
+          @send="handleSendMessage" 
+        />
       </div>
     </div>
 

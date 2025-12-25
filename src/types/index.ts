@@ -118,6 +118,10 @@ export interface BrowseScenario {
   user_id?: string
   conversation_count?: number
   like_count?: number
+  // Gemini 분석 결과 필드 (백엔드 ScenarioResponse와 동기화)
+  characterChanges?: string
+  eventAlterations?: string
+  settingModifications?: string
 }
 
 export interface BrowseFilters {

@@ -125,20 +125,40 @@ const { t } = useI18n()
 
 const isSubmitting = ref(false)
 
-// Computed properties to safely access parameters
+// Computed properties to safely access scenario fields
+// 백엔드 ScenarioResponse의 characterChanges, eventAlterations, settingModifications 필드 사용
 const characterChanges = computed(() => {
-  const params = props.parentScenario.parameters as any
-  return params?.character_changes || params?.character || ''
+  const scenario = props.parentScenario as any
+  // 1순위: 백엔드 ScenarioResponse의 직접 필드 (카멜케이스)
+  if (scenario.characterChanges) return scenario.characterChanges
+  // 2순위: parameters 객체의 character_changes (스네이크케이스)
+  const params = scenario.parameters
+  if (params?.character_changes) return params.character_changes
+  // 3순위: parameters 객체의 character 필드로 What-if 형식 생성
+  if (params?.character) {
+    const original = params.original_property || '원래 속성'
+    const newProp = params.new_property || '새로운 속성'
+    return `${params.character}: ${original} → ${newProp}`
+  }
+  return ''
 })
 
 const eventAlterations = computed(() => {
-  const params = props.parentScenario.parameters as any
-  return params?.event_alterations || params?.event_name || ''
+  const scenario = props.parentScenario as any
+  if (scenario.eventAlterations) return scenario.eventAlterations
+  const params = scenario.parameters
+  if (params?.event_alterations) return params.event_alterations
+  if (params?.event_name) return params.event_name
+  return ''
 })
 
 const settingModifications = computed(() => {
-  const params = props.parentScenario.parameters as any
-  return params?.setting_modifications || params?.new_setting || ''
+  const scenario = props.parentScenario as any
+  if (scenario.settingModifications) return scenario.settingModifications
+  const params = scenario.parameters
+  if (params?.setting_modifications) return params.setting_modifications
+  if (params?.new_setting) return params.new_setting
+  return ''
 })
 
 const handleClose = () => {
@@ -156,11 +176,24 @@ const handleSubmit = async () => {
     const forkedScenario = forkResponse.data
 
     // Create a new conversation with the forked scenario
-    const conversationResponse = await api.post('/conversations', {
+    // 백엔드에서 반환된 characterVectordbId를 사용하여 동일한 캐릭터로 대화
+    const conversationPayload: {
+      scenarioId: string
+      title: string
+      isPublic: boolean
+      characterVectordbId?: string
+    } = {
       scenarioId: forkedScenario.id,
       title: forkedScenario.title,
       isPublic: false,
-    })
+    }
+    
+    // 원본 대화의 캐릭터 정보가 있으면 사용
+    if (forkedScenario.characterVectordbId) {
+      conversationPayload.characterVectordbId = forkedScenario.characterVectordbId
+    }
+    
+    const conversationResponse = await api.post('/conversations', conversationPayload)
 
     emit('forked', conversationResponse.data)
     handleClose()
