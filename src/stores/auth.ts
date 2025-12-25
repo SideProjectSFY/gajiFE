@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import api from '@/services/api'
 import { setCookie, getCookie, deleteCookie } from '@/utils/cookies'
+import { setSentryUser, clearSentryUser } from '@/utils/sentry'
 
 interface User {
   id: string
@@ -82,6 +83,13 @@ export const useAuthStore = defineStore('auth', {
         username: data.username,
         email: data.email,
       }
+
+      // Sentry 사용자 정보 설정
+      setSentryUser({
+        id: data.userId,
+        username: data.username,
+        email: data.email,
+      })
     },
 
     // Clear auth data from cookies
@@ -98,6 +106,9 @@ export const useAuthStore = defineStore('auth', {
       this.user = null
       this.accessToken = null
       this.refreshToken = null
+
+      // Sentry 사용자 정보 제거
+      clearSentryUser()
     },
 
     async register(username: string, email: string, password: string): Promise<AuthResult> {

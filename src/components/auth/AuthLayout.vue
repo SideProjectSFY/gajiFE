@@ -16,8 +16,10 @@ const showBackToTop = ref(false)
 const scrollProgress = ref(0)
 const currentStage = ref(0)
 const stageBlend = ref(0)
+const scrollTriggerInstance = ref<ScrollTrigger | null>(null)
 
-const EXPANSION_HEIGHT = 500
+// Dynamic expansion height based on viewport (50% of viewport height)
+const expansionHeight = computed(() => window.innerHeight * 0.5)
 
 const props = defineProps<{
   stages?: Array<{
@@ -68,14 +70,15 @@ const handleScroll = () => {
   const scrollTop = leftColumnRef.value?.scrollTop ?? 0
   showBackToTop.value = scrollTop > 100
 
-  // Calculate scroll progress after expansion phase
-  if (scrollTop > EXPANSION_HEIGHT) {
+  // Calculate scroll progress after expansion phase (using dynamic expansion height)
+  const currentExpansionHeight = expansionHeight.value
+  if (scrollTop > currentExpansionHeight) {
     const scrollableHeight = leftColumnRef.value?.scrollHeight ?? 0
     const viewportHeight = leftColumnRef.value?.clientHeight ?? 0
-    const maxScroll = scrollableHeight - viewportHeight - EXPANSION_HEIGHT
+    const maxScroll = scrollableHeight - viewportHeight - currentExpansionHeight
 
     if (maxScroll > 0) {
-      const effectiveScroll = scrollTop - EXPANSION_HEIGHT
+      const effectiveScroll = scrollTop - currentExpansionHeight
       scrollProgress.value = Math.min(1, Math.max(0, effectiveScroll / maxScroll))
 
       // Calculate stage (0-3) and blend (0-1 within stage)
@@ -101,16 +104,28 @@ onMounted(() => {
 
   leftColumnRef.value.addEventListener('scroll', handleScroll)
 
-  // Takeover Animation
+  // Takeover Animation with proper lifecycle management
   const tl = gsap.timeline({
     scrollTrigger: {
       trigger: leftColumnRef.value, // The scroll container
       scroller: leftColumnRef.value, // It scrolls itself
       start: 'top top',
-      end: '+=500', // Expansion happens over first 500px of scroll
+      end: `+=${expansionHeight.value}`, // Dynamic expansion based on viewport
       scrub: 1,
+      invalidateOnRefresh: true, // Prevents accumulation on refresh
+      onUpdate: (self) => {
+        // Safety check to detect anomalies
+        if (self.progress < 0 || self.progress > 1) {
+          console.warn('ScrollTrigger progress out of bounds:', self.progress)
+        }
+      },
     },
   })
+
+  // Store instance for cleanup
+  if (tl.scrollTrigger) {
+    scrollTriggerInstance.value = tl.scrollTrigger as ScrollTrigger
+  }
 
   // Expand Left Column
   tl.to(
@@ -138,11 +153,21 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
+  // Clean up scroll listener
   leftColumnRef.value?.removeEventListener('scroll', handleScroll)
-})
 
-onUnmounted(() => {
-  leftColumnRef.value?.removeEventListener('scroll', handleScroll)
+  // Kill ScrollTrigger instance to prevent memory leaks and state accumulation
+  if (scrollTriggerInstance.value) {
+    scrollTriggerInstance.value.kill()
+    scrollTriggerInstance.value = null
+  }
+
+  // Kill all ScrollTriggers associated with this component as fallback
+  ScrollTrigger.getAll().forEach((st) => {
+    if (st.scroller === leftColumnRef.value) {
+      st.kill()
+    }
+  })
 })
 
 // PandaCSS Styles
@@ -152,6 +177,7 @@ const containerStyle = css({
   height: '100vh',
   overflow: 'hidden',
   bg: 'gray.50',
+  scrollbarGutter: 'stable',
 })
 
 const leftColumnStyle = css({
@@ -178,7 +204,8 @@ const leftColumnStyle = css({
 
 const sceneWrapperStyle = css({
   width: '100%',
-  minHeight: '70vh',
+  height: '60vh', // Fixed height to prevent resizing
+  maxHeight: '600px', // Max constraint for large screens
   marginTop: '1.5rem',
   marginBottom: '2.5rem',
   overflow: 'hidden',
@@ -187,12 +214,13 @@ const sceneWrapperStyle = css({
   justifyContent: 'center',
   background: 'transparent',
   borderRadius: 'lg',
+  aspectRatio: '16/9', // Maintain consistent aspect ratio
 })
 
 const rightColumnStyle = css({
   width: '50%',
   height: '100vh',
-  overflowY: 'auto',
+  overflowY: 'hidden',
   overscrollBehavior: 'none',
   position: 'relative',
   bg: 'white',
@@ -223,9 +251,9 @@ const sectionStyle = css({
   display: 'flex',
   flexDirection: 'column',
   gap: '0.75rem',
-  minHeight: '80vh',
+  minHeight: '100vh', // Full viewport height to prevent text overlap
   justifyContent: 'center',
-  alignContent: 'center',
+  alignItems: 'center',
 })
 
 const contentWrapperStyle = css({

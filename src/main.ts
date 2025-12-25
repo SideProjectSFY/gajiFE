@@ -9,6 +9,9 @@ import App from './App.vue'
 import './styles/main.css'
 import { useAuthStore } from './stores/auth'
 import i18n from './i18n'
+import { initWebVitals } from './utils/webVitals'
+import { useAnalytics } from './composables/useAnalytics'
+import { initSentry, setSentryUser } from './utils/sentry'
 
 // Google Analytics 4 초기화
 const GA4_MEASUREMENT_ID = import.meta.env.VITE_GA4_MEASUREMENT_ID
@@ -37,6 +40,13 @@ if (GA4_MEASUREMENT_ID && GA4_MEASUREMENT_ID !== 'G-XXXXXXXXXX') {
 
   // gtag을 window 객체에 할당
   window.gtag = gtag
+
+  // Web Vitals 추적 초기화
+  if (typeof window !== 'undefined') {
+    window.addEventListener('load', () => {
+      initWebVitals()
+    })
+  }
 }
 
 const app = createApp(App)
@@ -49,6 +59,40 @@ app.use(pinia)
 // Initialize auth state from cookies after Pinia is installed
 const authStore = useAuthStore()
 authStore.initializeFromCookies()
+
+// Sentry 초기화 (Pinia 설치 후, Router 설치 전)
+initSentry(app, router)
+
+// Sentry 사용자 정보 설정
+if (authStore.isAuthenticated && authStore.user) {
+  setSentryUser({
+    id: authStore.user.id,
+    username: authStore.user.username,
+    email: authStore.user.email,
+  })
+}
+
+// 사용자 속성 초기화
+const { setUserProperties } = useAnalytics()
+if (authStore.isAuthenticated) {
+  setUserProperties({
+    user_type: 'returning',
+    device_type: /Mobile|Android|iPhone/i.test(navigator.userAgent)
+      ? 'mobile'
+      : /iPad|Tablet/i.test(navigator.userAgent)
+        ? 'tablet'
+        : 'desktop',
+  })
+} else {
+  setUserProperties({
+    user_type: 'new',
+    device_type: /Mobile|Android|iPhone/i.test(navigator.userAgent)
+      ? 'mobile'
+      : /iPad|Tablet/i.test(navigator.userAgent)
+        ? 'tablet'
+        : 'desktop',
+  })
+}
 
 app.use(router)
 app.use(PrimeVue, { unstyled: true }) // Use unstyled mode to apply PandaCSS

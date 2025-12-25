@@ -271,6 +271,10 @@ const goToBookDetail = (bookId: string) => {
   router.push(`/books/${bookId}`)
 }
 
+const goToUserProfile = (username: string) => {
+  router.push(`/profile/${username}`)
+}
+
 // Infinite scroll handler
 const handleScroll = () => {
   // Disable infinite scroll for 'all' tab
@@ -502,7 +506,16 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div :class="css({ minH: '100vh', display: 'flex', flexDirection: 'column' })">
+  <div
+    :class="
+      css({
+        minH: '100vh',
+        display: 'flex',
+        flexDirection: 'column',
+        scrollbarGutter: 'stable',
+      })
+    "
+  >
     <AppHeader />
 
     <main
@@ -1170,8 +1183,15 @@ onUnmounted(() => {
                     borderRadius: '0.75rem',
                     p: '6',
                     position: 'relative',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s',
+                    _hover: {
+                      transform: 'translateY(-2px)',
+                      boxShadow: 'md',
+                    },
                   })
                 "
+                @click="goToUserProfile(user.username)"
               >
                 <button
                   :class="

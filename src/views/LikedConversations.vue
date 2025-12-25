@@ -1,5 +1,15 @@
 <template>
-  <div :class="css({ minH: '100vh', display: 'flex', flexDirection: 'column', bg: 'gray.50' })">
+  <div
+    :class="
+      css({
+        minH: '100vh',
+        display: 'flex',
+        flexDirection: 'column',
+        bg: 'gray.50',
+        scrollbarGutter: 'stable',
+      })
+    "
+  >
     <AppHeader />
 
     <main :class="css({ flex: 1, maxW: '1200px', w: 'full', mx: 'auto', px: '4', py: '8' })">

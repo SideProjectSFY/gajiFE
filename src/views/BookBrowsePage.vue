@@ -1,5 +1,18 @@
 <template>
-  <div :class="css({ minH: '100vh', display: 'flex', flexDirection: 'column', bg: 'white' })">
+  <div
+    ref="containerRef"
+    :class="
+      css({
+        height: '100vh',
+        overflowY: 'auto',
+        overscrollBehavior: 'none',
+        display: 'flex',
+        flexDirection: 'column',
+        bg: 'white',
+        scrollbarGutter: 'stable',
+      })
+    "
+  >
     <AppHeader />
 
     <main
@@ -89,17 +102,15 @@
       </div>
 
       <!-- Error State -->
-      <div v-if="error" class="error-container" role="alert" aria-live="polite">
-        <div class="error-content">
-          <i class="pi pi-exclamation-triangle" aria-hidden="true" />
-          <p class="error-message">
-            {{ error }}
-          </p>
-          <button class="retry-button" aria-label="Retry loading books" @click="retryFetch">
-            <i class="pi pi-refresh" aria-hidden="true" />
-            {{ t('books.error.retry') }}
-          </button>
-        </div>
+      <div v-if="error" :class="styles.errorContainer" role="alert" aria-live="polite">
+        <i class="pi pi-exclamation-triangle" :class="styles.errorIcon" aria-hidden="true" />
+        <h2 :class="styles.errorHeading">
+          {{ t('books.error.title') }}
+        </h2>
+        <p :class="styles.errorMessage" v-html="t('books.error.description')"></p>
+        <button :class="styles.retryButton" aria-label="Retry loading books" @click="retryFetch">
+          {{ t('books.error.retry') }}
+        </button>
       </div>
 
       <BookGrid
@@ -144,6 +155,63 @@ const route = useRoute()
 const authStore = useAuthStore()
 const { t } = useI18n()
 const { warning } = useToast()
+
+const containerRef = ref<HTMLElement | null>(null)
+
+// Styles for error state matching NotFound.vue
+const styles = {
+  errorContainer: css({
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: '4rem 2rem',
+    textAlign: 'center',
+    backgroundColor: '#f9fafb',
+    borderRadius: 'lg',
+    margin: '2rem 0',
+    minHeight: '400px',
+  }),
+  errorIcon: css({
+    fontSize: '4rem',
+    color: '#ef4444',
+    marginBottom: '1.5rem',
+    animation: 'bounce 2s infinite',
+  }),
+  errorHeading: css({
+    fontSize: { base: '2rem', md: '3rem' },
+    fontWeight: '800',
+    lineHeight: '1',
+    color: 'gray.800',
+    marginBottom: '1rem',
+  }),
+  errorMessage: css({
+    fontSize: '1.125rem',
+    color: 'gray.600',
+    marginBottom: '2rem',
+    maxWidth: '500px',
+    lineHeight: '1.6',
+  }),
+  retryButton: css({
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: '0.875rem 2rem',
+    backgroundColor: '#1f7d51',
+    color: 'white',
+    borderRadius: 'full',
+    fontWeight: '600',
+    fontSize: '1rem',
+    cursor: 'pointer',
+    transition: 'all 0.2s',
+    boxShadow: 'lg',
+    '&:hover': {
+      backgroundColor: '#166534',
+      transform: 'translateY(-2px)',
+      boxShadow: 'xl',
+    },
+  }),
+}
 
 // Genre options matching the design
 const genres = computed(() => [
@@ -283,7 +351,9 @@ const handlePageChange = (page: number): void => {
   currentPage.value = page
   updateUrl()
   fetchBooks()
-  window.scrollTo({ top: 0, behavior: 'smooth' })
+  if (containerRef.value) {
+    containerRef.value.scrollTo({ top: 0, behavior: 'smooth' })
+  }
 }
 
 const handleBookClick = (book: Book): void => {

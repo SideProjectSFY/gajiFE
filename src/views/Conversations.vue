@@ -16,6 +16,7 @@ const router = useRouter()
 const { t } = useI18n()
 const { success, error: showErrorToast } = useToast()
 const authStore = useAuthStore()
+const containerRef = ref<HTMLElement | null>(null)
 const conversations = ref<ConversationSummary[]>([])
 const loading = ref(true)
 const error = ref<string | null>(null)
@@ -128,7 +129,20 @@ const handleForked = (forkedConversation: { id: string }) => {
 </script>
 
 <template>
-  <div :class="css({ minH: '100vh', display: 'flex', flexDirection: 'column', bg: 'white' })">
+  <div
+    ref="containerRef"
+    :class="
+      css({
+        height: '100vh',
+        overflowY: 'auto',
+        overscrollBehavior: 'none',
+        display: 'flex',
+        flexDirection: 'column',
+        bg: 'white',
+        scrollbarGutter: 'stable',
+      })
+    "
+  >
     <AppHeader />
 
     <main

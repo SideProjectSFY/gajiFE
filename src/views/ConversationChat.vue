@@ -460,6 +460,7 @@ watch(
         h: '100vh',
         overflow: 'hidden',
         bg: 'gray.50',
+        scrollbarGutter: 'stable',
       })
     "
   >

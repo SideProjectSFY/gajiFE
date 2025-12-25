@@ -7,7 +7,8 @@
     "login": "Login",
     "signup": "Sign Up",
     "profile": "Profile",
-    "logout": "Logout"
+    "logout": "Logout",
+    "language": "Language"
   },
   "search": {
     "placeholder": "Search books, conversations...",
@@ -114,8 +115,10 @@
       "single": "book available"
     },
     "error": {
+      "title": "The pages are stuck together...",
+      "description": "We're having trouble opening the library right now.<br />The connection seems to be wandering. Let's try to find the path again.",
       "failed": "Failed to load books. Please try again.",
-      "retry": "Retry"
+      "retry": "Try opening the book again"
     },
     "empty": "No books available yet. Check back soon!",
     "emptyFiltered": "No books found for that genre. Try another filter.",
