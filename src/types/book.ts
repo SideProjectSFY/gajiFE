@@ -3,6 +3,18 @@
  * Corresponds to backend BookResponse DTO
  */
 
+// Character type from backend
+export interface Character {
+  id: string
+  name: string
+  isFeatured: boolean
+  description: string
+  vectordbCharacterId?: string
+  portraitPrompt?: string
+  persona?: string
+  speakingStyle?: string
+}
+
 export interface Book {
   id: string
   title: string
@@ -13,6 +25,7 @@ export interface Book {
   conversationCount: number
   likeCount?: number // Optional: backend provides this
   isLiked?: boolean
+  characters?: Character[] // Added character list
   // Optional fields not yet provided by backend:
   tags?: string[]
   year?: number
