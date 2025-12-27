@@ -204,8 +204,8 @@ const leftColumnStyle = css({
 
 const sceneWrapperStyle = css({
   width: '100%',
-  height: '60vh', // Fixed height to prevent resizing
-  maxHeight: '600px', // Max constraint for large screens
+  height: '60vh',
+  maxHeight: '600px',
   marginTop: '1.5rem',
   marginBottom: '2.5rem',
   overflow: 'hidden',
@@ -214,7 +214,7 @@ const sceneWrapperStyle = css({
   justifyContent: 'center',
   background: 'transparent',
   borderRadius: 'lg',
-  aspectRatio: '16/9', // Maintain consistent aspect ratio
+  aspectRatio: '16/9',
 })
 
 const rightColumnStyle = css({

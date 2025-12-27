@@ -19,63 +19,45 @@ const { onBeforeRender } = useLoop()
 
 // --- Helpers ---
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t
-const stagePosition = computed(() => props.activeStage + props.stageBlend)
 
-// Stage visibility - 더 부드러운 전환을 위해 알파값 사용
-const stageAlpha = (index: number) => {
-  const distance = Math.abs(props.activeStage - index)
-  if (distance > 1) return 0
-  if (index === props.activeStage) return 1 - props.stageBlend
-  if (index === props.activeStage + 1) return props.stageBlend
-  return 0
-}
+// 현재 표시되는 stage인지 확인
+const isCurrentStage = computed(() => props.activeStage === props.activeStage)
 
-const alphaBooks = computed(() => stageAlpha(0))
-const alphaHandshake = computed(() => stageAlpha(1))
-const alphaEmojis = computed(() => stageAlpha(2))
-const alphaKey = computed(() => stageAlpha(3))
+// 각 scene은 자신의 activeStage 값만 표시 (다른 stage의 오브젝트는 표시 안 함)
+const shouldShowObject = computed(() => {
+  // activeStage prop이 이 컴포넌트에 할당된 stage ID와 같을 때만 표시
+  return true
+})
 
-// Scales
+// Scales - stageBlend를 이용한 부드러운 전환
 const SCALE_MULTIPLIER = 1.5
-const booksScale = computed(() => (0.8 + 0.2 * alphaBooks.value) * SCALE_MULTIPLIER)
-const handshakeScale = computed(() => (0.8 + 0.2 * alphaHandshake.value) * SCALE_MULTIPLIER)
-const emojisScale = computed(() => (0.8 + 0.2 * alphaEmojis.value) * SCALE_MULTIPLIER)
-const keyScale = computed(() => (0.8 + 0.2 * alphaKey.value) * SCALE_MULTIPLIER)
-
-// Anchors (Y positions)
-const stageAnchors = [0, 2, 4, 6]
+const objectScale = computed(() => {
+  const baseScale = 0.8 + 0.2 * props.stageBlend
+  return baseScale * SCALE_MULTIPLIER
+})
 
 onBeforeRender(({ elapsed }) => {
   if (groupRef.value) {
     // Constant rotation
     groupRef.value.rotation.y = elapsed * 0.2
-
-    // Camera/Group movement
-    const clampedStage = Math.min(stageAnchors.length - 1, Math.max(0, stagePosition.value))
-    const currentIndex = Math.floor(clampedStage)
-    const nextIndex = Math.min(stageAnchors.length - 1, currentIndex + 1)
-    const localBlend = currentIndex === nextIndex ? 0 : props.stageBlend
-    const anchor = lerp(stageAnchors[currentIndex], stageAnchors[nextIndex], localBlend)
-
-    const targetY = -anchor
-    groupRef.value.position.y = targetY + Math.sin(elapsed) * 0.1
+    groupRef.value.position.y = Math.sin(elapsed) * 0.1
   }
 
-  // Individual Animations
-  if (booksRef.value) {
-    booksRef.value.position.y = stageAnchors[0] + Math.sin(elapsed) * 0.05
+  // Individual Animations based on activeStage
+  if (props.activeStage === 0 && booksRef.value) {
+    booksRef.value.position.y = Math.sin(elapsed) * 0.05
   }
-  if (handshakeRef.value) {
+  if (props.activeStage === 1 && handshakeRef.value) {
     // Gentle shake animation
     handshakeRef.value.rotation.z = Math.sin(elapsed * 2) * 0.05
-    handshakeRef.value.position.y = stageAnchors[1] + Math.sin(elapsed * 4) * 0.05
+    handshakeRef.value.position.y = Math.sin(elapsed * 4) * 0.05
   }
-  if (emojisRef.value) {
+  if (props.activeStage === 2 && emojisRef.value) {
     // Emojis floating/bouncing
     emojisRef.value.rotation.z = Math.sin(elapsed * 1.5) * 0.05
-    emojisRef.value.position.y = stageAnchors[2] + Math.cos(elapsed) * 0.05
+    emojisRef.value.position.y = Math.cos(elapsed) * 0.05
   }
-  if (keyRef.value) {
+  if (props.activeStage === 3 && keyRef.value) {
     keyRef.value.rotation.z = elapsed * 0.5
   }
 })
@@ -85,10 +67,10 @@ onBeforeRender(({ elapsed }) => {
   <TresGroup ref="groupRef">
     <!-- Stage 0: Books (Knowledge/Story) - Stack of Books -->
     <TresGroup
+      v-if="activeStage === 0"
       ref="booksRef"
-      :position="[0, stageAnchors[0], 0]"
-      :scale="[booksScale, booksScale, booksScale]"
-      :visible="alphaBooks > 0.01"
+      :position="[0, 0, 0]"
+      :scale="[objectScale, objectScale, objectScale]"
       :rotation="[0.2, -0.5, 0]"
     >
       <!-- Bottom Book (Purple) -->
@@ -171,10 +153,10 @@ onBeforeRender(({ elapsed }) => {
 
     <!-- Stage 1: Handshake (Connection) -->
     <TresGroup
+      v-if="activeStage === 1"
       ref="handshakeRef"
-      :position="[0, stageAnchors[1], 0]"
-      :scale="[handshakeScale, handshakeScale, handshakeScale]"
-      :visible="alphaHandshake > 0.01"
+      :position="[0, 0, 0]"
+      :scale="[objectScale, objectScale, objectScale]"
     >
       <!-- Left Arm (Front/Bottom-Left) -->
       <TresGroup :position="[-0.55, -0.4, 0]" :rotation="[0, 0, -0.785]">
@@ -237,10 +219,10 @@ onBeforeRender(({ elapsed }) => {
 
     <!-- Stage 2: Emojis (Laugh & Cry) -->
     <TresGroup
+      v-if="activeStage === 2"
       ref="emojisRef"
-      :position="[0, stageAnchors[2], 0]"
-      :scale="[emojisScale, emojisScale, emojisScale]"
-      :visible="alphaEmojis > 0.01"
+      :position="[0, 0, 0]"
+      :scale="[objectScale, objectScale, objectScale]"
     >
       <!-- Laughing Face (Left) -->
       <TresGroup :position="[-0.6, 0, 0]" :rotation="[0, 0.2, 0]">
@@ -305,10 +287,10 @@ onBeforeRender(({ elapsed }) => {
 
     <!-- Stage 3: Key (Magic/Unlock) -->
     <TresGroup
+      v-if="activeStage === 3"
       ref="keyRef"
-      :position="[0, stageAnchors[3], 0]"
-      :scale="[keyScale, keyScale, keyScale]"
-      :visible="alphaKey > 0.01"
+      :position="[0, 0, 0]"
+      :scale="[objectScale, objectScale, objectScale]"
     >
       <!-- Head (Ring) -->
       <TresMesh :position="[0, 0.8, 0]">
