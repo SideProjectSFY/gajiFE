@@ -162,10 +162,37 @@ const handleSendMessage = async (messageContent: string) => {
 
   try {
     const { sendMessageStream } = await import('@/services/conversationApi')
+    let streamingAssistantId: string | null = null
+    let streamedContent = ''
+    const ensureStreamingAssistant = (): Message => {
+      if (streamingAssistantId) {
+        const existing = messages.value.find((item) => item.id === streamingAssistantId)
+        if (existing) return existing
+      }
+      const placeholder: Message = {
+        id: `stream-${Date.now()}`,
+        conversationId: route.params.id as string,
+        role: 'assistant',
+        content: '',
+        timestamp: new Date().toISOString(),
+      }
+      streamingAssistantId = placeholder.id
+      messages.value.push(placeholder)
+      isTyping.value = false
+      return placeholder
+    }
 
     const response = await sendMessageStream(route.params.id as string, messageContent, {
       onAccepted: () => {
         aiError.value = ''
+      },
+      onDelta: (event) => {
+        const delta = event.text || ''
+        if (!delta) return
+        streamedContent += delta
+        const assistant = ensureStreamingAssistant()
+        assistant.content = streamedContent
+        scrollToBottom()
       },
     })
 
@@ -179,7 +206,16 @@ const handleSendMessage = async (messageContent: string) => {
       ragMetadataId: response.assistantMessage.ragMetadataId ?? response.ragMetadataId ?? null,
       providerElapsedMs: response.assistantMessage.providerElapsedMs ?? response.providerElapsedMs ?? null,
     }
-    messages.value.push(assistantMessage)
+    if (streamingAssistantId) {
+      const existingIndex = messages.value.findIndex((item) => item.id === streamingAssistantId)
+      if (existingIndex >= 0) {
+        messages.value.splice(existingIndex, 1, assistantMessage)
+      } else {
+        messages.value.push(assistantMessage)
+      }
+    } else {
+      messages.value.push(assistantMessage)
+    }
     isTyping.value = false
     scrollToBottom()
     

@@ -402,6 +402,9 @@ export interface SendMessageResponse {
 
 interface SendMessageStreamHandlers {
   onAccepted?: (event: Record<string, unknown>) => void
+  onContextReady?: (event: Record<string, unknown>) => void
+  onDelta?: (event: { text?: string }) => void
+  onUserMessage?: (event: Record<string, unknown>) => void
   onCompleted?: (response: SendMessageResponse) => void
   onError?: (event: Record<string, unknown>) => void
 }
@@ -640,6 +643,12 @@ export async function sendMessageStream(
       const payload = parseSseJson(event.data)
       if (event.event === 'accepted') {
         handlers.onAccepted?.(payload)
+      } else if (event.event === 'context_ready') {
+        handlers.onContextReady?.(payload)
+      } else if (event.event === 'user_message') {
+        handlers.onUserMessage?.(payload)
+      } else if (event.event === 'delta') {
+        handlers.onDelta?.({ text: typeof payload.text === 'string' ? payload.text : '' })
       } else if (event.event === 'completed') {
         completedResponse = mapChatCompletionResponse(payload as unknown as ConversationChatCompletionResponse)
         handlers.onCompleted?.(completedResponse)
@@ -657,6 +666,8 @@ export async function sendMessageStream(
       if (event.event === 'completed') {
         completedResponse = mapChatCompletionResponse(payload as unknown as ConversationChatCompletionResponse)
         handlers.onCompleted?.(completedResponse)
+      } else if (event.event === 'delta') {
+        handlers.onDelta?.({ text: typeof payload.text === 'string' ? payload.text : '' })
       }
     }
   }
