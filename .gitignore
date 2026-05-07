@@ -40,7 +40,6 @@ playwright-report
 .env.production
 
 coverage
-e2e
 
 # Test data
 .test-data/
