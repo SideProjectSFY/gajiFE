@@ -73,7 +73,10 @@ async function mockRagConversation(page: Page, variant: RagVariant) {
       return fulfillRagSources(route, variant);
     }
 
-    return route.fulfill({ status: 200, json: {} });
+    return route.fulfill({
+      status: 500,
+      json: { message: `Unhandled E2E API route: ${method} ${path}` },
+    });
   });
 }
 
@@ -178,7 +181,13 @@ function fulfillRagSources(route: Route, variant: RagVariant) {
   return route.fulfill({
     status: 200,
     json: {
-      sourceAvailable: true,
+      conversationId: CONVERSATION_ID,
+      assistantMessageId: ASSISTANT_MESSAGE_ID,
+      ragMetadataId: RAG_METADATA_ID,
+      novelId: 'novel-rag-e2e',
+      groundingStatus: 'grounded',
+      fallbackUsed: false,
+      fallbackReason: null,
       citations: [
         {
           passageId: 'gutenberg-1342:chunker-v1:chapter-03:chunk-0001:abcdef123456',
