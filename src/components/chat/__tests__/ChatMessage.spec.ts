@@ -34,13 +34,21 @@ describe('ChatMessage', () => {
 
   const mockGroundedAssistantMessage = {
     ...mockAssistantMessage,
+    ragMetadataId: '7f5ab245-e989-4a46-9973-6613d9a14511',
+    providerElapsedMs: 2437.4,
     rag: {
       grounding_status: 'grounded',
+      fallback_used: false,
       ranking_policy: 'vector_primary_rrf_fallback',
+      passage_count: 4,
       citations: [
         {
           final_rank: 1,
           passage_id: 'novel:chunker:v1:chapter-03:chunk-0001:abcdef123456',
+        },
+        {
+          final_rank: 2,
+          passage_id: 'novel:chunker:v1:chapter-34:chunk-0007:fedcba654321',
         },
       ],
     },
@@ -81,11 +89,72 @@ describe('ChatMessage', () => {
 
     expect(wrapper.find('[data-testid="rag-citations"]').exists()).toBe(true)
     expect(wrapper.find('[data-testid="rag-grounding-status"]').text()).toContain('grounded')
+    expect(wrapper.find('[data-testid="rag-fallback-status"]').text()).toContain('fallback no')
+    expect(wrapper.find('[data-testid="rag-metadata-id"]').text()).toContain('rag 7f5ab245')
+    expect(wrapper.find('[data-testid="rag-provider-latency"]').text()).toContain(
+      'provider 2437 ms'
+    )
     expect(wrapper.find('[data-testid="rag-citation"]').text()).toContain('[1]')
     expect(wrapper.text()).not.toContain('Retrieved passages')
+    expect(wrapper.text()).not.toContain('Elizabeth and Darcy meet at the assembly.')
   })
 
   it('loads source passages when a citation is opened', async () => {
+    vi.mocked(getRagSources).mockResolvedValue({
+      conversationId: 'conv-1',
+      assistantMessageId: '2',
+      ragMetadataId: 'rag-1',
+      novelId: 'novel-1',
+      groundingStatus: 'grounded',
+      fallbackUsed: false,
+      fallbackReason: null,
+      missingPassageIds: [],
+      citations: [
+        {
+          citationId: 'citation-1',
+          passageId: 'novel:chunker:v1:chapter-03:chunk-0001:abcdef123456',
+          finalRank: 1,
+          vectorRank: 1,
+          bm25Rank: 3,
+          chapter: '3',
+          sourceAvailable: true,
+          text: 'Elizabeth and Darcy meet at the assembly.',
+          manifestId: 'manifest-1234567890',
+          metadata: { source_novel_id: 'gutenberg:1342' },
+        },
+        {
+          citationId: 'citation-2',
+          passageId: 'novel:chunker:v1:chapter-34:chunk-0007:fedcba654321',
+          finalRank: 2,
+          vectorRank: 2,
+          bm25Rank: 1,
+          chapter: '34',
+          sourceAvailable: true,
+          text: 'Darcy explains his conduct in a letter.',
+          metadata: { source_novel_id: 'gutenberg:1342' },
+        },
+      ],
+    })
+
+    const wrapper = mount(ChatMessage, {
+      props: {
+        message: mockGroundedAssistantMessage,
+      },
+    })
+
+    await wrapper.find('[data-testid="rag-citation"]').trigger('click')
+    await flushPromises()
+
+    expect(getRagSources).toHaveBeenCalledWith('conv-1', '2')
+    expect(wrapper.find('[data-testid="rag-source-drawer"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="rag-source-item"]').text()).toContain(
+      'Elizabeth and Darcy meet at the assembly.'
+    )
+    expect(wrapper.find('[data-testid="rag-source-item"]').text()).toContain('vector #1')
+    expect(wrapper.find('[data-testid="rag-source-item"]').text()).toContain('manifest manifest')
+  })
+
+  it('moves the clicked citation source to the top of the drawer', async () => {
     vi.mocked(getRagSources).mockResolvedValue({
       conversationId: 'conv-1',
       assistantMessageId: '2',
@@ -105,6 +174,80 @@ describe('ChatMessage', () => {
           text: 'Elizabeth and Darcy meet at the assembly.',
           metadata: { source_novel_id: 'gutenberg:1342' },
         },
+        {
+          citationId: 'citation-2',
+          passageId: 'novel:chunker:v1:chapter-34:chunk-0007:fedcba654321',
+          finalRank: 2,
+          chapter: '34',
+          sourceAvailable: true,
+          text: 'Darcy explains his conduct in a letter.',
+          metadata: { source_novel_id: 'gutenberg:1342' },
+        },
+      ],
+    })
+
+    const wrapper = mount(ChatMessage, {
+      props: {
+        message: mockGroundedAssistantMessage,
+      },
+    })
+
+    await wrapper.findAll('[data-testid="rag-citation"]')[1].trigger('click')
+    await flushPromises()
+
+    const firstSource = wrapper.find('[data-testid="rag-source-item"]')
+    expect(firstSource.attributes('data-selected')).toBe('true')
+    expect(firstSource.text()).toContain('Darcy explains his conduct in a letter.')
+  })
+
+  it('shows fallback QA metadata even without citations', () => {
+    const wrapper = mount(ChatMessage, {
+      props: {
+        message: {
+          ...mockAssistantMessage,
+          ragMetadataId: 'rag-fallback-1',
+          providerElapsedMs: 9012,
+          rag: {
+            grounding_status: 'fallback_ungrounded',
+            fallback_used: true,
+            fallback_reason: 'provider_generation_exception',
+            citations: [],
+          },
+        },
+      },
+    })
+
+    expect(wrapper.find('[data-testid="rag-citations"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="rag-grounding-status"]').text()).toContain(
+      'fallback ungrounded'
+    )
+    expect(wrapper.find('[data-testid="rag-fallback-status"]').text()).toContain('fallback used')
+    expect(wrapper.find('[data-testid="rag-fallback-reason"]').text()).toContain(
+      'provider_generation_exception'
+    )
+    expect(wrapper.find('[data-testid="rag-no-citations"]').text()).toContain('No source citations')
+  })
+
+  it('shows source policy message when source text is unavailable', async () => {
+    vi.mocked(getRagSources).mockResolvedValue({
+      conversationId: 'conv-1',
+      assistantMessageId: '2',
+      ragMetadataId: 'rag-1',
+      novelId: 'novel-1',
+      groundingStatus: 'grounded',
+      fallbackUsed: false,
+      fallbackReason: null,
+      missingPassageIds: ['novel:chunker:v1:chapter-03:chunk-0001:abcdef123456'],
+      citations: [
+        {
+          citationId: 'citation-1',
+          passageId: 'novel:chunker:v1:chapter-03:chunk-0001:abcdef123456',
+          finalRank: 1,
+          chapter: '3',
+          sourceAvailable: false,
+          text: null,
+          metadata: null,
+        },
       ],
     })
 
@@ -117,10 +260,11 @@ describe('ChatMessage', () => {
     await wrapper.find('[data-testid="rag-citation"]').trigger('click')
     await flushPromises()
 
-    expect(getRagSources).toHaveBeenCalledWith('conv-1', '2')
-    expect(wrapper.find('[data-testid="rag-source-drawer"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="rag-missing-sources"]').text()).toContain(
+      'Missing sources: 1'
+    )
     expect(wrapper.find('[data-testid="rag-source-item"]').text()).toContain(
-      'Elizabeth and Darcy meet at the assembly.'
+      'Source text is unavailable'
     )
   })
 

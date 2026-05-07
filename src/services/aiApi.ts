@@ -54,6 +54,7 @@ export interface RagChatMetadata {
   ranking_policy?: string
   grounding_status?: string
   fallback_used?: boolean
+  fallback_reason?: string | null
   passage_count?: number
   citations?: RagCitation[]
   timing_ms?: Record<string, number>
