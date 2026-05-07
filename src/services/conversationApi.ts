@@ -1,6 +1,7 @@
 import api from './api'
 import type { RagChatMetadata } from './aiApi'
 import type { ForkRelationship } from '@/components/chat/ForkNavigationWidget.vue'
+import { useAuthStore } from '@/stores/auth'
 
 export interface ConversationSummary {
   id: string
@@ -399,6 +400,17 @@ export interface SendMessageResponse {
   providerElapsedMs?: number | null
 }
 
+interface SendMessageStreamHandlers {
+  onAccepted?: (event: Record<string, unknown>) => void
+  onCompleted?: (response: SendMessageResponse) => void
+  onError?: (event: Record<string, unknown>) => void
+}
+
+interface ParsedSseEvent {
+  event: string
+  data: string
+}
+
 interface MessageResponse {
   id: string
   conversationId: string
@@ -451,6 +463,30 @@ export interface RagChatSourceResponse {
   fallbackReason?: string | null
   citations: RagCitationSource[]
   missingPassageIds: string[]
+}
+
+const RAG_SOURCE_CACHE_LIMIT = 100
+const ragSourceCache = new Map<string, Promise<RagChatSourceResponse> | RagChatSourceResponse>()
+
+function ragSourceCacheKey(conversationId: string, assistantMessageId: string): string {
+  return `${conversationId}:${assistantMessageId}`
+}
+
+function rememberRagSourceResponse(
+  key: string,
+  value: Promise<RagChatSourceResponse> | RagChatSourceResponse
+): void {
+  ragSourceCache.delete(key)
+  ragSourceCache.set(key, value)
+  while (ragSourceCache.size > RAG_SOURCE_CACHE_LIMIT) {
+    const oldestKey = ragSourceCache.keys().next().value
+    if (!oldestKey) break
+    ragSourceCache.delete(oldestKey)
+  }
+}
+
+export function clearRagSourceCache(): void {
+  ragSourceCache.clear()
 }
 
 export async function sendMessage(
@@ -545,6 +581,131 @@ export async function sendMessage(
   }
 }
 
+export async function sendMessageStream(
+  conversationId: string,
+  content: string,
+  handlers: SendMessageStreamHandlers = {}
+): Promise<SendMessageResponse> {
+  const authStore = useAuthStore()
+  const headers: Record<string, string> = {
+    Accept: 'text/event-stream',
+    'Content-Type': 'application/json',
+  }
+  if (authStore.accessToken) {
+    headers.Authorization = `Bearer ${authStore.accessToken}`
+  }
+  if (authStore.user?.id) {
+    headers['X-User-Id'] = authStore.user.id
+  }
+
+  const streamUrl = buildApiUrl(`/conversations/${conversationId}/messages/chat-completion/stream`)
+  const streamRequest = (): Promise<Response> =>
+    fetch(streamUrl, {
+      method: 'POST',
+      headers,
+      credentials: 'include',
+      body: JSON.stringify({ content }),
+    })
+
+  let response = await streamRequest()
+  if (response.status === 401 && (await authStore.refreshAccessToken())) {
+    if (authStore.accessToken) {
+      headers.Authorization = `Bearer ${authStore.accessToken}`
+    }
+    response = await streamRequest()
+  }
+
+  if (response.status === 404 || response.status === 405) {
+    return sendMessage(conversationId, content)
+  }
+  if (!response.ok) {
+    throw new Error(`Streaming chat request failed with HTTP ${response.status}`)
+  }
+  if (!response.body) {
+    return sendMessage(conversationId, content)
+  }
+
+  const reader = response.body.getReader()
+  const decoder = new TextDecoder()
+  let buffer = ''
+  let completedResponse: SendMessageResponse | null = null
+
+  while (true) {
+    const { value, done } = await reader.read()
+    if (done) break
+    buffer += decoder.decode(value, { stream: true })
+    const parsed = drainSseEvents(buffer)
+    buffer = parsed.remaining
+    for (const event of parsed.events) {
+      const payload = parseSseJson(event.data)
+      if (event.event === 'accepted') {
+        handlers.onAccepted?.(payload)
+      } else if (event.event === 'completed') {
+        completedResponse = mapChatCompletionResponse(payload as unknown as ConversationChatCompletionResponse)
+        handlers.onCompleted?.(completedResponse)
+      } else if (event.event === 'error') {
+        handlers.onError?.(payload)
+        throw new Error(String(payload.message || 'AI chat completion failed'))
+      }
+    }
+  }
+  buffer += decoder.decode()
+
+  if (buffer.trim()) {
+    for (const event of parseSseBlock(buffer)) {
+      const payload = parseSseJson(event.data)
+      if (event.event === 'completed') {
+        completedResponse = mapChatCompletionResponse(payload as unknown as ConversationChatCompletionResponse)
+        handlers.onCompleted?.(completedResponse)
+      }
+    }
+  }
+
+  if (!completedResponse) {
+    throw new Error('Streaming chat ended before completion')
+  }
+  return completedResponse
+}
+
+function buildApiUrl(path: string): string {
+  const baseUrl = String(import.meta.env.VITE_API_BASE_URL || '/api/v1').replace(/\/$/, '')
+  return `${baseUrl}${path}`
+}
+
+function drainSseEvents(buffer: string): { events: ParsedSseEvent[]; remaining: string } {
+  const normalized = buffer.replace(/\r\n/g, '\n')
+  const parts = normalized.split('\n\n')
+  const remaining = parts.pop() ?? ''
+  return {
+    events: parts.flatMap(parseSseBlock),
+    remaining,
+  }
+}
+
+function parseSseBlock(block: string): ParsedSseEvent[] {
+  if (!block.trim()) return []
+  let event = 'message'
+  const dataLines: string[] = []
+  for (const rawLine of block.split('\n')) {
+    const line = rawLine.trimEnd()
+    if (line.startsWith('event:')) {
+      event = line.slice('event:'.length).trim()
+    } else if (line.startsWith('data:')) {
+      dataLines.push(line.slice('data:'.length).trimStart())
+    }
+  }
+  if (dataLines.length === 0) return []
+  return [{ event, data: dataLines.join('\n') }]
+}
+
+function parseSseJson(data: string): Record<string, unknown> {
+  try {
+    return JSON.parse(data) as Record<string, unknown>
+  } catch {
+    return { message: data }
+  }
+}
+
 function mapChatCompletionResponse(
   response: ConversationChatCompletionResponse
 ): SendMessageResponse {
@@ -577,10 +738,28 @@ function mapChatCompletionResponse(
 
 export async function getRagSources(
   conversationId: string,
-  assistantMessageId: string
+  assistantMessageId: string,
+  options: { forceRefresh?: boolean } = {}
 ): Promise<RagChatSourceResponse> {
-  const response = await api.get<RagChatSourceResponse>(
-    `/conversations/${conversationId}/messages/${assistantMessageId}/rag-sources`
-  )
-  return response.data
+  const cacheKey = ragSourceCacheKey(conversationId, assistantMessageId)
+  if (!options.forceRefresh) {
+    const cached = ragSourceCache.get(cacheKey)
+    if (cached) return cached
+  }
+
+  const request = api
+    .get<RagChatSourceResponse>(
+      `/conversations/${conversationId}/messages/${assistantMessageId}/rag-sources`
+    )
+    .then((response) => response.data)
+
+  rememberRagSourceResponse(cacheKey, request)
+  try {
+    const data = await request
+    rememberRagSourceResponse(cacheKey, data)
+    return data
+  } catch (error) {
+    ragSourceCache.delete(cacheKey)
+    throw error
+  }
 }

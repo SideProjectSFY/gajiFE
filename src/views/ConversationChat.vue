@@ -161,9 +161,13 @@ const handleSendMessage = async (messageContent: string) => {
   isTyping.value = true
 
   try {
-    const { sendMessage } = await import('@/services/conversationApi')
+    const { sendMessageStream } = await import('@/services/conversationApi')
 
-    const response = await sendMessage(route.params.id as string, messageContent)
+    const response = await sendMessageStream(route.params.id as string, messageContent, {
+      onAccepted: () => {
+        aiError.value = ''
+      },
+    })
 
     const assistantMessage: Message = {
       id: response.assistantMessage.id,
