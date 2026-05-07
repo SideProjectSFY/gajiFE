@@ -1,4 +1,5 @@
 import api from './api'
+import type { RagChatMetadata } from './aiApi'
 import type { ForkRelationship } from '@/components/chat/ForkNavigationWidget.vue'
 
 export interface ConversationSummary {
@@ -114,6 +115,9 @@ export async function getForkRelationship(
 
     // Transform snake_case API response to camelCase for Vue component
     const data = response.data
+    if (!data?.current) {
+      return null
+    }
     return {
       current: {
         id: data.current.id,
@@ -380,10 +384,19 @@ export interface SendMessageResponse {
     role: 'assistant'
     content: string
     timestamp: string
+    rag?: RagChatMetadata | null
+    ragMetadataId?: string | null
+    providerElapsedMs?: number | null
   }
   // 턴 정보
   turnCount?: number
   maxTurns?: number
+  rag?: RagChatMetadata | null
+  provider?: string
+  model?: string
+  tokenUsage?: number
+  ragMetadataId?: string | null
+  providerElapsedMs?: number | null
 }
 
 interface MessageResponse {
@@ -404,10 +417,60 @@ interface PollResponse {
   maxTurns?: number
 }
 
+interface ConversationChatCompletionResponse {
+  userMessage: MessageResponse
+  assistantMessage: MessageResponse
+  rag?: RagChatMetadata | null
+  provider?: string
+  model?: string
+  tokenUsage?: number
+  ragMetadataId?: string | null
+  providerElapsedMs?: number | null
+}
+
+export interface RagCitationSource {
+  citationId?: string
+  passageId: string
+  finalRank?: number | null
+  vectorRank?: number | null
+  bm25Rank?: number | null
+  manifestId?: string | null
+  chapter?: string | null
+  sourceAvailable: boolean
+  text?: string | null
+  metadata?: Record<string, unknown> | null
+}
+
+export interface RagChatSourceResponse {
+  conversationId: string
+  assistantMessageId: string
+  ragMetadataId: string
+  novelId?: string | null
+  groundingStatus?: string | null
+  fallbackUsed?: boolean | null
+  fallbackReason?: string | null
+  citations: RagCitationSource[]
+  missingPassageIds: string[]
+}
+
 export async function sendMessage(
   conversationId: string,
   content: string
 ): Promise<SendMessageResponse> {
+  try {
+    const response = await api.post<ConversationChatCompletionResponse>(
+      `/conversations/${conversationId}/messages/chat-completion`,
+      { content }
+    )
+    return mapChatCompletionResponse(response.data)
+  } catch (error: any) {
+    const status = error?.response?.status
+    if (status !== 404 && status !== 405) {
+      throw error
+    }
+    console.warn('RAG chat completion endpoint unavailable, falling back to legacy polling')
+  }
+
   // Submit user message
   const submitResponse = await api.post<MessageResponse>(
     `/conversations/${conversationId}/messages`,
@@ -417,7 +480,7 @@ export async function sendMessage(
   // Poll for AI response with retries (up to 30 seconds)
   const maxRetries = 30 // 30 attempts
   const retryDelay = 1000 // 1 second between attempts
-  
+
   for (let attempt = 0; attempt < maxRetries; attempt++) {
     try {
       const pollResponse = await api.get<PollResponse>(
@@ -449,15 +512,15 @@ export async function sendMessage(
         console.error('AI generation failed:', pollResponse.data.error)
         break
       }
-      
+
       // Status is 'processing' or 'queued', wait and retry
       if (attempt < maxRetries - 1) {
-        await new Promise(resolve => setTimeout(resolve, retryDelay))
+        await new Promise((resolve) => setTimeout(resolve, retryDelay))
       }
     } catch (error) {
       console.warn(`AI poll attempt ${attempt + 1} failed:`, error)
       if (attempt < maxRetries - 1) {
-        await new Promise(resolve => setTimeout(resolve, retryDelay))
+        await new Promise((resolve) => setTimeout(resolve, retryDelay))
       }
     }
   }
@@ -480,4 +543,44 @@ export async function sendMessage(
       timestamp: new Date().toISOString(),
     },
   }
+}
+
+function mapChatCompletionResponse(
+  response: ConversationChatCompletionResponse
+): SendMessageResponse {
+  return {
+    userMessage: {
+      id: response.userMessage.id,
+      conversationId: response.userMessage.conversationId,
+      role: 'user',
+      content: response.userMessage.content,
+      timestamp: response.userMessage.createdAt || new Date().toISOString(),
+    },
+    assistantMessage: {
+      id: response.assistantMessage.id,
+      conversationId: response.assistantMessage.conversationId,
+      role: 'assistant',
+      content: response.assistantMessage.content,
+      timestamp: response.assistantMessage.createdAt || new Date().toISOString(),
+      rag: response.rag ?? null,
+      ragMetadataId: response.ragMetadataId ?? null,
+      providerElapsedMs: response.providerElapsedMs ?? null,
+    },
+    rag: response.rag ?? null,
+    provider: response.provider,
+    model: response.model,
+    tokenUsage: response.tokenUsage,
+    ragMetadataId: response.ragMetadataId ?? null,
+    providerElapsedMs: response.providerElapsedMs ?? null,
+  }
+}
+
+export async function getRagSources(
+  conversationId: string,
+  assistantMessageId: string
+): Promise<RagChatSourceResponse> {
+  const response = await api.get<RagChatSourceResponse>(
+    `/conversations/${conversationId}/messages/${assistantMessageId}/rag-sources`
+  )
+  return response.data
 }

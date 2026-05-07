@@ -22,6 +22,18 @@ const mainContentStyle = css({
   flexDirection: 'column',
   w: 'full',
 })
+
+const srOnlyStyle = css({
+  position: 'absolute',
+  width: '1px',
+  height: '1px',
+  padding: 0,
+  margin: '-1px',
+  overflow: 'hidden',
+  clip: 'rect(0, 0, 0, 0)',
+  whiteSpace: 'nowrap',
+  border: 0,
+})
 </script>
 
 <template>
@@ -29,6 +41,7 @@ const mainContentStyle = css({
     <AppHeader />
 
     <main :class="mainContentStyle">
+      <h1 :class="srOnlyStyle">About Gaji</h1>
       <AboutHero />
       <AboutMission />
       <AboutGuide />

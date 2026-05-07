@@ -4,6 +4,7 @@ import { computed, ref } from 'vue'
 import { useClipboard } from '@vueuse/core'
 import { css } from '../../../styled-system/css'
 import type { Message } from '@/stores/conversation'
+import { getRagSources, type RagChatSourceResponse } from '@/services/conversationApi'
 
 interface Props {
   message: Message
@@ -16,7 +17,15 @@ const props = withDefaults(defineProps<Props>(), {
 
 const isUser = computed(() => props.message.role === 'user')
 const isSystem = computed(() => props.message.role === 'system')
+const ragMetadata = computed(() => props.message.rag)
+const citations = computed(() => (ragMetadata.value?.citations ?? []).slice(0, 4))
+const hasCitations = computed(() => !isUser.value && citations.value.length > 0)
 const showCopyFeedback = ref(false)
+const sourceDrawerOpen = ref(false)
+const sourceLoading = ref(false)
+const sourceError = ref('')
+const sourceResponse = ref<RagChatSourceResponse | null>(null)
+const sourceCitations = computed(() => sourceResponse.value?.citations ?? [])
 
 // Clipboard functionality
 const { copy, isSupported: isClipboardSupported } = useClipboard()
@@ -42,6 +51,38 @@ async function handleCopy(): Promise<void> {
   } catch (error) {
     console.error('Failed to copy message:', error)
   }
+}
+
+async function handleOpenSources(): Promise<void> {
+  if (!hasCitations.value || sourceLoading.value) return
+  sourceDrawerOpen.value = true
+  if (sourceResponse.value) return
+
+  sourceLoading.value = true
+  sourceError.value = ''
+  try {
+    sourceResponse.value = await getRagSources(props.message.conversationId, props.message.id)
+  } catch (error) {
+    console.error('Failed to load RAG sources:', error)
+    sourceError.value = '근거 passage를 불러오지 못했습니다.'
+  } finally {
+    sourceLoading.value = false
+  }
+}
+
+function closeSources(): void {
+  sourceDrawerOpen.value = false
+}
+
+function formatPassageId(passageId: string): string {
+  if (!passageId) return ''
+  if (passageId.length <= 18) return passageId
+  return `${passageId.slice(0, 10)}...${passageId.slice(-6)}`
+}
+
+function formatGroundingStatus(status?: string): string {
+  if (!status) return 'grounding unknown'
+  return status.replace(/_/g, ' ')
 }
 
 // Static styles
@@ -147,6 +188,132 @@ const styles = {
     fontSize: '0.75rem',
     animation: 'fadeIn 0.2s ease-in',
   }),
+  citationBlock: css({
+    mt: '0.75rem',
+    pt: '0.625rem',
+    borderTop: '1px solid',
+    borderColor: 'neutral.200',
+  }),
+  citationMeta: css({
+    display: 'flex',
+    flexWrap: 'wrap',
+    gap: '0.375rem',
+    alignItems: 'center',
+    mb: '0.5rem',
+    fontSize: '0.72rem',
+    color: 'neutral.600',
+  }),
+  citationBadge: css({
+    display: 'inline-flex',
+    alignItems: 'center',
+    minH: '1.5rem',
+    px: '0.5rem',
+    borderRadius: '999px',
+    backgroundColor: 'white',
+    border: '1px solid',
+    borderColor: 'neutral.200',
+    color: 'neutral.700',
+    fontSize: '0.72rem',
+    lineHeight: '1',
+  }),
+  citationList: css({
+    display: 'flex',
+    flexWrap: 'wrap',
+    gap: '0.375rem',
+  }),
+  citationPill: css({
+    display: 'inline-flex',
+    alignItems: 'center',
+    maxW: '100%',
+    minH: '1.625rem',
+    px: '0.5rem',
+    borderRadius: '999px',
+    backgroundColor: 'rgba(31, 125, 81, 0.08)',
+    border: '1px solid',
+    borderColor: 'rgba(31, 125, 81, 0.22)',
+    color: '#1F7D51',
+    fontSize: '0.72rem',
+    lineHeight: '1.1',
+    cursor: 'pointer',
+    _hover: {
+      backgroundColor: 'rgba(31, 125, 81, 0.13)',
+    },
+    '&:focus-visible': {
+      outline: '2px solid',
+      outlineColor: '#1F7D51',
+      outlineOffset: '2px',
+    },
+  }),
+  sourceDrawer: css({
+    mt: '0.75rem',
+    pt: '0.75rem',
+    borderTop: '1px solid',
+    borderColor: 'neutral.200',
+  }),
+  sourceDrawerHeader: css({
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: '0.75rem',
+    mb: '0.625rem',
+  }),
+  sourceTitle: css({
+    fontSize: '0.78rem',
+    fontWeight: '700',
+    color: 'neutral.800',
+  }),
+  sourceCloseButton: css({
+    border: 'none',
+    bg: 'transparent',
+    color: 'neutral.600',
+    cursor: 'pointer',
+    minW: '1.75rem',
+    minH: '1.75rem',
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: '0.375rem',
+    _hover: {
+      bg: 'neutral.200',
+    },
+    '&:focus-visible': {
+      outline: '2px solid',
+      outlineColor: '#1F7D51',
+      outlineOffset: '2px',
+    },
+  }),
+  sourceList: css({
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '0.625rem',
+  }),
+  sourceItem: css({
+    border: '1px solid',
+    borderColor: 'neutral.200',
+    borderRadius: '0.5rem',
+    bg: 'white',
+    p: '0.75rem',
+  }),
+  sourceItemHeader: css({
+    display: 'flex',
+    flexWrap: 'wrap',
+    gap: '0.375rem',
+    alignItems: 'center',
+    mb: '0.5rem',
+    color: 'neutral.600',
+    fontSize: '0.72rem',
+  }),
+  sourceText: css({
+    color: 'neutral.800',
+    fontSize: '0.84rem',
+    lineHeight: '1.55',
+    whiteSpace: 'pre-wrap',
+  }),
+  sourceState: css({
+    color: 'neutral.600',
+    fontSize: '0.82rem',
+    lineHeight: '1.5',
+  }),
 }
 </script>
 
@@ -184,6 +351,67 @@ const styles = {
         <div :class="styles.content">
           {{ message.content }}
         </div>
+        <div v-if="hasCitations" :class="styles.citationBlock" data-testid="rag-citations">
+          <div :class="styles.citationMeta">
+            <span :class="styles.citationBadge" data-testid="rag-grounding-status">
+              {{ formatGroundingStatus(ragMetadata?.grounding_status) }}
+            </span>
+            <span v-if="ragMetadata?.ranking_policy" :class="styles.citationBadge">
+              {{ ragMetadata.ranking_policy }}
+            </span>
+          </div>
+          <div :class="styles.citationList">
+            <button
+              v-for="(citation, index) in citations"
+              :key="citation.passage_id"
+              type="button"
+              :class="styles.citationPill"
+              :title="citation.passage_id"
+              data-testid="rag-citation"
+              @click="handleOpenSources"
+            >
+              [{{ citation.final_rank ?? index + 1 }}] {{ formatPassageId(citation.passage_id) }}
+            </button>
+          </div>
+          <div v-if="sourceDrawerOpen" :class="styles.sourceDrawer" data-testid="rag-source-drawer">
+            <div :class="styles.sourceDrawerHeader">
+              <span :class="styles.sourceTitle">Source passages</span>
+              <button
+                type="button"
+                :class="styles.sourceCloseButton"
+                aria-label="근거 닫기"
+                data-testid="rag-source-close"
+                @click="closeSources"
+              >
+                <i class="pi pi-times" aria-hidden="true"></i>
+              </button>
+            </div>
+            <div v-if="sourceLoading" :class="styles.sourceState" data-testid="rag-source-loading">
+              Loading sources...
+            </div>
+            <div v-else-if="sourceError" :class="styles.sourceState" data-testid="rag-source-error">
+              {{ sourceError }}
+            </div>
+            <div v-else :class="styles.sourceList">
+              <article
+                v-for="source in sourceCitations"
+                :key="source.citationId ?? source.passageId"
+                :class="styles.sourceItem"
+                data-testid="rag-source-item"
+              >
+                <div :class="styles.sourceItemHeader">
+                  <span>[{{ source.finalRank ?? '-' }}]</span>
+                  <span>{{ source.chapter ? `Chapter ${source.chapter}` : 'Chapter unknown' }}</span>
+                  <span>{{ formatPassageId(source.passageId) }}</span>
+                </div>
+                <p v-if="source.sourceAvailable && source.text" :class="styles.sourceText">
+                  {{ source.text }}
+                </p>
+                <p v-else :class="styles.sourceState">Source unavailable.</p>
+              </article>
+            </div>
+          </div>
+        </div>
         <div :class="styles.metaRow">
           <span :class="styles.timestamp">
             {{ formattedTime }}
@@ -199,7 +427,7 @@ const styles = {
             aria-label="메시지 복사"
             @click="handleCopy"
           >
-            <span>📋</span>
+            <i class="pi pi-copy" aria-hidden="true"></i>
           </button>
         </div>
       </div>

@@ -116,6 +116,7 @@ export interface BrowseScenario {
   whatIfQuestion?: string
   parent_scenario_id?: string
   user_id?: string
+  book_id?: string
   conversation_count?: number
   like_count?: number
   // Gemini 분석 결과 필드 (백엔드 ScenarioResponse와 동기화)

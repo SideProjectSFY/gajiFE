@@ -373,12 +373,7 @@ const cancelDelete = (): void => {
 }
 
 // Pagination helpers
-interface PaginatedItem {
-  id: string | number
-  [key: string]: unknown
-}
-
-const getPaginatedItems = (items: PaginatedItem[], page: number): PaginatedItem[] => {
+const getPaginatedItems = <T extends { id: string | number }>(items: T[], page: number): T[] => {
   const start = (page - 1) * itemsPerPage
   const end = start + itemsPerPage
   return items.slice(start, end)
@@ -1132,9 +1127,7 @@ const saveBio = async () => {
                   color: 'gray.700',
                   lineHeight: '1.5',
                   mb: '3',
-                  display: '-webkit-box',
-                  WebkitLineClamp: '2',
-                  WebkitBoxOrient: 'vertical',
+                  lineClamp: 2,
                   overflow: 'hidden',
                 })
               "
@@ -1465,9 +1458,7 @@ const saveBio = async () => {
                     color: 'gray.700',
                     lineHeight: '1.5',
                     mb: '3',
-                    display: '-webkit-box',
-                    WebkitLineClamp: '2',
-                    WebkitBoxOrient: 'vertical',
+                    lineClamp: 2,
                     overflow: 'hidden',
                   })
                 "
@@ -1951,9 +1942,7 @@ const saveBio = async () => {
                     color: 'gray.700',
                     lineHeight: '1.5',
                     mb: '3',
-                    display: '-webkit-box',
-                    WebkitLineClamp: '2',
-                    WebkitBoxOrient: 'vertical',
+                    lineClamp: 2,
                     overflow: 'hidden',
                   })
                 "

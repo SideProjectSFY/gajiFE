@@ -8,9 +8,9 @@ import ScrollTrigger from 'gsap/ScrollTrigger'
 
 gsap.registerPlugin(ScrollTrigger)
 
-const cameraRef = shallowRef(null)
-const mainTubeRef = shallowRef(null)
-const branchTubeRef = shallowRef(null)
+const cameraRef = shallowRef<THREE.PerspectiveCamera | null>(null)
+const mainTubeRef = shallowRef<THREE.Mesh | null>(null)
+const branchTubeRef = shallowRef<THREE.Mesh | null>(null)
 
 // 1. The Canon Path (Straight & Stable)
 const mainCurve = new THREE.CatmullRomCurve3([

@@ -163,25 +163,7 @@ const handleSendMessage = async (messageContent: string) => {
   try {
     const { sendMessage } = await import('@/services/conversationApi')
 
-    const sendPromise = sendMessage(route.params.id as string, messageContent)
-    let timeoutId: number | undefined
-    const timeoutPromise = new Promise<null>((resolve) => {
-      timeoutId = window.setTimeout(() => resolve(null), 32000)
-    })
-
-    const response = (await Promise.race([sendPromise, timeoutPromise])) as Awaited<
-      ReturnType<typeof sendMessage>
-    > | null
-
-    if (timeoutId !== undefined) {
-      window.clearTimeout(timeoutId)
-    }
-
-    if (response === null) {
-      aiError.value = 'AI response timed out. Please try again.'
-      isTyping.value = false
-      return
-    }
+    const response = await sendMessage(route.params.id as string, messageContent)
 
     const assistantMessage: Message = {
       id: response.assistantMessage.id,
@@ -189,6 +171,9 @@ const handleSendMessage = async (messageContent: string) => {
       role: 'assistant',
       content: response.assistantMessage.content,
       timestamp: response.assistantMessage.timestamp,
+      rag: response.assistantMessage.rag ?? response.rag ?? null,
+      ragMetadataId: response.assistantMessage.ragMetadataId ?? response.ragMetadataId ?? null,
+      providerElapsedMs: response.assistantMessage.providerElapsedMs ?? response.providerElapsedMs ?? null,
     }
     messages.value.push(assistantMessage)
     isTyping.value = false
@@ -204,7 +189,15 @@ const handleSendMessage = async (messageContent: string) => {
   } catch (error) {
     console.error('Failed to send message:', error)
     isTyping.value = false
-    aiError.value = 'Error sending message. Please try again.'
+    const errorMessage = String((error as any)?.message || '').toLowerCase()
+    const timedOut = (error as any)?.code === 'ECONNABORTED' || errorMessage.includes('timeout')
+    aiError.value = timedOut
+      ? 'AI response timed out. Syncing latest messages...'
+      : 'Error sending message. Please try again.'
+    if (timedOut) {
+      await new Promise((resolve) => window.setTimeout(resolve, 1500))
+      await loadConversation(route.params.id as string)
+    }
   }
 }
 

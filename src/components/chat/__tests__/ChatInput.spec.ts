@@ -73,7 +73,7 @@ describe('ChatInput', () => {
     })
 
     const textarea = wrapper.find('[data-testid="message-input"]')
-    expect(textarea.attributes('placeholder')).toContain('AI가 응답 중')
+    expect(textarea.attributes('placeholder')).toContain('AI is responding')
   })
 
   it('has proper accessibility labels', () => {

@@ -9,6 +9,9 @@ export default defineConfig({
     environment: 'happy-dom',
     setupFiles: ['./src/test-setup.ts'],
     include: ['src/**/*.{test,spec}.{js,ts,vue}'],
+    env: {
+      VITE_BYPASS_AUTH: 'false',
+    },
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],

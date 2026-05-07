@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import api from '@/services/api'
 import { useAuthStore } from './auth'
+import type { RagChatMetadata } from '@/services/aiApi'
 
 export interface Message {
   id: string
@@ -9,6 +10,9 @@ export interface Message {
   role: 'user' | 'assistant' | 'system'
   content: string
   timestamp: string
+  rag?: RagChatMetadata | null
+  ragMetadataId?: string | null
+  providerElapsedMs?: number | null
 }
 
 export interface Conversation {

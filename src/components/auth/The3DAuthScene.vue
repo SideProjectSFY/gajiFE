@@ -92,7 +92,7 @@ onBeforeRender(({ elapsed }) => {
       <TresGroup :position="[0.15, -0.22, 0.1]" :rotation="[0, 0.5, 0.2]">
         <TresMesh :rotation="[0, 0, -0.5]">
           <TresSphereGeometry :args="[0.05, 16, 16, 0, Math.PI * 2, 0, Math.PI * 0.5]" />
-          <TresMeshStandardMaterial color="#8D6E63" :roughness="0.8" side="DoubleSide" />
+          <TresMeshStandardMaterial color="#8D6E63" :roughness="0.8" :side="DoubleSide" />
         </TresMesh>
       </TresGroup>
 

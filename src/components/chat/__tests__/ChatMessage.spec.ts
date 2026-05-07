@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { mount } from '@vue/test-utils'
+import { flushPromises, mount } from '@vue/test-utils'
 import ChatMessage from '../ChatMessage.vue'
+import { getRagSources } from '@/services/conversationApi'
 
 // Mock @vueuse/core
 vi.mock('@vueuse/core', () => ({
@@ -8,6 +9,10 @@ vi.mock('@vueuse/core', () => ({
     copy: vi.fn().mockResolvedValue(undefined),
     isSupported: { value: true },
   }),
+}))
+
+vi.mock('@/services/conversationApi', () => ({
+  getRagSources: vi.fn(),
 }))
 
 describe('ChatMessage', () => {
@@ -25,6 +30,20 @@ describe('ChatMessage', () => {
     role: 'assistant' as const,
     content: 'Hi, I am the AI assistant',
     timestamp: new Date().toISOString(),
+  }
+
+  const mockGroundedAssistantMessage = {
+    ...mockAssistantMessage,
+    rag: {
+      grounding_status: 'grounded',
+      ranking_policy: 'vector_primary_rrf_fallback',
+      citations: [
+        {
+          final_rank: 1,
+          passage_id: 'novel:chunker:v1:chapter-03:chunk-0001:abcdef123456',
+        },
+      ],
+    },
   }
 
   beforeEach(() => {
@@ -51,6 +70,58 @@ describe('ChatMessage', () => {
 
     expect(wrapper.text()).toContain(mockAssistantMessage.content)
     expect(wrapper.find('[data-testid="assistant-message"]').exists()).toBe(true)
+  })
+
+  it('renders RAG citation metadata without passage text', () => {
+    const wrapper = mount(ChatMessage, {
+      props: {
+        message: mockGroundedAssistantMessage,
+      },
+    })
+
+    expect(wrapper.find('[data-testid="rag-citations"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="rag-grounding-status"]').text()).toContain('grounded')
+    expect(wrapper.find('[data-testid="rag-citation"]').text()).toContain('[1]')
+    expect(wrapper.text()).not.toContain('Retrieved passages')
+  })
+
+  it('loads source passages when a citation is opened', async () => {
+    vi.mocked(getRagSources).mockResolvedValue({
+      conversationId: 'conv-1',
+      assistantMessageId: '2',
+      ragMetadataId: 'rag-1',
+      novelId: 'novel-1',
+      groundingStatus: 'grounded',
+      fallbackUsed: false,
+      fallbackReason: null,
+      missingPassageIds: [],
+      citations: [
+        {
+          citationId: 'citation-1',
+          passageId: 'novel:chunker:v1:chapter-03:chunk-0001:abcdef123456',
+          finalRank: 1,
+          chapter: '3',
+          sourceAvailable: true,
+          text: 'Elizabeth and Darcy meet at the assembly.',
+          metadata: { source_novel_id: 'gutenberg:1342' },
+        },
+      ],
+    })
+
+    const wrapper = mount(ChatMessage, {
+      props: {
+        message: mockGroundedAssistantMessage,
+      },
+    })
+
+    await wrapper.find('[data-testid="rag-citation"]').trigger('click')
+    await flushPromises()
+
+    expect(getRagSources).toHaveBeenCalledWith('conv-1', '2')
+    expect(wrapper.find('[data-testid="rag-source-drawer"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="rag-source-item"]').text()).toContain(
+      'Elizabeth and Darcy meet at the assembly.'
+    )
   })
 
   it('displays formatted timestamp', () => {

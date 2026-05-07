@@ -27,10 +27,11 @@ describe('BookFilterBar.vue', () => {
     const sortSelect = wrapper.find('#sort-filter')
     const options = sortSelect.findAll('option')
 
-    expect(options.length).toBe(3)
-    expect(options[0].text()).toBe('Latest')
-    expect(options[1].text()).toBe('Recommended')
-    expect(options[2].text()).toBe('Popular')
+    expect(options.length).toBe(4)
+    expect(options[0].text()).toBe('Most Scenarios')
+    expect(options[1].text()).toBe('Latest')
+    expect(options[2].text()).toBe('Recommended')
+    expect(options[3].text()).toBe('Popular')
   })
 
   it('emits filterChange when genre is changed', async () => {

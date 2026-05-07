@@ -35,7 +35,6 @@ const styles = {
     lineHeight: '1',
     background: 'linear-gradient(135deg, #1f7d51 0%, #10b981 100%)',
     backgroundClip: 'text',
-    WebkitBackgroundClip: 'text',
     color: 'transparent',
     marginBottom: '1.5rem',
   }),

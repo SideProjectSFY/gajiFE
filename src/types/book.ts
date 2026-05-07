@@ -49,9 +49,10 @@ export interface BookFilters {
   sort?: BookSortOption
 }
 
-export type BookSortOption = 'latest' | 'recommended' | 'popular'
+export type BookSortOption = 'latest' | 'recommended' | 'popular' | 'scenarios'
 
 export const BOOK_SORT_OPTIONS: { value: BookSortOption; label: string }[] = [
+  { value: 'scenarios', label: 'Most Scenarios' },
   { value: 'latest', label: 'Latest' },
   { value: 'recommended', label: 'Recommended' },
   { value: 'popular', label: 'Popular' },

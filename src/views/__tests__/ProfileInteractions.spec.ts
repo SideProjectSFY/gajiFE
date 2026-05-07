@@ -5,6 +5,7 @@ import { createPinia, setActivePinia } from 'pinia'
 import Profile from '../Profile.vue'
 import { bookApi } from '@/services/bookApi'
 import { userApi } from '@/services/userApi'
+import { useAuthStore } from '@/stores/auth'
 
 // Mock APIs
 vi.mock('@/services/bookApi', () => ({
@@ -46,6 +47,9 @@ vi.mock('vue-router', () => ({
 describe('Profile.vue Interactions', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
+    const authStore = useAuthStore()
+    authStore.user = { id: 'user1', username: 'testuser', email: 'test@example.com' }
+    authStore.accessToken = 'test-token'
     vi.clearAllMocks()
   })
 

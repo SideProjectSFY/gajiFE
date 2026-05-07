@@ -74,9 +74,7 @@ const styles = {
     color: '#6b7280',
     lineHeight: '1.5',
     marginBottom: '1rem',
-    display: '-webkit-box',
-    WebkitLineClamp: 2,
-    WebkitBoxOrient: 'vertical',
+    lineClamp: 2,
     overflow: 'hidden',
   }),
   stats: css({
@@ -124,10 +122,7 @@ const styles = {
 </script>
 
 <template>
-  <div
-    :class="styles.card"
-    @click="handleClick"
-  >
+  <div :class="styles.card" @click="handleClick">
     <div :class="styles.header">
       <h3 :class="styles.title">
         {{ scenario.scenario_title }}
@@ -174,7 +169,7 @@ const styles = {
           :src="scenario.creator.avatar_url"
           :alt="scenario.creator.username"
           :class="styles.avatarImg"
-        >
+        />
         <span v-else>
           {{ scenario.creator.username.charAt(0).toUpperCase() }}
         </span>

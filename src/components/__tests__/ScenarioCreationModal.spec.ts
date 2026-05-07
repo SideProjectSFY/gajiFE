@@ -48,6 +48,15 @@ describe('ScenarioCreationModal', () => {
     })
   }
 
+  const fillRequiredFields = async (wrapper: ReturnType<typeof mount>) => {
+    await wrapper
+      .find('[data-testid="scenario-title-input"]')
+      .setValue('New Scenario for Test Book')
+    await wrapper
+      .find('[data-testid="what-if-question-input"]')
+      .setValue('What if the story took a different path?')
+  }
+
   describe('rendering', () => {
     it('renders modal with correct title', () => {
       const wrapper = mountModal()
@@ -87,6 +96,7 @@ describe('ScenarioCreationModal', () => {
 
     it('enables submit button when valid scenario type', async () => {
       const wrapper = mountModal()
+      await fillRequiredFields(wrapper)
       await wrapper
         .find('[data-testid="character-changes-input"]')
         .setValue('This is a valid character change description')
@@ -132,6 +142,7 @@ describe('ScenarioCreationModal', () => {
         .mockResolvedValueOnce(mockConversationResponse)
 
       const wrapper = mountModal()
+      await fillRequiredFields(wrapper)
       await wrapper
         .find('[data-testid="character-changes-input"]')
         .setValue('Hermione sorted into Slytherin instead of Gryffindor')
@@ -143,22 +154,21 @@ describe('ScenarioCreationModal', () => {
       await wrapper.find('form').trigger('submit')
       await flushPromises()
 
-      expect(api.post).toHaveBeenCalledWith('/scenarios', {
-        bookId: 123,
-        title: 'New Scenario for Test Book',
-        description: '',
-        parameters: {
-          character_changes: 'Hermione sorted into Slytherin instead of Gryffindor',
-          event_alterations: 'Troll incident: saved by Draco',
-          setting_modifications: '',
-        },
+      expect(api.post).toHaveBeenNthCalledWith(1, '/scenarios', {
+        novelId: '123',
+        scenarioTitle: 'New Scenario for Test Book',
+        whatIfQuestion: 'What if the story took a different path?',
+        characterChanges: 'Hermione sorted into Slytherin instead of Gryffindor',
+        eventAlterations: 'Troll incident: saved by Draco',
+        settingModifications: '',
         scenarioType: 'CHARACTER_CHANGE',
         isPrivate: false,
       })
 
-      expect(api.post).toHaveBeenCalledWith('/conversations', {
+      expect(api.post).toHaveBeenNthCalledWith(2, '/conversations', {
         scenarioId: 'new-scenario-id',
         title: 'Conversation: Test Book',
+        characterVectordbId: undefined,
       })
     })
 
@@ -171,6 +181,7 @@ describe('ScenarioCreationModal', () => {
         .mockResolvedValueOnce(mockConversationResponse)
 
       const wrapper = mountModal()
+      await fillRequiredFields(wrapper)
       await wrapper
         .find('[data-testid="character-changes-input"]')
         .setValue('Valid character changes here')
@@ -194,6 +205,7 @@ describe('ScenarioCreationModal', () => {
       })
 
       const wrapper = mountModal()
+      await fillRequiredFields(wrapper)
       await wrapper
         .find('[data-testid="character-changes-input"]')
         .setValue('Valid character changes here')
@@ -219,6 +231,7 @@ describe('ScenarioCreationModal', () => {
       vi.mocked(api.post).mockReturnValue(promise as Promise<{ data: { id: string } }>)
 
       const wrapper = mountModal()
+      await fillRequiredFields(wrapper)
       await wrapper
         .find('[data-testid="character-changes-input"]')
         .setValue('Valid character changes here')

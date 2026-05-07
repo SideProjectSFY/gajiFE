@@ -80,7 +80,7 @@ export const scenarioApi = {
         .mockScenarioTreeAPI
     ) {
       return (
-        window as { mockScenarioTreeAPI: (id: string) => Promise<ScenarioTreeResponse> }
+        window as unknown as { mockScenarioTreeAPI: (id: string) => Promise<ScenarioTreeResponse> }
       ).mockScenarioTreeAPI(scenarioId)
     }
 

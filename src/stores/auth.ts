@@ -7,6 +7,7 @@ interface User {
   id: string
   username: string
   email: string
+  isPremium?: boolean // Added for tier differentiation
 }
 
 interface AuthState {
@@ -28,6 +29,16 @@ interface AuthResult {
   message?: string
 }
 
+const AUTH_BYPASS_ENABLED =
+  import.meta.env.VITE_BYPASS_AUTH === 'true' ||
+  (import.meta.env.DEV && import.meta.env.VITE_BYPASS_AUTH !== 'false')
+
+const DEV_BYPASS_USER: User = {
+  id: '00000000-0000-0000-0000-000000000000',
+  username: 'dev-bypass',
+  email: 'dev-bypass@gaji.local',
+}
+
 const COOKIE_KEYS = {
   ACCESS_TOKEN: 'accessToken',
   REFRESH_TOKEN: 'refreshToken',
@@ -44,8 +55,9 @@ export const useAuthStore = defineStore('auth', {
   }),
 
   getters: {
-    isAuthenticated: (state): boolean => !!state.user,
-    currentUser: (state): User | null => state.user,
+    isAuthenticated: (state): boolean => AUTH_BYPASS_ENABLED || !!state.user,
+    currentUser: (state): User | null =>
+      state.user || (AUTH_BYPASS_ENABLED ? { ...DEV_BYPASS_USER } : null),
   },
 
   actions: {
@@ -64,6 +76,8 @@ export const useAuthStore = defineStore('auth', {
           email: email,
         }
         // We don't have the tokens in memory after refresh, but cookies are set
+      } else if (AUTH_BYPASS_ENABLED) {
+        this.user = { ...DEV_BYPASS_USER }
       }
     },
 
@@ -106,6 +120,10 @@ export const useAuthStore = defineStore('auth', {
       this.user = null
       this.accessToken = null
       this.refreshToken = null
+
+      if (AUTH_BYPASS_ENABLED) {
+        this.user = { ...DEV_BYPASS_USER }
+      }
 
       // Sentry 사용자 정보 제거
       clearSentryUser()

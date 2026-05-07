@@ -1,8 +1,5 @@
 <template>
-  <div
-    ref="containerRef"
-    class="share-button-container"
-  >
+  <div ref="containerRef" class="share-button-container">
     <button
       :class="shareButtonClass"
       aria-label="Share scenario"
@@ -19,54 +16,19 @@
         stroke-linecap="round"
         stroke-linejoin="round"
       >
-        <circle
-          cx="18"
-          cy="5"
-          r="3"
-        />
-        <circle
-          cx="6"
-          cy="12"
-          r="3"
-        />
-        <circle
-          cx="18"
-          cy="19"
-          r="3"
-        />
-        <line
-          x1="8.59"
-          y1="13.51"
-          x2="15.42"
-          y2="17.49"
-        />
-        <line
-          x1="15.41"
-          y1="6.51"
-          x2="8.59"
-          y2="10.49"
-        />
+        <circle cx="18" cy="5" r="3" />
+        <circle cx="6" cy="12" r="3" />
+        <circle cx="18" cy="19" r="3" />
+        <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" />
+        <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
       </svg>
       <span>Share</span>
     </button>
 
     <transition name="dropdown-fade">
-      <div
-        v-if="dropdownOpen"
-        :class="dropdownClass"
-        data-testid="share-dropdown"
-      >
-        <button
-          :class="shareOptionClass"
-          data-testid="twitter-share"
-          @click="shareTwitter"
-        >
-          <svg
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="currentColor"
-          >
+      <div v-if="dropdownOpen" :class="dropdownClass" data-testid="share-dropdown">
+        <button :class="shareOptionClass" data-testid="twitter-share" @click="shareTwitter">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
             <path
               d="M23 3a10.9 10.9 0 01-3.14 1.53 4.48 4.48 0 00-7.86 3v1A10.66 10.66 0 013 4s-4 9 5 13a11.64 11.64 0 01-7 2c9 5 20 0 20-11.5a4.5 4.5 0 00-.08-.83A7.72 7.72 0 0023 3z"
             />
@@ -74,27 +36,14 @@
           <span>Share on Twitter</span>
         </button>
 
-        <button
-          :class="shareOptionClass"
-          data-testid="facebook-share"
-          @click="shareFacebook"
-        >
-          <svg
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="currentColor"
-          >
+        <button :class="shareOptionClass" data-testid="facebook-share" @click="shareFacebook">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
             <path d="M18 2h-3a5 5 0 00-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 011-1h3z" />
           </svg>
           <span>Share on Facebook</span>
         </button>
 
-        <button
-          :class="shareOptionClass"
-          data-testid="copy-link"
-          @click="copyLink"
-        >
+        <button :class="shareOptionClass" data-testid="copy-link" @click="copyLink">
           <svg
             width="16"
             height="16"
@@ -296,8 +245,9 @@ const shareOptionClass = css({
   _hover: {
     backgroundColor: '#f9fafb',
   },
-  _notLast: {
-    borderBottom: '1px solid #f3f4f6',
+  borderBottom: '1px solid #f3f4f6',
+  _last: {
+    borderBottom: 'none',
   },
 })
 </script>

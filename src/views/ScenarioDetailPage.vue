@@ -86,10 +86,10 @@
 
       <div class="tabs">
         <TabView>
-          <TabPanel header="Scenario Tree">
+          <TabPanel value="tree" header="Scenario Tree">
             <p class="no-tree">Scenario tree removed in conversations-only domain.</p>
           </TabPanel>
-          <TabPanel v-if="!scenario.parent_scenario_id" header="Fork History">
+          <TabPanel v-if="!scenario.parent_scenario_id" value="fork-history" header="Fork History">
             <p class="no-tree">Fork history removed in conversations-only domain.</p>
           </TabPanel>
         </TabView>
@@ -97,7 +97,7 @@
     </div>
 
     <ForkScenarioModal
-      v-if="showForkModal"
+      v-if="showForkModal && scenario"
       :parent-scenario="scenario"
       :is-open="showForkModal"
       @close="showForkModal = false"
@@ -197,7 +197,7 @@ const fetchScenario = async () => {
       }
     }
   } catch (err: unknown) {
-    const apiError = err as { response?: { data?: { message?: string } } }
+    const apiError = err as { response?: { status?: number; data?: { message?: string } } }
     console.error('Failed to fetch scenario:', err)
 
     // Handle authentication errors
@@ -297,8 +297,8 @@ const handleStartConversation = async () => {
   try {
     // TODO: Allow user to select character
     // For now, use a default character VectorDB ID
-    const characterVectordbId = 'default-character-id'; // TODO: Get from character selection
-    
+    const characterVectordbId = 'default-character-id' // TODO: Get from character selection
+
     const response = await api.post(`/conversations`, {
       scenarioId: scenarioId,
       scenarioType: scenario.value.scenario_type,
@@ -308,7 +308,7 @@ const handleStartConversation = async () => {
     const conversationId = response.data.id
     router.push(`/conversations/${conversationId}`)
   } catch (err: unknown) {
-    const apiError = err as { response?: { data?: { message?: string } } }
+    const apiError = err as { response?: { status?: number; data?: { message?: string } } }
     console.error('Failed to create conversation:', err)
 
     // Check if it's an authentication error

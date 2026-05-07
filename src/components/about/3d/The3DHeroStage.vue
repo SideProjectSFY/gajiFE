@@ -8,7 +8,7 @@ import ScrollTrigger from 'gsap/ScrollTrigger'
 
 gsap.registerPlugin(ScrollTrigger)
 
-const sphereRef = shallowRef(null)
+const sphereRef = shallowRef<THREE.Object3D | null>(null)
 
 // Scroll Interaction
 watchEffect(() => {

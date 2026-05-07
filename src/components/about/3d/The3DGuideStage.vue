@@ -8,14 +8,18 @@ import ScrollTrigger from 'gsap/ScrollTrigger'
 
 gsap.registerPlugin(ScrollTrigger)
 
-const groupRef = shallowRef(null)
-const trunkRef = shallowRef(null)
-const branchesRef = shallowRef(null)
-const foliageRef = shallowRef(null)
+const groupRef = shallowRef<THREE.Group | null>(null)
+const trunkRef = shallowRef<THREE.Mesh | null>(null)
+const branchesRef = shallowRef<THREE.Group | null>(null)
+const foliageRef = shallowRef<THREE.Group | null>(null)
 
 // Scroll Interaction: Growth
 watchEffect(() => {
-  if (groupRef.value && trunkRef.value) {
+  if (groupRef.value && trunkRef.value && branchesRef.value && foliageRef.value) {
+    const group = groupRef.value
+    const trunk = trunkRef.value
+    const branches = branchesRef.value
+    const foliage = foliageRef.value
     const tl = gsap.timeline({
       scrollTrigger: {
         trigger: '#guide-section',
@@ -27,8 +31,8 @@ watchEffect(() => {
     })
 
     // Step 1: Trunk Grows (The Foundation)
-    tl.fromTo(trunkRef.value.scale, { y: 0 }, { y: 1, duration: 1, ease: 'power1.out' }).fromTo(
-      trunkRef.value.position,
+    tl.fromTo(trunk.scale, { y: 0 }, { y: 1, duration: 1, ease: 'power1.out' }).fromTo(
+      trunk.position,
       { y: -2 },
       { y: 1, duration: 1, ease: 'power1.out' },
       '<'
@@ -36,29 +40,29 @@ watchEffect(() => {
 
     // Step 2: Branches Sprout (The Forking)
     tl.fromTo(
-      branchesRef.value.scale,
+      branches.scale,
       { x: 0, y: 0, z: 0 },
       { x: 1, y: 1, z: 1, duration: 1, ease: 'back.out(1.7)' }
     )
 
     // Step 3: Foliage Expands (The Community)
     tl.fromTo(
-      foliageRef.value.scale,
+      foliage.scale,
       { x: 0, y: 0, z: 0 },
       { x: 0.5, y: 0.5, z: 0.5, duration: 1, ease: 'elastic.out(1, 0.5)' }
     )
 
     // Step 4: Full Bloom (The Result - "Last one looks like leaves")
-    tl.to(foliageRef.value.scale, {
+    tl.to(foliage.scale, {
       x: 1.2,
       y: 1.2,
       z: 1.2,
       duration: 1,
       ease: 'elastic.out(1, 0.3)',
-    }).to(foliageRef.value.material, { color: '#22c55e', duration: 1 }, '<') // Brighten up
+    })
 
     // Continuous Rotation
-    gsap.to(groupRef.value.rotation, {
+    gsap.to(group.rotation, {
       scrollTrigger: {
         trigger: '#guide-section',
         scroller: '#about-scroller',

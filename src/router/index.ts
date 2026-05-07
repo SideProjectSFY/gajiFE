@@ -3,6 +3,10 @@ import { useAuthStore } from '@/stores/auth'
 import { useAnalytics } from '@/composables/useAnalytics'
 import { useToast } from '@/composables/useToast'
 
+const AUTH_BYPASS_ENABLED =
+  import.meta.env.VITE_BYPASS_AUTH === 'true' ||
+  (import.meta.env.DEV && import.meta.env.VITE_BYPASS_AUTH !== 'false')
+
 // Views
 import Home from '@/views/Home.vue'
 import About from '@/views/About.vue'
@@ -21,8 +25,14 @@ import FollowingList from '@/views/FollowingList.vue'
 import LikedConversations from '@/views/LikedConversations.vue'
 import SearchPage from '@/views/SearchPage.vue'
 import Logout from '@/views/Logout.vue'
+import AiTest from '@/views/AiTest.vue' // Added for testing
 
 const routes: RouteRecordRaw[] = [
+  {
+    path: '/ai-test',
+    name: 'AiTest',
+    component: AiTest,
+  },
   {
     path: '/',
     name: 'Home',
@@ -216,6 +226,11 @@ const router = createRouter({
 
 // Navigation guard for authentication
 router.beforeEach((to, _from, next) => {
+  if (AUTH_BYPASS_ENABLED) {
+    next()
+    return
+  }
+
   const authStore = useAuthStore()
   const { error } = useToast()
   const requiresAuth = to.meta.requiresAuth

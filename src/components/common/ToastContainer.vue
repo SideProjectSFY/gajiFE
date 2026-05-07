@@ -17,6 +17,7 @@
 
 <script setup lang="ts">
 import { css } from 'styled-system/css'
+import type { SystemStyleObject } from 'styled-system/types'
 import { useToast, type Toast } from '@/composables/useToast'
 
 const { toasts, remove } = useToast()
@@ -46,7 +47,7 @@ const containerStyle = {
   maxWidth: '20rem',
 }
 
-const toastStyle = (type: Toast['type']): Record<string, unknown> => {
+const toastStyle = (type: Toast['type']): SystemStyleObject => {
   const baseStyle = {
     px: '4',
     py: '3',

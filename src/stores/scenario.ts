@@ -78,19 +78,30 @@ export const useScenarioStore = defineStore('scenario', () => {
 
   // Helper function to map API response to Scenario interface
   function mapResponseToScenario(response: CreateScenarioResponse): Scenario {
+    const legacy = response as CreateScenarioResponse &
+      Partial<{
+        scenario_title: string
+        book_id: string
+        character_changes: string | null
+        event_alterations: string | null
+        setting_modifications: string | null
+        created_at: string
+        updated_at: string
+      }>
     return {
       id: response.id,
-      title: response.scenario_title,
-      description: '', // Will be populated from other API calls
-      bookId: response.book_id,
-      characterChanges: response.character_changes,
-      eventAlterations: response.event_alterations,
-      settingModifications: response.setting_modifications,
+      title: response.title || legacy.scenario_title || '',
+      description: response.description || '',
+      bookId: legacy.book_id,
+      bookTitle: response.bookTitle,
+      characterChanges: legacy.character_changes,
+      eventAlterations: legacy.event_alterations,
+      settingModifications: legacy.setting_modifications,
       characters: [],
       tags: [],
-      isPrivate: false,
-      createdAt: response.created_at,
-      updatedAt: response.updated_at,
+      isPrivate: response.isPrivate,
+      createdAt: response.createdAt || legacy.created_at || '',
+      updatedAt: response.updatedAt || legacy.updated_at || '',
     }
   }
 

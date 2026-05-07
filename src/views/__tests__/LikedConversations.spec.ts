@@ -57,6 +57,8 @@ describe('LikedConversations.vue', () => {
     return mount(LikedConversations, {
       global: {
         stubs: {
+          AppHeader: true,
+          AppFooter: true,
           ConversationCard: true,
           Spinner: true,
           Pagination: true,
@@ -74,7 +76,8 @@ describe('LikedConversations.vue', () => {
   })
 
   it('loads liked conversations on mount when authenticated', async () => {
-    authStore.accessToken = 'test-token'; authStore.user = { id: '1', username: 'test', email: 'test@test.com' }
+    authStore.accessToken = 'test-token'
+    authStore.user = { id: '1', username: 'test', email: 'test@test.com' }
     vi.mocked(api.get).mockResolvedValue({
       data: mockConversations,
     })
@@ -89,7 +92,8 @@ describe('LikedConversations.vue', () => {
   })
 
   it('displays loading state while fetching', () => {
-    authStore.accessToken = 'test-token'; authStore.user = { id: '1', username: 'test', email: 'test@test.com' }
+    authStore.accessToken = 'test-token'
+    authStore.user = { id: '1', username: 'test', email: 'test@test.com' }
     vi.mocked(api.get).mockImplementation(
       () =>
         new Promise((resolve) => {
@@ -102,7 +106,8 @@ describe('LikedConversations.vue', () => {
   })
 
   it('displays empty state when no liked conversations', async () => {
-    authStore.accessToken = 'test-token'; authStore.user = { id: '1', username: 'test', email: 'test@test.com' }
+    authStore.accessToken = 'test-token'
+    authStore.user = { id: '1', username: 'test', email: 'test@test.com' }
     vi.mocked(api.get).mockResolvedValue({
       data: { content: [], totalElements: 0, totalPages: 0 },
     })
@@ -116,7 +121,8 @@ describe('LikedConversations.vue', () => {
   })
 
   it('displays conversation grid when conversations exist', async () => {
-    authStore.accessToken = 'test-token'; authStore.user = { id: '1', username: 'test', email: 'test@test.com' }
+    authStore.accessToken = 'test-token'
+    authStore.user = { id: '1', username: 'test', email: 'test@test.com' }
     vi.mocked(api.get).mockResolvedValue({
       data: mockConversations,
     })
@@ -129,7 +135,8 @@ describe('LikedConversations.vue', () => {
   })
 
   it('displays correct total count', async () => {
-    authStore.accessToken = 'test-token'; authStore.user = { id: '1', username: 'test', email: 'test@test.com' }
+    authStore.accessToken = 'test-token'
+    authStore.user = { id: '1', username: 'test', email: 'test@test.com' }
     vi.mocked(api.get).mockResolvedValue({
       data: mockConversations,
     })
@@ -142,7 +149,8 @@ describe('LikedConversations.vue', () => {
   })
 
   it('renders ConversationCard for each conversation', async () => {
-    authStore.accessToken = 'test-token'; authStore.user = { id: '1', username: 'test', email: 'test@test.com' }
+    authStore.accessToken = 'test-token'
+    authStore.user = { id: '1', username: 'test', email: 'test@test.com' }
     vi.mocked(api.get).mockResolvedValue({
       data: mockConversations,
     })
@@ -156,7 +164,8 @@ describe('LikedConversations.vue', () => {
   })
 
   it('shows pagination when multiple pages exist', async () => {
-    authStore.accessToken = 'test-token'; authStore.user = { id: '1', username: 'test', email: 'test@test.com' }
+    authStore.accessToken = 'test-token'
+    authStore.user = { id: '1', username: 'test', email: 'test@test.com' }
     vi.mocked(api.get).mockResolvedValue({
       data: { ...mockConversations, totalPages: 3 },
     })
@@ -169,7 +178,8 @@ describe('LikedConversations.vue', () => {
   })
 
   it('hides pagination when single page', async () => {
-    authStore.accessToken = 'test-token'; authStore.user = { id: '1', username: 'test', email: 'test@test.com' }
+    authStore.accessToken = 'test-token'
+    authStore.user = { id: '1', username: 'test', email: 'test@test.com' }
     vi.mocked(api.get).mockResolvedValue({
       data: mockConversations,
     })
@@ -182,7 +192,8 @@ describe('LikedConversations.vue', () => {
   })
 
   it('handles API error gracefully', async () => {
-    authStore.accessToken = 'test-token'; authStore.user = { id: '1', username: 'test', email: 'test@test.com' }
+    authStore.accessToken = 'test-token'
+    authStore.user = { id: '1', username: 'test', email: 'test@test.com' }
     vi.mocked(api.get).mockRejectedValue(new Error('API Error'))
 
     wrapper = createWrapper()

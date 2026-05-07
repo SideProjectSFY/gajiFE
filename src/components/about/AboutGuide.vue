@@ -178,7 +178,6 @@ const iconWrapperStyle = (bgColor: string) =>
     mb: '6',
     boxShadow: 'lg',
     backdropFilter: 'blur(8px)', // Glassmorphism
-    bgOpacity: 0.9,
   })
 
 const stepTitleStyle = css({

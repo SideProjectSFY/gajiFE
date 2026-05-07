@@ -8,6 +8,10 @@ import { useAuthStore } from '@/stores/auth'
 import { useAnalytics } from '@/composables/useAnalytics'
 import { captureApiError, addBreadcrumb } from '@/utils/sentry'
 
+const AUTH_BYPASS_ENABLED =
+  import.meta.env.VITE_BYPASS_AUTH === 'true' ||
+  (import.meta.env.DEV && import.meta.env.VITE_BYPASS_AUTH !== 'false')
+
 // Create axios instance
 const api: AxiosInstance = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL || '/api/v1',
@@ -136,6 +140,10 @@ api.interceptors.response.use(
     )
 
     const originalRequest = config
+
+    if (AUTH_BYPASS_ENABLED && (error.response?.status === 401 || error.response?.status === 403)) {
+      return Promise.reject(error)
+    }
 
     // Handle 401 errors (unauthorized)
     if (error.response?.status === 401 && originalRequest && !originalRequest._retry) {
