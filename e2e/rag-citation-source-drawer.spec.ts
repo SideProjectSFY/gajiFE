@@ -65,6 +65,10 @@ async function mockRagConversation(page: Page, variant: RagVariant) {
       });
     }
 
+    if (method === 'POST' && path === `/conversations/${CONVERSATION_ID}/messages/chat-completion/stream`) {
+      return fulfillChatCompletionStream(route, variant);
+    }
+
     if (method === 'POST' && path === `/conversations/${CONVERSATION_ID}/messages/chat-completion`) {
       return fulfillChatCompletion(route, variant);
     }
@@ -81,6 +85,33 @@ async function mockRagConversation(page: Page, variant: RagVariant) {
 }
 
 function fulfillChatCompletion(route: Route, variant: RagVariant) {
+  return route.fulfill({
+    status: 200,
+    json: buildChatCompletionPayload(variant),
+  });
+}
+
+function fulfillChatCompletionStream(route: Route, variant: RagVariant) {
+  const payload = buildChatCompletionPayload(variant);
+  const answer = payload.assistantMessage.content;
+  const events = [
+    { event: 'accepted', data: { status: 'accepted' } },
+    { event: 'user_message', data: payload.userMessage },
+    { event: 'delta', data: { text: answer } },
+    { event: 'completed', data: payload },
+  ];
+
+  return route.fulfill({
+    status: 200,
+    headers: {
+      'Content-Type': 'text/event-stream; charset=utf-8',
+      'Cache-Control': 'no-cache',
+    },
+    body: events.map((item) => `event: ${item.event}\ndata: ${JSON.stringify(item.data)}\n\n`).join(''),
+  });
+}
+
+function buildChatCompletionPayload(variant: RagVariant) {
   const isFallback = variant === 'fallback';
   const citations = isFallback
     ? []
@@ -111,43 +142,40 @@ function fulfillChatCompletion(route: Route, variant: RagVariant) {
         },
       ];
 
-  return route.fulfill({
-    status: 200,
-    json: {
-      userMessage: {
-        id: 'user-msg-rag-e2e',
-        conversationId: CONVERSATION_ID,
-        role: 'user',
-        content: 'Why does Darcy explain himself?',
-        createdAt: '2026-05-07T09:01:00Z',
-      },
-      assistantMessage: {
-        id: ASSISTANT_MESSAGE_ID,
-        conversationId: CONVERSATION_ID,
-        role: 'assistant',
-        content: isFallback
-          ? 'I can answer from general conversation context, but retrieved evidence was unavailable.'
-          : 'Darcy explains himself because Elizabeth has challenged both his conduct and his character.',
-        createdAt: '2026-05-07T09:01:01Z',
-      },
-      rag: {
-        enabled: true,
-        novel_id: 'novel-rag-e2e',
-        mode: 'hybrid',
-        ranking_policy: 'vector_primary_rrf_fallback',
-        grounding_status: isFallback ? 'fallback_ungrounded' : 'grounded',
-        fallback_used: isFallback,
-        fallback_reason: isFallback ? 'provider_generation_exception' : null,
-        passage_count: citations.length,
-        citations,
-      },
-      provider: 'gemini',
-      model: 'gemini-2.5-flash',
-      tokenUsage: 123,
-      ragMetadataId: RAG_METADATA_ID,
-      providerElapsedMs: 2437.4,
+  return {
+    userMessage: {
+      id: 'user-msg-rag-e2e',
+      conversationId: CONVERSATION_ID,
+      role: 'user',
+      content: 'Why does Darcy explain himself?',
+      createdAt: '2026-05-07T09:01:00Z',
     },
-  });
+    assistantMessage: {
+      id: ASSISTANT_MESSAGE_ID,
+      conversationId: CONVERSATION_ID,
+      role: 'assistant',
+      content: isFallback
+        ? 'I can answer from general conversation context, but retrieved evidence was unavailable.'
+        : 'Darcy explains himself because Elizabeth has challenged both his conduct and his character.',
+      createdAt: '2026-05-07T09:01:01Z',
+    },
+    rag: {
+      enabled: true,
+      novel_id: 'novel-rag-e2e',
+      mode: 'hybrid',
+      ranking_policy: 'vector_primary_rrf_fallback',
+      grounding_status: isFallback ? 'fallback_ungrounded' : 'grounded',
+      fallback_used: isFallback,
+      fallback_reason: isFallback ? 'provider_generation_exception' : null,
+      passage_count: citations.length,
+      citations,
+    },
+    provider: 'gemini',
+    model: 'gemini-2.5-flash',
+    tokenUsage: 123,
+    ragMetadataId: RAG_METADATA_ID,
+    providerElapsedMs: 2437.4,
+  };
 }
 
 function fulfillRagSources(route: Route, variant: RagVariant) {
