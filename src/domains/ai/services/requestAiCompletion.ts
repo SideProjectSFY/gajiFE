@@ -47,7 +47,7 @@ export async function requestAiCompletion(request: Request, prompt: string): Pro
   if (!response.ok) {
     const errorText = await response.text().catch(() => 'Unknown error');
     console.error(`[AI Spring] Request failed: ${response.status} ${response.statusText}`, errorText);
-    throw new Error('AI completion failed');
+    throw new Response(errorText || 'AI completion failed', { status: response.status });
   }
 
   return (await response.json()) as CompletionResult;

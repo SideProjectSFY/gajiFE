@@ -6,7 +6,11 @@ export async function POST(request: Request) {
     const body = (await request.json()) as { prompt: string };
     const result = await requestAiCompletion(request, body.prompt);
     return NextResponse.json(result, { status: 200 });
-  } catch {
+  } catch (error) {
+    if (error instanceof Response) {
+      const message = await error.text().catch(() => 'Failed to request AI completion');
+      return NextResponse.json({ message }, { status: error.status });
+    }
     return NextResponse.json({ message: 'Failed to request AI completion' }, { status: 500 });
   }
 }
