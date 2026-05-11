@@ -103,14 +103,13 @@ PORT=3100 npm run dev
 
 ## API 통신
 
-브라우저는 Next.js Route Handler를 통해 Spring Boot API Gateway와 통신합니다. FE는 FastAPI, PostgreSQL, Elasticsearch에 직접 접근하지 않습니다. AI/RAG 작업은 Spring Boot 경계를 통해 처리되며, 현재 백엔드는 과도기적으로 FastAPI를 호출할 수 있습니다.
+브라우저는 Next.js Route Handler를 통해 Spring Boot API Gateway와 통신합니다. FE는 PostgreSQL, Elasticsearch에 직접 접근하지 않습니다. AI/RAG 작업은 Spring Boot 경계를 통해 처리됩니다.
 
 ```mermaid
 flowchart LR
     Browser["브라우저"] --> Next["Next.js Route Handler (/api/*)"]
     Next --> Spring["Spring Boot API Gateway (/api/v1/*)"]
     Spring --> Search["PostgreSQL/pgvector + Elasticsearch"]
-    Spring -.-> FastAPI["FastAPI AI Service"]
 ```
 
 관련 파일:
