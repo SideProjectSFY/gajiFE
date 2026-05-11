@@ -11,8 +11,8 @@
     "language": "Language"
   },
   "search": {
-    "placeholder": "Search books, conversations...",
-    "ariaLabel": "Search books, conversations",
+    "placeholder": "Search books, branches, conversations, users...",
+    "ariaLabel": "Search books, branches, conversations, users",
     "allBooks": "Search All of Books"
   },
   "notFound": {
@@ -95,6 +95,8 @@
   },
   "books": {
     "title": "Browse Books",
+    "heroEyebrow": "Library",
+    "heroDescription": "Choose a source work to start conversations and scenarios.",
     "filters": {
       "allGenres": "All Genres",
       "romance": "Romance",
@@ -203,6 +205,8 @@
   },
   "conversations": {
     "title": "Browse Conversations",
+    "heroEyebrow": "Conversations",
+    "heroDescription": "Continue sourced answers and forkable conversations.",
     "filters": {
       "allGenres": "All Genres",
       "romance": "Romance",
@@ -219,6 +223,7 @@
     "count": {
       "available": "conversations available"
     },
+    "empty": "No conversations found.",
     "loading": "Loading conversations...",
     "error": "Failed to load conversations.",
     "empty": "No conversations found.",
@@ -229,10 +234,11 @@
       "title": "Untitled Conversation"
     },
     "noDescription": "No description available for this conversation.",
-    "messageCount": "conversations",
+    "messageCount": "messages",
     "actions": {
       "forkChat": "Fork Chat",
-      "goToBook": "Go to Book"
+      "goToBook": "Go to Book",
+      "openConversation": "Open conversation"
     },
     "tags": {
       "character": "Character",
@@ -246,6 +252,8 @@
   },
   "common": {
     "loading": "Loading...",
+    "loadingTitle": "Loading your story",
+    "loadingSubtitle": "Just a moment.",
     "error": "Error",
     "retry": "Retry",
     "close": "Close",
@@ -312,18 +320,86 @@
     "forkedFrom": "Forked From",
     "liked": "Liked",
     "like": "Like",
+    "unlike": "Unlike",
     "alreadyForked": "Already forked conversation",
     "forkedConversation": "Forked Conversation (Depth: {depth})",
     "loadingMessages": "Loading messages...",
+    "loadingConversation": "Loading conversation",
+    "aiThinking": "Matching the character memory with related scenes...",
     "startConversation": "Start a conversation",
     "askAnything": "Ask the character anything",
     "messageList": "Conversation message list",
     "clickToViewMessages": "Click to view messages",
     "unknownBook": "Unknown Book",
     "input": {
-      "loading": "AI is responding...",
-      "placeholder": "Type a message... (Enter: Send, Shift+Enter: New line)"
-    }
+      "loading": "The character is preparing a reply...",
+      "placeholder": "Ask about this scene or branch.",
+      "ariaLabel": "Message input",
+      "send": "Send"
+    },
+    "messageRole": {
+      "user": "You",
+      "assistant": "AI",
+      "system": "System"
+    },
+    "path": {
+      "current": "Current path",
+      "base": "Base path",
+      "forkDepth": "Fork depth {depth}",
+      "untitled": "Conversation",
+      "viewOriginal": "View original",
+      "viewFork": "View fork",
+      "baseConversation": "Base conversation",
+      "forkedConversation": "Forked conversation · depth {depth}"
+    },
+    "memo": {
+      "title": "Private memo",
+      "placeholder": "Leave a note from this conversation.",
+      "save": "Save",
+      "clear": "Clear",
+      "updated": "Memo saved."
+    },
+    "evidence": {
+      "label": "Related scene context",
+      "verified": "Sources verified",
+      "partial": "Partially sourced",
+      "reviewed": "Sources reviewed",
+      "sourceCount": "{count} related scenes",
+      "citationsLabel": "Referenced scenes",
+      "source": "Scene {rank}",
+      "open": "View",
+      "drawerLabel": "Related scenes",
+      "drawerEyebrow": "Related scenes",
+      "drawerTitle": "Context used for this reply",
+      "sourceTitle": "Related passage",
+      "unavailable": "This scene text cannot be shown right now."
+    },
+    "fork": {
+      "title": "Branch from this moment",
+      "description": "Carry the recent flow into another interpretation.",
+      "action": "Branch",
+      "modalTitle": "Create a branch from here?",
+      "modalDescription": "The recent messages will carry over so you can continue from another angle.",
+      "pending": "Creating branch...",
+      "confirm": "Create branch"
+    },
+    "loadError": {
+      "title": "Could not load conversation",
+      "description": "We could not open this conversation right now. Please check the link or try again later."
+    },
+    "errors": {
+      "aiFailed": "The reply could not be generated.",
+      "timeout": "The reply is taking too long. Please try again in a moment.",
+      "sendFailed": "Could not send the message. Please try again.",
+      "likeFailed": "Could not update like status.",
+      "memoOwnerOnly": "Only the conversation owner can edit the memo.",
+      "memoSaveFailed": "Could not save the memo.",
+      "memoDeleteFailed": "Could not delete the memo.",
+      "forkFailed": "Could not fork the conversation.",
+      "sourceFailed": "Could not load the sources."
+    },
+    "sourceLoading": "Loading sources",
+    "closeSources": "Close sources"
   },
   "searchPage": {
     "searchPlaceholder": "Search for books, characters, conversations...",
@@ -371,12 +447,15 @@
     "createAccount": "Create account",
     "brandTitle": "Every story has infinite branches to explore",
     "brandSubtitle": "Discover endless possibilities",
+    "success": "Login complete. Redirecting shortly.",
     "errors": {
+      "credentialsRequired": "Please enter both email or username and password.",
       "emailRequired": "Email is required",
       "emailInvalid": "Please enter a valid email address",
       "passwordRequired": "Password is required",
       "passwordLength": "Password must be at least 8 characters",
-      "loginFailed": "Login failed"
+      "loginFailed": "Login failed",
+      "loginFailedDetailed": "Login failed. Please check your information and try again."
     }
   },
   "register": {
@@ -397,17 +476,23 @@
     "login": "Login",
     "brandTitle": "Join the Gaji Community",
     "brandSubtitle": "Create, share, and explore stories with others",
+    "success": "Account created. Redirecting home shortly.",
     "errors": {
+      "invalidForm": "Please check the information you entered.",
       "usernameRequired": "Username is required",
       "usernameLength": "Username must be at least 3 characters",
       "usernameInvalid": "Username can only contain letters, numbers, and underscores",
+      "usernameInvalidDetailed": "Use at least 3 characters: Korean, English, numbers, or _ only.",
       "emailRequired": "Email is required",
       "emailInvalid": "Please enter a valid email address",
+      "emailTaken": "This email is already in use.",
       "passwordRequired": "Password is required",
       "passwordLength": "Password must be at least 8 characters",
       "passwordComplexity": "Password must contain uppercase, lowercase, and number",
+      "passwordComplexityDetailed": "Use at least 8 characters with uppercase, lowercase, and a number.",
       "passwordMismatch": "Passwords do not match",
-      "registrationFailed": "Registration failed"
+      "registrationFailed": "Registration failed",
+      "registrationFailedDetailed": "Registration failed. Please try again later."
     },
     "passwordStrengthLabel": "Password strength:",
     "passwordStrength": {
@@ -421,8 +506,19 @@
     "loginToLike": "Please login to like"
   },
   "scenario": {
-    "creating": "Creating scenario...",
-    "forking": "Forking scenario...",
+    "title": "Branches",
+    "start": "Start from this branch",
+    "fork": "Create branch",
+    "error": "Could not load branches. Please try again shortly.",
+    "errorTitle": "Could not load branches",
+    "emptyTitle": "No branches yet",
+    "emptyDescription": "Choose a book and create your first branch to collect it here.",
+    "emptyAction": "Start from books",
+    "count": {
+      "available": "branches available"
+    },
+    "creating": "Creating branch...",
+    "forking": "Creating branch...",
     "waitMessage": "This may take about 20 seconds."
   }
 }

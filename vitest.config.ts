@@ -1,28 +1,14 @@
-import { defineConfig } from 'vitest/config'
-import vue from '@vitejs/plugin-vue'
-import { fileURLToPath } from 'node:url'
+import { defineConfig } from 'vitest/config';
+import react from '@vitejs/plugin-react';
+import tsconfigPaths from 'vite-tsconfig-paths';
 
 export default defineConfig({
-  plugins: [vue()],
+  plugins: [react(), tsconfigPaths()],
   test: {
+    environment: 'jsdom',
     globals: true,
-    environment: 'happy-dom',
-    setupFiles: ['./src/test-setup.ts'],
-    include: ['src/**/*.{test,spec}.{js,ts,vue}'],
-    env: {
-      VITE_BYPASS_AUTH: 'false',
-    },
-    coverage: {
-      provider: 'v8',
-      reporter: ['text', 'json', 'html'],
-      include: ['src/components/**/*.vue', 'src/stores/**/*.ts'],
-      exclude: ['node_modules', 'src/**/*.d.ts'],
-    },
+    setupFiles: ['./vitest.setup.ts'],
+    include: ['src/**/*.{test,spec}.{ts,tsx}'],
+    exclude: ['tests/e2e/**', 'node_modules/**', '.next/**'],
   },
-  resolve: {
-    alias: {
-      '@': fileURLToPath(new URL('./src', import.meta.url)),
-      'styled-system': fileURLToPath(new URL('./styled-system', import.meta.url)),
-    },
-  },
-})
+});
