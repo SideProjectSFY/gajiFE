@@ -54,7 +54,7 @@ test('home onboarding and card search explain the first path clearly', async ({ 
   await expect(page.getByRole('link', { name: /첫 질문 시작/ })).toBeVisible();
 
   await page.goto('/search?query=편지&page=0&size=6');
-  await expect(page.getByRole('heading', { name: '시나리오 (1)' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: '가지 (1)' })).toBeVisible();
   await expect(page.getByRole('link', { name: /편지가 먼저 도착한다면/ })).toBeVisible();
   await expect(page.getByRole('link', { name: /Pride and Prejudice/ }).first()).toBeVisible();
 
